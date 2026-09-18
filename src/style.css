@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');.badge{border:0!important;box-shadow:none!important;outline:none!important}
 .badge.planejar-reposicao{background:#fff0df;color:#ad6427}.badge.reduzir-compras,.badge.avaliar-transferencia{background:#eaf0fb;color:#496ca8}.badge.confirmar-saldo,.badge.investigar-sem-consumo{background:#fbe9ec;color:#a6495c}
 .config-grid.single-panel{grid-template-columns:1fr}.badge.solicitar-comprar{background:#fff0df;color:#ad6427}.badge.bloquear-m-max{background:#fbe9ec;color:#a6495c}.badge.estoque-zerado{background:#eef0f3;color:#677582}.badge.estoque-ok{background:#edf3e3;color:#567b26}
 .badge.bloquear{background:#fbe9ec;color:#a6495c}.badge.sem-acao-definida{background:#eef0f3;color:#677582}.summary-card.bloquear{border-top:3px solid #bc6776}
