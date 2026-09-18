@@ -25,6 +25,12 @@ export function normalize(value) {
   return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+export function normalizeLocalKey(value) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return '';
+  return normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 export function suggestMapping(headers) {
   const result = {};
   for (const field of fields) {
@@ -179,7 +185,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
 }
 
 export function summarizeLocationTotal(rows, localFilter) {
-  const filterValue = String(localFilter ?? '').trim();
+  const filterValue = normalizeLocalKey(localFilter);
   if (!filterValue) {
     return rows.reduce((total, row) => {
       const amount = parseNumber(row.stockValue ?? row.stock ?? 0);
@@ -187,7 +193,7 @@ export function summarizeLocationTotal(rows, localFilter) {
     }, 0);
   }
   return rows.reduce((total, row) => {
-    const localValue = String(row?.localCode ?? row?.location ?? row?.branch ?? '').trim();
+    const localValue = normalizeLocalKey(row?.localCode ?? row?.location ?? row?.branch ?? '');
     if (localValue !== filterValue) return total;
     const amount = parseNumber(row.stockValue ?? row.stock ?? 0);
     return total + (Number.isFinite(amount) ? amount : 0);

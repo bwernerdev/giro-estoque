@@ -97,6 +97,23 @@ test('reconhece o cabeçalho deslocado e calcula giro a partir dos valores monet
   assert.equal(analyzeGiro([['Itajaí', 4, 'Peça D', '', '', 50, '']], mapping, { shortDays: 30, excessDays: 90, longDays: 365 })[0].action, 'Confirmar saldo');
 });
 
+test('normaliza locais com número e espaços antes de somar o total', () => {
+  const rows = [
+    { localCode: 7, stockValue: 120.5 },
+    { localCode: ' 7 ', stockValue: 75 },
+    { localCode: '298', stockValue: 40 },
+    { localCode: ' 298 ', stockValue: 20 },
+    { localCode: 'Local 7', stockValue: 33 },
+    { localCode: 'Local 8', stockValue: 50 },
+    { localCode: '7', stockValue: null },
+  ];
+
+  assert.equal(summarizeLocationTotal(rows, '7'), 195.5);
+  assert.equal(summarizeLocationTotal(rows, '298'), 60);
+  assert.equal(summarizeLocationTotal(rows, 'Local 7'), 33);
+  assert.equal(summarizeLocationTotal(rows, ''), 338.5);
+});
+
 test('soma o total do local de estoque selecionado em valor de saldo', () => {
   const rows = [
     { localCode: '7', stockValue: 120.5 },

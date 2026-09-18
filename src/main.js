@@ -1,5 +1,5 @@
 import { importFile } from './import.js';
-import { analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
 
 const app = document.querySelector('#app');
 const PAGE_SIZE = 50;
@@ -103,8 +103,10 @@ function refresh() {
   const previousLocation = state.locationFilter;
   const locationValues = [...new Set(state.allResults.map(row => String(row.localCode ?? row.location ?? row.branch ?? '').trim()).filter(Boolean))];
   el('#location-filter').innerHTML = '<option value="">Todos os locais</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
-  if (locationValues.includes(previousLocation)) state.locationFilter = previousLocation;
-  else state.locationFilter = '';
+
+  const normalizedPreviousLocation = normalizeLocalKey(previousLocation);
+  const matchingLocation = locationValues.find(value => normalizeLocalKey(value) === normalizedPreviousLocation) ?? '';
+  state.locationFilter = normalizedPreviousLocation ? matchingLocation : '';
   el('#location-filter').value = state.locationFilter;
   el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + actions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
   if (actions.includes(previousFilter)) el('#filter').value = previousFilter;
@@ -122,7 +124,7 @@ function visibleResults() {
   const localFilter = state.locationFilter;
   const analitico = isAnaliticoMode();
   return state.results.filter(row => {
-    const localMatch = !localFilter || String(row.localCode ?? row.location ?? row.branch ?? '').trim() === localFilter;
+    const localMatch = !localFilter || normalizeLocalKey(row.localCode ?? row.location ?? row.branch ?? '') === normalizeLocalKey(localFilter);
     const actionMatch = !filter || (analitico ? row.actions.includes(filter) : row.action === filter);
     const searchMatch = !query || normalize(`${row.item} ${row.sku} ${row.branch || ''} ${row.location || ''} ${row.localCode || ''}`).includes(query);
     return localMatch && actionMatch && searchMatch;
