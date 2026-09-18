@@ -21,9 +21,10 @@
   #result-table td.reason { min-width: 0; }
   #result-table .badge { max-width: 100%; white-space: normal; }
   .search-label { flex: 1 1 220px; min-width: 180px; }
-  .table-filters { flex: 1 1 auto; min-width: 0; }
+  .table-filters { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; }
   .table-filters select { width: min(100%, 210px); min-width: 130px; }
   #location-filter { min-width: 140px; }
+  .table-tools { display: flex; align-items: center; gap: 12px; width: 100%; }
 
   .analitico-table th:nth-child(1) { width: 23%; }
   .analitico-table th:nth-child(2) { width: 7%; }
