@@ -58,6 +58,11 @@ export function parseNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function parseAnaliticoNumber(value) {
+  if (typeof value === 'string' && !/^-?[\d.,\s]+$/.test(value.trim())) return null;
+  return parseNumber(value);
+}
+
 export function analyze(rows, mapping, settings, firstRow = 2) {
   const safetyDays = Math.max(0, parseNumber(settings.safetyDays) ?? 0);
   const excessDays = Math.max(1, parseNumber(settings.excessDays) ?? 90);
@@ -118,24 +123,42 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const get = key => mapping[key] >= 0 ? cells[mapping[key]] : null;
     const item = String(get('item') ?? '').trim();
     const sku = String(get('sku') ?? '').trim();
-    const stock = parseNumber(get('stock'));
-    const minimum = parseNumber(get('minimum'));
-    const maximum = parseNumber(get('maximum'));
+    const stock = parseAnaliticoNumber(get('stock'));
+    const minimum = parseAnaliticoNumber(get('minimum'));
+    const maximum = parseAnaliticoNumber(get('maximum'));
     const stockValue = parseNumber(get('stockValue'));
     const coverage = parseNumber(get('giroDays'));
-    const daysSince = parseNumber(get('daysSince'));
+    const daysSince = parseAnaliticoNumber(get('daysSince'));
     const averageConsumption = parseNumber(get('averageConsumption'));
     const classification = String(get('classification') ?? '').trim();
     const blockReason = String(get('blockReason') ?? '').trim();
     const blockId = String(get('blockId') ?? '').trim();
     const lastRequest = String(get('lastRequest') ?? '').trim();
     const localCode = String(get('localCode') ?? '').trim();
-    const localNumber = parseNumber(get('localCode'));
+    const localNumber = parseAnaliticoNumber(get('localCode'));
     const base = { row: index + firstRow, item, sku, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
-    if (!item || stock === null || !classification) return { ...base, reason: 'Nome, quantidade ou classificação ausente.' };
-    const details = [daysSince === null ? '' : `${formatNumber(daysSince)} dias desde a última requisição`, blockReason, blockId ? `Id Bloqueio: ${blockId}` : ''].filter(Boolean);
+    const issues = [];
+    const checkNumber = (key, label, value) => {
+      if (!(mapping[key] >= 0)) issues.push(`${label}: coluna não mapeada`);
+      else if (value === null) issues.push(`${label}: valor ausente ou inválido`);
+      else if (value < 0) issues.push(`${label}: valor negativo`);
+    };
+    if (!item) issues.push('Nm Item: valor ausente');
+    if (!classification) issues.push('Itens Acima de 90 dias: valor ausente');
+    checkNumber('stock', 'Qtde Atual', stock);
+    checkNumber('daysSince', 'Dif Dias', daysSince);
+    checkNumber('minimum', 'Qnt Min', minimum);
+    checkNumber('maximum', 'Qnt Max', maximum);
+    checkNumber('localCode', 'Cd Local Estoque', localNumber);
     const reasonStatus = normalize(blockReason);
-    const alreadyBlocked = normalize(blockId).startsWith('bloqueado');
+    if (!(mapping.blockReason >= 0)) issues.push('Ds Motivo Bloqueio: coluna não mapeada');
+    else if (!['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) issues.push(`Ds Motivo Bloqueio: ${blockReason ? 'valor não reconhecido' : 'valor ausente'}`);
+    const blockStatus = normalize(blockId);
+    if (!(mapping.blockId >= 0)) issues.push('Id Bloqueio: coluna não mapeada');
+    else if (blockStatus !== 'desbloqueado' && !blockStatus.startsWith('bloqueado')) issues.push(`Id Bloqueio: ${blockId ? 'valor não reconhecido' : 'valor ausente'}`);
+    if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
+    const details = [daysSince === null ? '' : `${formatNumber(daysSince)} dias desde a última requisição`, blockReason, blockId ? `Id Bloqueio: ${blockId}` : ''].filter(Boolean);
+    const alreadyBlocked = blockStatus.startsWith('bloqueado');
     const hiddenByStatus = stock === 0 && minimum === 0 && maximum === 0 && reasonStatus === 'desbloqueado';
     const actions = [];
     if (daysSince !== null && daysSince >= 180 && stock > 0 && localNumber === 298 && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) actions.push('BLOQUEAR');
