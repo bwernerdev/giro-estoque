@@ -1,9 +1,19 @@
 import { importFile } from './import.js';
-import { analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, suggestMapping } from './analysis.js';
+import { analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, suggestMapping, summarizeLocationTotal } from './analysis.js';
 
 const app = document.querySelector('#app');
 const PAGE_SIZE = 50;
-const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], fileName: '', page: 1 };
+const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], fileName: '', page: 1, locationFilter: '' };
+
+function realCurrency(value) {
+  const numeric = Number(value) || 0;
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(numeric);
+}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -20,7 +30,7 @@ app.innerHTML = `
         <div class="section-head"><div><h2>Preparar análise</h2></div><div class="config-actions"><button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false">Abrir configuração ▾</button><span id="file-name" class="file-pill"></span></div></div>
         <div id="config-grid" class="config-grid" hidden><div class="panel"><h3>Colunas da planilha</h3><p class="panel-intro">Confirme quais colunas contêm os dados de cada item.</p><div id="mapping" class="mapping-grid"></div></div>
         <div class="panel" id="criteria-panel"><h3>Critérios de decisão</h3><p class="panel-intro" id="criteria-intro">Ajuste os limites de cobertura para sua operação.</p><div class="settings-grid" id="settings-grid"></div><p class="formula-note" id="formula-note"></p></div></div>
-        <section id="results-section" class="results-section"><div class="section-head"><div><span class="section-kicker">RESULTADOS</span><h2>Visão dos itens</h2></div></div><div id="summary" class="summary-grid"></div><div class="table-panel"><div class="table-tools"><label class="search-label">⌕ <input id="search" type="search" placeholder="Buscar item ou código"></label><div class="table-filters"><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select><label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> Mostrar itens ocultos</label><details id="export-menu" class="export-menu"><summary class="secondary-button">Exportar ▾</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details></div></div><div class="table-scroll"><table id="result-table"><thead id="table-head"></thead><tbody id="result-rows"></tbody></table></div><div id="table-footer" class="table-footer"><span id="page-status"></span><nav id="pagination" class="pagination" aria-label="Páginas de resultados" hidden><button id="page-previous" type="button">Anterior</button><span id="page-label"></span><button id="page-next" type="button">Próxima</button></nav></div></div></section>
+        <section id="results-section" class="results-section"><div class="section-head"><div><span class="section-kicker">RESULTADOS</span><h2>Visão dos itens</h2></div></div><div id="summary" class="summary-grid"></div><div class="table-panel"><div class="table-tools"><label class="search-label">⌕ <input id="search" type="search" placeholder="Buscar item ou código"></label><div class="table-filters"><select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos os locais</option></select><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select><label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> Mostrar itens ocultos</label><details id="export-menu" class="export-menu"><summary class="secondary-button">Exportar ▾</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details></div></div><div class="table-scroll"><table id="result-table"><thead id="table-head"></thead><tbody id="result-rows"></tbody></table></div><div id="table-footer" class="table-footer"><span id="page-status"></span><nav id="pagination" class="pagination" aria-label="Páginas de resultados" hidden><button id="page-previous" type="button">Anterior</button><span id="page-label"></span><button id="page-next" type="button">Próxima</button></nav></div></div></section>
       </section>
     </main>
   </div><section id="print-report" aria-hidden="true"></section>`;
@@ -80,12 +90,22 @@ function refresh() {
   state.results = analitico && !el('#show-hidden').checked ? state.allResults.filter(row => !row.hidden) : state.allResults;
   el('#hidden-toggle').hidden = !analitico;
   el('#results-section').hidden = false;
-  const actions = analitico ? ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Sem ação definida', 'Verificar dados'] : giro ? ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'] : ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
+  const actions = analitico ? ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'] : giro ? ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'] : ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
   const counts = analitico
-    ? [...actions.filter(action => action !== 'Verificar dados').map(action => ({ action, count: state.results.filter(row => row.actions.includes(action)).length })), { action: 'Itens ocultos', count: state.allResults.filter(row => row.hidden).length }, ...['Sem Saldo', 'Item com Giro', 'Item de Giro Baixo/Sem Saida'].map(action => ({ action, count: state.results.filter(row => row.classification === action).length }))]
+    ? [...actions.filter(action => action !== 'Verificar dados').map(action => ({ action, count: state.results.filter(row => row.actions.includes(action)).length })), { action: 'Itens ocultos', count: state.allResults.filter(row => row.hidden).length }]
     : actions.map(action => ({ action, count: state.results.filter(row => row.action === action).length }));
-  el('#summary').innerHTML = `<div class="summary-card total"><span>ITENS NO PAINEL</span><strong>${state.results.length}</strong></div>` + counts.map(({ action, count }) => `<div class="summary-card ${slug(action)}"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></div>`).join('');
+  const locationTotal = summarizeLocationTotal(state.allResults, state.locationFilter);
+  const localTotalCard = state.locationFilter || state.allResults.length > 0
+    ? `<div class="summary-card local-total"><span>${state.locationFilter ? 'TOTAL DO LOCAL' : 'TOTAL GERAL'}</span><strong>${realCurrency(locationTotal)}</strong></div>`
+    : '';
+  el('#summary').innerHTML = `<div class="summary-card total"><span>ITENS NO PAINEL</span><strong>${state.results.length}</strong></div>` + counts.map(({ action, count }) => `<div class="summary-card ${slug(action)}"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></div>`).join('') + (localTotalCard || '');
   const previousFilter = el('#filter').value;
+  const previousLocation = state.locationFilter;
+  const locationValues = [...new Set(state.allResults.map(row => String(row.localCode ?? row.location ?? row.branch ?? '').trim()).filter(Boolean))];
+  el('#location-filter').innerHTML = '<option value="">Todos os locais</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+  if (locationValues.includes(previousLocation)) state.locationFilter = previousLocation;
+  else state.locationFilter = '';
+  el('#location-filter').value = state.locationFilter;
   el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + actions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
   if (actions.includes(previousFilter)) el('#filter').value = previousFilter;
   el('#filter').setAttribute('aria-label', 'Filtrar ação');
@@ -99,8 +119,14 @@ function slug(text) { return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '
 function visibleResults() {
   const query = normalize(el('#search').value);
   const filter = el('#filter').value;
+  const localFilter = state.locationFilter;
   const analitico = isAnaliticoMode();
-  return state.results.filter(row => (!filter || (analitico ? row.actions.includes(filter) : row.action === filter)) && (!query || normalize(`${row.item} ${row.sku} ${row.branch || ''} ${row.location || ''} ${row.localCode || ''}`).includes(query)));
+  return state.results.filter(row => {
+    const localMatch = !localFilter || String(row.localCode ?? row.location ?? row.branch ?? '').trim() === localFilter;
+    const actionMatch = !filter || (analitico ? row.actions.includes(filter) : row.action === filter);
+    const searchMatch = !query || normalize(`${row.item} ${row.sku} ${row.branch || ''} ${row.location || ''} ${row.localCode || ''}`).includes(query);
+    return localMatch && actionMatch && searchMatch;
+  });
 }
 function renderResults() {
   const query = el('#search').value.trim().toLowerCase();
@@ -202,6 +228,11 @@ upload.addEventListener('dragleave', () => upload.classList.remove('dragging'));
 upload.addEventListener('drop', event => { event.preventDefault(); upload.classList.remove('dragging'); loadFile(event.dataTransfer.files[0]); });
 el('#search').addEventListener('input', () => { state.page = 1; renderResults(); });
 el('#filter').addEventListener('change', () => { state.page = 1; renderResults(); });
+el('#location-filter').addEventListener('change', () => {
+  state.locationFilter = el('#location-filter').value;
+  state.page = 1;
+  refresh();
+});
 function changePage(direction) {
   state.page += direction;
   renderResults();

@@ -138,27 +138,31 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const localNumber = parseAnaliticoNumber(get('localCode'));
     const base = { row: index + firstRow, item, sku, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
     const issues = [];
-    const checkNumber = (key, label, value) => {
-      if (!(mapping[key] >= 0)) issues.push(`${label}: coluna não mapeada`);
-      else if (value === null) issues.push(`${label}: valor ausente ou inválido`);
-      else if (value < 0) issues.push(`${label}: valor negativo`);
+    const checkNumber = (key, label, value, required = false) => {
+      if (!(mapping[key] >= 0)) {
+        if (required) issues.push(`${label}: coluna não mapeada`);
+        return;
+      }
+      if (value === null) issues.push(`${label}: valor ausente ou inválido`);
     };
     if (!item) issues.push('Nm Item: valor ausente');
     if (!classification) issues.push('Itens Acima de 90 dias: valor ausente');
-    checkNumber('stock', 'Qtde Atual', stock);
-    checkNumber('daysSince', 'Dif Dias', daysSince);
+    checkNumber('stock', 'Qtde Atual', stock, true);
     checkNumber('minimum', 'Qnt Min', minimum);
     checkNumber('maximum', 'Qnt Max', maximum);
-    checkNumber('localCode', 'Cd Local Estoque', localNumber);
+    if (mapping.daysSince >= 0) checkNumber('daysSince', 'Dif Dias', daysSince);
+    if (mapping.localCode >= 0) checkNumber('localCode', 'Cd Local Estoque', localNumber);
     const reasonStatus = normalize(blockReason);
-    if (!(mapping.blockReason >= 0)) issues.push('Ds Motivo Bloqueio: coluna não mapeada');
-    else if (!['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) issues.push(`Ds Motivo Bloqueio: ${blockReason ? 'valor não reconhecido' : 'valor ausente'}`);
+    if (mapping.blockReason >= 0 && !['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) {
+      issues.push(`Ds Motivo Bloqueio: ${blockReason ? 'valor não reconhecido' : 'valor ausente'}`);
+    }
     const blockStatus = normalize(blockId);
-    if (!(mapping.blockId >= 0)) issues.push('Id Bloqueio: coluna não mapeada');
-    else if (blockStatus !== 'desbloqueado' && !blockStatus.startsWith('bloqueado')) issues.push(`Id Bloqueio: ${blockId ? 'valor não reconhecido' : 'valor ausente'}`);
+    if (mapping.blockId >= 0 && blockStatus !== 'desbloqueado' && !blockStatus.startsWith('bloqueado')) {
+      issues.push(`Id Bloqueio: ${blockId ? 'valor não reconhecido' : 'valor ausente'}`);
+    }
     if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
     const details = [daysSince === null ? '' : `${formatNumber(daysSince)} dias desde a última requisição`, blockReason, blockId ? `Id Bloqueio: ${blockId}` : ''].filter(Boolean);
-    const alreadyBlocked = blockStatus.startsWith('bloqueado');
+    const alreadyBlocked = blockId ? blockStatus.startsWith('bloqueado') : false;
     const hiddenByStatus = stock === 0 && minimum === 0 && maximum === 0 && reasonStatus === 'desbloqueado';
     const actions = [];
     if (daysSince !== null && daysSince >= 180 && stock > 0 && localNumber === 298 && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) actions.push('BLOQUEAR');
@@ -172,6 +176,22 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     if (hidden) details.push(hiddenByStatus ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
     return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · ') };
   });
+}
+
+export function summarizeLocationTotal(rows, localFilter) {
+  const filterValue = String(localFilter ?? '').trim();
+  if (!filterValue) {
+    return rows.reduce((total, row) => {
+      const amount = parseNumber(row.stockValue ?? row.stock ?? 0);
+      return total + (Number.isFinite(amount) ? amount : 0);
+    }, 0);
+  }
+  return rows.reduce((total, row) => {
+    const localValue = String(row?.localCode ?? row?.location ?? row?.branch ?? '').trim();
+    if (localValue !== filterValue) return total;
+    const amount = parseNumber(row.stockValue ?? row.stock ?? 0);
+    return total + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
 }
 
 export function formatNumber(value) {

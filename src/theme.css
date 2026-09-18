@@ -31,6 +31,8 @@ html[data-theme="dark"] .search-label { background: #111c2a; border-color: #4153
 html[data-theme="dark"] .search-label input { background: transparent; }
 html[data-theme="dark"] .formula-note, html[data-theme="dark"] .table-footer, html[data-theme="dark"] footer { border-color: #32445a; }
 html[data-theme="dark"] .summary-card span, html[data-theme="dark"] th { color: #a8b8c8; }
+html[data-theme="dark"] .summary-card strong { color: #edf5ff; }
+html[data-theme="dark"] .summary-card.local-total strong { color: #bfe77c; }
 html[data-theme="dark"] th { background: #202f41; }
 html[data-theme="dark"] td { border-color: #2b3b50; color: #d4e0ea; }
 html[data-theme="dark"] td:first-child strong { color: #f0f5fa; }

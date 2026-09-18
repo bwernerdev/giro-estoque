@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, suggestMapping } from '../src/analysis.js';
+import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
 
 test('reconhece cabeçalhos comuns e recomenda ações distintas', () => {
   const mapping = suggestMapping(['Produto', 'Estoque Atual', 'Vendas 30 dias', 'Prazo de reposição']);
@@ -95,4 +95,16 @@ test('reconhece o cabeçalho deslocado e calcula giro a partir dos valores monet
   assert.equal(results[0].coverage, 15);
   assert.equal(results[0].row, 5);
   assert.equal(analyzeGiro([['Itajaí', 4, 'Peça D', '', '', 50, '']], mapping, { shortDays: 30, excessDays: 90, longDays: 365 })[0].action, 'Confirmar saldo');
+});
+
+test('soma o total do local de estoque selecionado em valor de saldo', () => {
+  const rows = [
+    { localCode: '7', stockValue: 120.5 },
+    { localCode: '7', stockValue: 75 },
+    { localCode: '298', stockValue: 40 },
+    { localCode: '7', stockValue: null },
+  ];
+  assert.equal(summarizeLocationTotal(rows, '7'), 195.5);
+  assert.equal(summarizeLocationTotal(rows, '298'), 40);
+  assert.equal(summarizeLocationTotal(rows, ''), 235.5);
 });
