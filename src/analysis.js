@@ -22,6 +22,7 @@ export const fields = [
 ];
 
 export const ANALITICO_REQUIRED_KEYS = ['item', 'stock', 'minimum', 'maximum', 'daysSince', 'classification', 'blockReason', 'blockId', 'localCode'];
+const OBSOLETE_LOCATION_CODES = new Set([1, 298]);
 
 export function normalize(value) {
   return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -144,6 +145,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const lastRequest = String(get('lastRequest') ?? '').trim();
     const localCode = String(get('localCode') ?? '').trim();
     const localNumber = parseAnaliticoNumber(get('localCode'));
+    const isObsoleteLocation = OBSOLETE_LOCATION_CODES.has(localNumber);
     const base = { row: index + firstRow, item, sku, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
     const issues = [];
     const checkNumber = (key, label, value, required = false) => {
@@ -175,16 +177,16 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const alreadyBlocked = blockId ? blockStatus.startsWith('bloqueado') : false;
     const hiddenByStatus = stock === 0 && minimum === 0 && maximum === 0 && reasonStatus === 'desbloqueado';
     const actions = [];
-    if (daysSince !== null && daysSince >= 180 && stock > 0 && localNumber === 298 && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) {
+    if (daysSince !== null && daysSince >= 180 && stock > 0 && isObsoleteLocation && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) {
       if (!alreadyBlocked) actions.push('BLOQUEAR');
     }
     else if (daysSince !== null && daysSince >= 180 && stock > 0 && (reasonStatus === 'bloqueado por saldo' || (reasonStatus === 'desbloqueado' && localNumber !== null && localNumber !== 7))) actions.push(alreadyBlocked ? 'TRANSFERIR OBSOLETO' : 'BLOQUEAR E TRANSFERIR OBSOLETO');
     else if (daysSince !== null && daysSince >= 90 && stock > 0 && reasonStatus === 'desbloqueado') actions.push('BLOQUEAR');
     if (daysSince !== null && daysSince >= 90 && stock === 0 && reasonStatus === 'bloqueado por saldo') actions.push('DESBLOQUEAR');
-    if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && localNumber === 298 && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
+    if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && isObsoleteLocation && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
     if (!actions.length) actions.push('Sem ação definida');
     const hidden = hiddenByStatus || actions.includes('Sem ação definida');
-    if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local 298, ao menos 180 dias sem requisição e item bloqueado.');
+    if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local obsoleto (1 ou 298), ao menos 180 dias sem requisição e item bloqueado.');
     if (hidden) details.push(hiddenByStatus ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
     return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · ') };
   });

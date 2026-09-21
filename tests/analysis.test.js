@@ -95,6 +95,22 @@ test('mantém visíveis as linhas inválidas e informa o campo que precisa de co
   assert.match(results[2].reason, /Qnt Min: maior que Qnt Max/);
 });
 
+test('aplica ao local 1 as mesmas regras de obsoleto do local 298', () => {
+  const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  const results = analyzeAnalitico([
+    ['Já bloqueado e sem limites', 5, 180, 'Bloqueado por saldo', 'Bloqueado por saldo', 0, 0, 'Item de Giro Baixo/Sem Saida', 1],
+    ['Desbloqueado', 5, 180, 'Desbloqueado', 'Desbloqueado', 0, 0, 'Item de Giro Baixo/Sem Saida', 1],
+    ['Já bloqueado e com limites', 5, 180, 'Bloqueado por saldo', 'Bloqueado por saldo', 1, 2, 'Item de Giro Baixo/Sem Saida', 1],
+  ], mapping);
+
+  assert.deepEqual(results.map(row => row.actions), [
+    ['Sem ação definida'],
+    ['BLOQUEAR'],
+    ['ZERAR MIN/MAX'],
+  ]);
+  assert.deepEqual(results.map(row => row.hidden), [true, false, false]);
+});
+
 test('reconhece o cabeçalho deslocado e calcula giro a partir dos valores monetários', () => {
   const rows = [[], ['Giro por SKU'], [], ['Filial ', 'SKU', 'Nome do SKU', 'Quantidade', 'Valor do Estoque', 'Valor do Consumo', 'Giro em Dias']];
   assert.equal(findHeaderRow(rows), 3);
