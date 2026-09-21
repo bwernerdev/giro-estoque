@@ -175,7 +175,9 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const alreadyBlocked = blockId ? blockStatus.startsWith('bloqueado') : false;
     const hiddenByStatus = stock === 0 && minimum === 0 && maximum === 0 && reasonStatus === 'desbloqueado';
     const actions = [];
-    if (daysSince !== null && daysSince >= 180 && stock > 0 && localNumber === 298 && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) actions.push('BLOQUEAR');
+    if (daysSince !== null && daysSince >= 180 && stock > 0 && localNumber === 298 && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) {
+      if (!alreadyBlocked) actions.push('BLOQUEAR');
+    }
     else if (daysSince !== null && daysSince >= 180 && stock > 0 && (reasonStatus === 'bloqueado por saldo' || (reasonStatus === 'desbloqueado' && localNumber !== null && localNumber !== 7))) actions.push(alreadyBlocked ? 'TRANSFERIR OBSOLETO' : 'BLOQUEAR E TRANSFERIR OBSOLETO');
     else if (daysSince !== null && daysSince >= 90 && stock > 0 && reasonStatus === 'desbloqueado') actions.push('BLOQUEAR');
     if (daysSince !== null && daysSince >= 90 && stock === 0 && reasonStatus === 'bloqueado por saldo') actions.push('DESBLOQUEAR');

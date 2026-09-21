@@ -23,11 +23,11 @@ Regras de ação fornecidas pelo usuário:
 - `Dif Dias >= 90`, `Qtde Atual > 0` e `Ds Motivo Bloqueio = Desbloqueado`: **BLOQUEAR**.
 - `Dif Dias >= 180`, `Qtde Atual > 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: transferir a obsoleto, exceto no local **298**. Se `Id Bloqueio` já indica bloqueio, o texto exibido é **TRANSFERIR OBSOLETO**; caso contrário, **BLOQUEAR E TRANSFERIR OBSOLETO**. A condição adicional `Cd Local Estoque ≠ 7` para esse mesmo estado está contida nesta regra.
 - `Dif Dias >= 180`, `Qtde Atual > 0`, `Ds Motivo Bloqueio = Desbloqueado` e `Cd Local Estoque` diferente de **7** e **298**: **BLOQUEAR E TRANSFERIR OBSOLETO**. Neste caso, a transferência substitui **BLOQUEAR**; no local 7 permanece apenas **BLOQUEAR**.
-- Se o item já está no local **298**, não é recomendada nova transferência. Para `Dif Dias >= 180`, `Qtde Atual > 0` e status **Desbloqueado** ou **Bloqueado por saldo**, a ação é apenas **BLOQUEAR**.
+- Se o item já está no local **298**, não é recomendada nova transferência. Para `Dif Dias >= 180`, `Qtde Atual > 0` e status **Desbloqueado**, a ação é **BLOQUEAR**. Se `Id Bloqueio` já indicar bloqueio, essa ação não é repetida.
 - `Dif Dias >= 90`, `Qtde Atual = 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: **DESBLOQUEAR**.
 - `Qtde Atual > 0`, pelo menos um entre `Qnt Min` e `Qnt Max` diferente de zero, `Cd Local Estoque = 298`, `Dif Dias >= 180` e `Id Bloqueio` começa por **Bloqueado**: **ZERAR MIN/MAX**.
 
-Um item no local **298** pode receber **BLOQUEAR** e **ZERAR MIN/MAX** ao mesmo tempo. Os demais ficam **Sem ação definida** até que outra regra seja informada.
+Um item bloqueado no local **298** pode receber **ZERAR MIN/MAX** quando atender às condições dessa regra. Se não houver outra ação aplicável, fica **Sem ação definida** e oculto por padrão.
 
 Itens com **Sem ação definida** ficam ocultos por padrão, assim como os itens com `Qtde Atual = 0`, `Qnt Min = 0`, `Qnt Max = 0` e `Ds Motivo Bloqueio = Desbloqueado`. Marque **Mostrar itens ocultos**, ao lado do filtro de ações, para ver os itens ocultos identificados na tabela.
 

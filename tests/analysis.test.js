@@ -65,9 +65,9 @@ test('aplica as condições de ação e ocultação informadas', () => {
     ['Sem ação definida'], ['BLOQUEAR'], ['BLOQUEAR'], ['BLOQUEAR'],
     ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'], ['Sem ação definida'],
     ['Verificar dados'], ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'],
-    ['Sem ação definida'], ['Sem ação definida'], ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['BLOQUEAR'],
+    ['Sem ação definida'], ['Sem ação definida'], ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['TRANSFERIR OBSOLETO'], ['Sem ação definida'], ['BLOQUEAR'],
     ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['BLOQUEAR E TRANSFERIR OBSOLETO'],
-    ['BLOQUEAR', 'ZERAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
+    ['ZERAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
     ['DESBLOQUEAR'], ['Verificar dados'],
   ]);
   assert.equal(results[0].hidden, true);
@@ -76,6 +76,8 @@ test('aplica as condições de ação e ocultação informadas', () => {
   assert.equal(results[7].hidden, false);
   assert.equal(results[10].hidden, true);
   assert.equal(results[11].hidden, true);
+  assert.equal(results[14].hidden, true);
+  assert.equal(results[19].hidden, false);
   assert.equal(results[1].hidden, false);
 });
 
