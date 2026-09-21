@@ -21,6 +21,8 @@ export const fields = [
   { key: 'localCode', label: 'Código do local', required: false, aliases: ['cd local estoque'] },
 ];
 
+export const ANALITICO_REQUIRED_KEYS = ['item', 'stock', 'minimum', 'maximum', 'daysSince', 'classification', 'blockReason', 'blockId', 'localCode'];
+
 export function normalize(value) {
   return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
@@ -150,6 +152,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
         return;
       }
       if (value === null) issues.push(`${label}: valor ausente ou inválido`);
+      else if (value < 0) issues.push(`${label}: valor negativo`);
     };
     if (!item) issues.push('Nm Item: valor ausente');
     if (!classification) issues.push('Itens Acima de 90 dias: valor ausente');
@@ -166,6 +169,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     if (mapping.blockId >= 0 && blockStatus !== 'desbloqueado' && !blockStatus.startsWith('bloqueado')) {
       issues.push(`Id Bloqueio: ${blockId ? 'valor não reconhecido' : 'valor ausente'}`);
     }
+    if (minimum !== null && maximum !== null && minimum > maximum) issues.push('Qnt Min: maior que Qnt Max');
     if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
     const details = [daysSince === null ? '' : `${formatNumber(daysSince)} dias desde a última requisição`, blockReason, blockId ? `Id Bloqueio: ${blockId}` : ''].filter(Boolean);
     const alreadyBlocked = blockId ? blockStatus.startsWith('bloqueado') : false;

@@ -64,19 +64,33 @@ test('aplica as condições de ação e ocultação informadas', () => {
   assert.deepEqual(results.map(row => row.actions), [
     ['Sem ação definida'], ['BLOQUEAR'], ['BLOQUEAR'], ['BLOQUEAR'],
     ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'], ['Sem ação definida'],
-    ['Sem ação definida'], ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'],
+    ['Verificar dados'], ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'],
     ['Sem ação definida'], ['Sem ação definida'], ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['BLOQUEAR'],
     ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['BLOQUEAR E TRANSFERIR OBSOLETO'],
     ['BLOQUEAR', 'ZERAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
-    ['DESBLOQUEAR'], ['Sem ação definida'],
+    ['DESBLOQUEAR'], ['Verificar dados'],
   ]);
   assert.equal(results[0].hidden, true);
   assert.equal(results[5].hidden, false);
   assert.equal(results[9].hidden, false);
-  assert.equal(results[7].hidden, true);
+  assert.equal(results[7].hidden, false);
   assert.equal(results[10].hidden, true);
   assert.equal(results[11].hidden, true);
   assert.equal(results[1].hidden, false);
+});
+
+test('mantém visíveis as linhas inválidas e informa o campo que precisa de correção', () => {
+  const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  const results = analyzeAnalitico([
+    ['Saldo negativo', -1, 180, 'Desbloqueado', 'Desbloqueado', 0, 0, 'Sem Saldo', 7],
+    ['Status ausente', 2, 180, '', 'Desbloqueado', 0, 0, 'Item com Giro', 7],
+    ['Limites invertidos', 2, 180, 'Desbloqueado', 'Desbloqueado', 8, 4, 'Item com Giro', 7],
+  ], mapping);
+
+  assert.ok(results.every(row => row.action === 'Verificar dados' && row.hidden === false));
+  assert.match(results[0].reason, /Qtde Atual: valor negativo/);
+  assert.match(results[1].reason, /Ds Motivo Bloqueio: valor ausente/);
+  assert.match(results[2].reason, /Qnt Min: maior que Qnt Max/);
 });
 
 test('reconhece o cabeçalho deslocado e calcula giro a partir dos valores monetários', () => {

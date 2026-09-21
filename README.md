@@ -16,6 +16,8 @@ A análise acontece no navegador; a planilha não é enviada a um servidor. A bi
 
 O padrão principal é a aba **Analítico** da `PLANILHA.xlsx`. A primeira linha contém cabeçalhos como `Cd Item`, `Nm Item`, `Qtde Atual`, `Qnt Min`, `Qnt Max`, `Giro Estoque (Dias)` e `Itens Acima de 90 dias`. O sistema exibe a classificação **exatamente como está na planilha**. Linhas de soma sem item são ignoradas.
 
+Antes de aplicar as regras, o sistema valida as colunas obrigatórias e os valores de cada item. Quantidades negativas, mínimo maior que máximo, status não reconhecido e valores obrigatórios ausentes recebem **Verificar dados**. Essas linhas permanecem visíveis, mostram o campo que precisa de correção em **Outros dados** e entram no respectivo filtro e cartão do resumo.
+
 Regras de ação fornecidas pelo usuário:
 
 - `Dif Dias >= 90`, `Qtde Atual > 0` e `Ds Motivo Bloqueio = Desbloqueado`: **BLOQUEAR**.

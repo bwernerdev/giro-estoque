@@ -1,9 +1,12 @@
 import { importFile } from './import.js';
-import { analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
 
 const app = document.querySelector('#app');
 const PAGE_SIZE = 50;
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], fileName: '', page: 1, locationFilter: '' };
+const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
+const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
+const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 
 function realCurrency(value) {
   const numeric = Number(value) || 0;
@@ -44,7 +47,11 @@ function setTheme(theme) {
   document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#080e17' : '#0b1725');
 }
 try { setTheme(localStorage.getItem('giro-estoque-theme')); } catch { setTheme('light'); }
-function message(text, error = false) { el('#message').textContent = text; el('#message').className = text ? (error ? 'message error' : 'message') : ''; }
+function message(text, tone = '') {
+  const type = tone === true ? 'error' : tone;
+  el('#message').textContent = text;
+  el('#message').className = text ? `message${type ? ` ${type}` : ''}` : '';
+}
 function setConfigExpanded(expanded) {
   el('#config-grid').hidden = !expanded;
   el('#config-toggle').setAttribute('aria-expanded', String(expanded));
@@ -53,8 +60,14 @@ function setConfigExpanded(expanded) {
 function currentSheet() { return state.sheets[state.sheet]; }
 function dataRows() { return currentSheet().rows.slice(currentSheet().headerRow + 1).filter(row => row.some(value => String(value ?? '').trim()) && (state.mapping.item < 0 || String(row[state.mapping.item] ?? '').trim())); }
 
-function isGiroMode() { return state.mapping.stockValue >= 0 && state.mapping.consumption >= 0; }
-function isAnaliticoMode() { return state.mapping.stock >= 0 && state.mapping.classification >= 0; }
+function isMapped(key) { return state.mapping[key] >= 0; }
+function isGiroMode() { return isMapped('stockValue') || isMapped('consumption'); }
+function isAnaliticoMode() { return isMapped('classification') || (isMapped('daysSince') && isMapped('blockReason')); }
+function requiredKeys() {
+  if (isAnaliticoMode()) return ANALITICO_REQUIRED_KEYS;
+  if (isGiroMode()) return ['item', 'stockValue', 'consumption'];
+  return ['item', 'stock', 'sales'];
+}
 function renderSettings() {
   el('#criteria-panel').hidden = isAnaliticoMode();
   el('.config-grid').classList.toggle('single-panel', isAnaliticoMode());
@@ -70,7 +83,8 @@ function renderSettings() {
 
 function renderMapping() {
   const headers = currentSheet().rows[currentSheet().headerRow] || [];
-  el('#mapping').innerHTML = `<label class="sheet-select">Aba<select id="sheet-select">${state.sheets.map((sheet, i) => `<option value="${i}" ${i === state.sheet ? 'selected' : ''}>${escapeHtml(sheet.name)}</option>`).join('')}</select></label>` + fields.filter(field => state.mapping[field.key] >= 0 || ['item', 'sku', 'stock'].includes(field.key)).map(field => `<label>${field.label}${(field.key === 'item' || (isAnaliticoMode() && ['stock', 'classification'].includes(field.key)) || (!isAnaliticoMode() && !isGiroMode() && ['stock', 'sales'].includes(field.key))) ? ' <span class="required">*</span>' : ''}<select data-map="${field.key}"><option value="-1">Não selecionar</option>${headers.map((header, i) => `<option value="${i}" ${state.mapping[field.key] === i ? 'selected' : ''}>${escapeHtml(header || `Coluna ${i + 1}`)}</option>`).join('')}</select></label>`).join('');
+  const required = new Set(requiredKeys());
+  el('#mapping').innerHTML = `<label class="sheet-select">Aba<select id="sheet-select">${state.sheets.map((sheet, i) => `<option value="${i}" ${i === state.sheet ? 'selected' : ''}>${escapeHtml(sheet.name)}</option>`).join('')}</select></label>` + fields.map(field => `<label>${field.label}${required.has(field.key) ? ' <span class="required">*</span>' : ''}<select data-map="${field.key}"><option value="-1">Não selecionar</option>${headers.map((header, i) => `<option value="${i}" ${state.mapping[field.key] === i ? 'selected' : ''}>${escapeHtml(header || `Coluna ${i + 1}`)}</option>`).join('')}</select></label>`).join('');
   el('#sheet-select').addEventListener('change', event => { state.sheet = Number(event.target.value); state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []); renderMapping(); renderSettings(); refresh(); });
   el('#mapping').querySelectorAll('[data-map]').forEach(select => select.addEventListener('change', () => { state.mapping[select.dataset.map] = Number(select.value); renderSettings(); refresh(); }));
 }
@@ -78,7 +92,8 @@ function renderMapping() {
 function refresh() {
   const analitico = isAnaliticoMode();
   const giro = !analitico && isGiroMode();
-  const missing = fields.filter(field => (field.key === 'item' || (analitico && ['stock', 'classification'].includes(field.key)) || (!analitico && !giro && ['stock', 'sales'].includes(field.key))) && state.mapping[field.key] < 0);
+  const required = new Set(requiredKeys());
+  const missing = fields.filter(field => required.has(field.key) && !isMapped(field.key));
   if (missing.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message(`Selecione as colunas: ${missing.map(field => field.label).join(', ')}.`, true); return; }
   const selected = fields.map(field => state.mapping[field.key]).filter(value => value >= 0);
   if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', true); return; }
@@ -90,9 +105,9 @@ function refresh() {
   state.results = analitico && !el('#show-hidden').checked ? state.allResults.filter(row => !row.hidden) : state.allResults;
   el('#hidden-toggle').hidden = !analitico;
   el('#results-section').hidden = false;
-  const actions = analitico ? ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'] : giro ? ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'] : ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
+  const actions = analitico ? ANALITICO_ACTIONS : giro ? GIRO_ACTIONS : GENERIC_ACTIONS;
   const counts = analitico
-    ? [...actions.filter(action => action !== 'Verificar dados').map(action => ({ action, count: state.results.filter(row => row.actions.includes(action)).length })), { action: 'Itens ocultos', count: state.allResults.filter(row => row.hidden).length }]
+    ? [...actions.map(action => ({ action, count: state.results.filter(row => row.actions.includes(action)).length })), { action: 'Itens ocultos', count: state.allResults.filter(row => row.hidden).length }]
     : actions.map(action => ({ action, count: state.results.filter(row => row.action === action).length }));
   const locationTotal = summarizeLocationTotal(state.allResults, state.locationFilter);
   const localTotalCard = state.locationFilter || state.allResults.length > 0
@@ -101,7 +116,8 @@ function refresh() {
   el('#summary').innerHTML = `<div class="summary-card total"><span>ITENS NO PAINEL</span><strong>${state.results.length}</strong></div>` + counts.map(({ action, count }) => `<div class="summary-card ${slug(action)}"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></div>`).join('') + (localTotalCard || '');
   const previousFilter = el('#filter').value;
   const previousLocation = state.locationFilter;
-  const locationValues = [...new Set(state.allResults.map(row => String(row.localCode ?? row.location ?? row.branch ?? '').trim()).filter(Boolean))];
+  const locationValues = [...new Set(state.allResults.map(row => String(row.localCode ?? row.location ?? row.branch ?? '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
   el('#location-filter').innerHTML = '<option value="">Todos os locais</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
 
   const normalizedPreviousLocation = normalizeLocalKey(previousLocation);
@@ -113,7 +129,8 @@ function refresh() {
   el('#filter').setAttribute('aria-label', 'Filtrar ação');
   el('#result-table').className = analitico ? 'analitico-table' : 'standard-table';
   el('#table-head').innerHTML = analitico ? '<tr><th>ITEM / CÓDIGO</th><th>QTD. ATUAL</th><th>MÍN. / MÁX.</th><th>GIRO</th><th>CLASSIFICAÇÃO</th><th>AÇÃO</th><th>OUTROS DADOS</th></tr>' : giro ? '<tr><th>ITEM / FILIAL</th><th>ESTOQUE (R$)</th><th>CONSUMO (R$)</th><th>GIRO</th><th>RECOMENDAÇÃO</th><th>MOTIVO</th></tr>' : '<tr><th>ITEM</th><th>ESTOQUE</th><th>VENDAS / 30D</th><th>COBERTURA</th><th>RECOMENDAÇÃO</th><th>MOTIVO</th></tr>';
-  message(state.results.some(row => row.action === 'Verificar dados') ? 'Algumas linhas precisam de revisão. Confira os dados de origem e o mapeamento.' : '');
+  const reviewCount = state.results.filter(row => row.action === 'Verificar dados').length;
+  message(reviewCount ? `${reviewCount} ${reviewCount === 1 ? 'linha precisa' : 'linhas precisam'} de revisão. Consulte “Outros dados” para corrigir a planilha.` : '', reviewCount ? 'warning' : '');
   renderResults();
 }
 
@@ -143,7 +160,7 @@ function renderResults() {
   const visible = filtered.slice(start, start + PAGE_SIZE);
   el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? currency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? currency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(action => `<span class="badge ${slug(action)}">${escapeHtml(action)}</span>`).join(' ') : `<span class="badge ${slug(row.action)}">${escapeHtml(row.action)}</span>`}</td><td class="reason">${escapeHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
   const itemLabel = filtered.length === 1 ? 'item' : 'itens';
-  const filterLabel = query || filter ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
+  const filterLabel = query || filter || state.locationFilter ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
   el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
   el('#pagination').hidden = pageCount <= 1;
   el('#page-label').textContent = `Página ${state.page} de ${pageCount}`;
@@ -161,7 +178,8 @@ function exportData() {
 }
 function exportName(extension) {
   const action = slug(el('#filter').value || 'todas-as-acoes');
-  return `controle-estoque-${action}.${extension}`;
+  const local = state.locationFilter ? `-local-${slug(state.locationFilter)}` : '';
+  return `controle-estoque-${action}${local}.${extension}`;
 }
 function saveBlob(blob, fileName) {
   const url = URL.createObjectURL(blob);
@@ -200,13 +218,16 @@ function exportPdf() {
   const rows = visibleResults();
   const filter = el('#filter').value || 'Todas as ações';
   const search = el('#search').value.trim();
-  el('#print-report').innerHTML = `<h1>Controle de Estoque</h1><p>Ação: ${escapeHtml(filter)}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const local = state.locationFilter ? ` · Local: ${escapeHtml(state.locationFilter)}` : '';
+  el('#print-report').innerHTML = `<h1>Controle de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   window.print();
 }
 
 async function loadFile(file) {
   if (!file) return;
   message('Lendo planilha...');
+  upload.setAttribute('aria-busy', 'true');
+  upload.classList.add('loading');
   try {
     state.sheets = (await importFile(file)).map(sheet => ({ ...sheet, headerRow: findHeaderRow(sheet.rows) }));
     if (!state.sheets.length || !state.sheets.some(sheet => sheet.rows.length > sheet.headerRow + 1)) throw new Error('Não encontrei linhas de dados na planilha.');
@@ -221,6 +242,7 @@ async function loadFile(file) {
     el('.shell').classList.add('has-data');
     renderMapping(); renderSettings(); refresh();
   } catch (error) { message(error.message || 'Não foi possível abrir o arquivo.', true); }
+  finally { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); }
 }
 
 el('#file-input').addEventListener('change', event => { const file = event.target.files[0]; event.target.value = ''; loadFile(file); });
