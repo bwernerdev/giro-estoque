@@ -10,7 +10,7 @@ Após importar uma planilha, a apresentação e a área de importação ficam co
 
 Use o botão **Modo escuro** no cabeçalho para alternar o tema. A escolha fica salva no navegador.
 
-A análise acontece no navegador; a planilha não é enviada a um servidor. A biblioteca ExcelJS está incluída em `vendor/` para que o Go Live funcione sem instalar pacotes.
+A análise acontece no navegador; a planilha não é enviada a um servidor. A biblioteca ExcelJS e as fontes visuais estão incluídas no projeto para que o Go Live funcione sem depender da internet. Planilhas grandes são analisadas em blocos e exibem o andamento da leitura.
 
 ## Planilha
 
@@ -34,6 +34,19 @@ Itens com **Sem ação definida** ficam ocultos por padrão, assim como os itens
 O menu **Exportar**, ao lado dos filtros, oferece Excel (.xlsx), CSV e PDF. A tabela mostra até **50 itens por página**. As exportações incluem todos os itens que correspondem ao filtro de ação, à busca e à opção **Mostrar itens ocultos**, inclusive os de outras páginas. Para PDF, o navegador abre a impressão; selecione **Salvar como PDF** como destino.
 
 O sistema procura o cabeçalho nas primeiras 20 linhas e reconhece o relatório **BBOG6656 - Giro De Estoques Almoxarifado Por Filial**. É possível corrigir o mapeamento após a importação. Arquivos Excel podem conter várias abas; escolha a aba na interface.
+
+Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm Item` como nome do item.
+
+## Estrutura do código
+
+- `src/analysis.js`: validação dos dados e regras de negócio.
+- `src/dashboard.js`: busca, filtros, resumo, paginação e processamento em blocos.
+- `src/export-data.js`: preparação dos dados para Excel e CSV.
+- `src/template.js`: estrutura HTML da interface.
+- `src/main.js`: integração da interface, importação e exportação.
+- `src/style.css`, `src/theme.css` e `src/responsive.css`: estilos base, tema escuro e responsividade.
+
+Execute `npm test` para validar regras, filtros, paginação, nova importação, exportação e estrutura acessível da interface.
 
 No relatório BBOG6656, o giro é calculado como `Valor do Estoque ÷ Valor do Consumo × 30`. O arquivo de exemplo traz o giro como valor, sem fórmulas gravadas nas células. O sistema recalcula o valor e confere diferenças com a coluna `Giro em Dias`. Sem consumo, o giro é indefinido; esses itens recebem a recomendação **Investigar sem consumo**. Quando há consumo e o saldo está em branco, a recomendação é **Confirmar saldo** antes de decidir pela reposição.
 

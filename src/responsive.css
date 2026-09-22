@@ -35,7 +35,6 @@
   #result-table thead th { position: sticky; top: 0; z-index: 1; box-shadow: inset 0 -1px 0 #e3e9ec; }
   #result-table tbody tr { transition: background-color .14s ease; }
   #result-table tbody tr:hover { background: #f8fbf5; }
-  .table-filters select:focus { border-color: #92bd38; box-shadow: none; outline: none; }
   button:focus-visible,
   .primary-button:focus-visible,
   .config-toggle:focus-visible,
@@ -61,10 +60,10 @@
 
 @media (hover: hover) and (pointer: fine) {
   .summary-card:hover { transform: translateY(-2px); border-color: #d2dee3; box-shadow: 0 10px 26px rgba(12, 26, 38, .07); }
+  html[data-theme="dark"] .summary-card:hover { border-color: #465b72; box-shadow: 0 10px 26px rgba(0, 0, 0, .2); }
 }
 
 html[data-theme="dark"] #result-table tbody tr:hover { background: #1d2b3b; }
-html[data-theme="dark"] .summary-card:hover { border-color: #465b72; box-shadow: 0 10px 26px rgba(0, 0, 0, .2); }
 html[data-theme="dark"] .message.warning { color: #f1c873; }
 html[data-theme="dark"] .search-label:focus-within { background: #152233; }
 html[data-theme="dark"] #result-table thead th { box-shadow: inset 0 -1px 0 #3a4c61; }
@@ -73,16 +72,13 @@ html[data-theme="dark"] #result-table thead th { box-shadow: inset 0 -1px 0 #3a4
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
 
-@media screen and (max-width: 1100px) {
-  #result-table th,
-  #result-table td { padding-inline: 8px; }
-}
-
 @media screen and (max-width: 1200px) {
   .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media screen and (max-width: 1100px) {
+  #result-table th,
+  #result-table td { padding-inline: 8px; }
   .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .summary-card span { letter-spacing: .08em; }
   .summary-card strong { font-size: clamp(15px, 1.9vw, 20px); }

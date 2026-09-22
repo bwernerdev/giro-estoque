@@ -1,13 +1,16 @@
 import { importFile } from './import.js';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalize, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js';
+import { buildCsv, buildExportData } from './export-data.js';
+import { renderApp } from './template.js';
 
 const app = document.querySelector('#app');
-const PAGE_SIZE = 50;
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '' };
 const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+let refreshRun = 0;
 
 function realCurrency(value) {
   const numeric = Number(value) || 0;
@@ -19,21 +22,7 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
-app.innerHTML = `
-  <div class="shell">
-    <header class="topbar"><div class="brand"><span class="brand-mark">↗</span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div><button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">☾ Modo escuro</button></header>
-    <main>
-      <section class="hero"><div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE MATERIAIS</div><h1>Entenda o giro<br>de cada <em>item.</em></h1><p>Consulte quantidades, limites, classificação e ações por item.</p></section>
-      <section class="upload-card" id="upload-card"><div class="upload-icon">⇧</div><div><h2>Importar planilha</h2><p>Arraste um arquivo aqui ou selecione no computador</p><small>Excel .xlsx ou CSV · análise local no navegador</small></div><label class="primary-button" for="file-input">Selecionar arquivo <span>→</span></label><input id="file-input" type="file" accept=".xlsx,.csv" hidden></section>
-      <div id="message" role="status" aria-live="polite"></div>
-      <section id="workspace" hidden>
-        <div class="section-head"><div><h2>Preparar análise</h2></div><div class="config-actions"><button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false">Abrir configuração ▾</button><span id="file-name" class="file-pill"></span></div></div>
-        <div id="config-grid" class="config-grid" hidden><div class="panel"><h3>Colunas da planilha</h3><p class="panel-intro">Confirme quais colunas contêm os dados de cada item.</p><div id="mapping" class="mapping-grid"></div></div>
-        <div class="panel" id="criteria-panel"><h3>Critérios de decisão</h3><p class="panel-intro" id="criteria-intro">Ajuste os limites de cobertura para sua operação.</p><div class="settings-grid" id="settings-grid"></div><p class="formula-note" id="formula-note"></p></div></div>
-        <section id="results-section" class="results-section"><div class="section-head"><div><span class="section-kicker">RESULTADOS</span><h2>Visão dos itens</h2></div></div><div id="summary" class="summary-grid"></div><div class="table-panel"><div class="table-tools"><label class="search-label">⌕ <input id="search" type="search" placeholder="Buscar item ou código"></label><div class="table-filters"><select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos os locais</option></select><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select><label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> Mostrar itens ocultos</label><details id="export-menu" class="export-menu"><summary class="secondary-button">Exportar ▾</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details></div></div><div class="table-scroll"><table id="result-table"><thead id="table-head"></thead><tbody id="result-rows"></tbody></table></div><div id="table-footer" class="table-footer"><span id="page-status"></span><nav id="pagination" class="pagination" aria-label="Páginas de resultados" hidden><button id="page-previous" type="button">Anterior</button><span id="page-label"></span><button id="page-next" type="button">Próxima</button></nav></div></div></section>
-      </section>
-    </main>
-  </div><section id="print-report" aria-hidden="true"></section>`;
+app.innerHTML = renderApp();
 
 const el = selector => document.querySelector(selector);
 function setTheme(theme) {
@@ -56,10 +45,6 @@ function setConfigExpanded(expanded) {
 }
 function currentSheet() { return state.sheets[state.sheet]; }
 function dataRows() { return currentSheet().rows.slice(currentSheet().headerRow + 1).filter(row => row.some(value => String(value ?? '').trim()) && (state.mapping.item < 0 || String(row[state.mapping.item] ?? '').trim())); }
-function rowLocation(row) { return row.localCode ?? row.location ?? row.branch ?? ''; }
-function matchesLocation(row, location = state.locationFilter) {
-  return !location || normalizeLocalKey(rowLocation(row)) === normalizeLocalKey(location);
-}
 
 function isMapped(key) { return state.mapping[key] >= 0; }
 function isGiroMode() { return isMapped('stockValue') || isMapped('consumption'); }
@@ -95,7 +80,8 @@ function renderMapping() {
   }));
 }
 
-function refresh() {
+async function refresh({ reanalyze = true } = {}) {
+  const run = reanalyze ? ++refreshRun : refreshRun;
   const analitico = isAnaliticoMode();
   const giro = !analitico && isGiroMode();
   const required = new Set(requiredKeys());
@@ -103,29 +89,38 @@ function refresh() {
   if (missing.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message(`Selecione as colunas: ${missing.map(field => field.label).join(', ')}.`, true); return; }
   const selected = fields.map(field => state.mapping[field.key]).filter(value => value >= 0);
   if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', true); return; }
-  state.allResults = analitico
-    ? analyzeAnalitico(dataRows(), state.mapping, currentSheet().headerRow + 2)
-    : giro
-      ? analyzeGiro(dataRows(), state.mapping, { shortDays: el('#short-days').value, excessDays: el('#excess-days').value, longDays: el('#long-days').value }, currentSheet().headerRow + 2)
-      : analyze(dataRows(), state.mapping, { safetyDays: el('#safety-days').value, excessDays: el('#excess-days').value, defaultLead: el('#default-lead').value }, currentSheet().headerRow + 2);
+  if (reanalyze) {
+    const rows = dataRows();
+    const analyzeChunk = analitico
+      ? (chunk, firstRow) => analyzeAnalitico(chunk, state.mapping, firstRow)
+      : giro
+        ? (chunk, firstRow) => analyzeGiro(chunk, state.mapping, { shortDays: el('#short-days').value, excessDays: el('#excess-days').value, longDays: el('#long-days').value }, firstRow)
+        : (chunk, firstRow) => analyze(chunk, state.mapping, { safetyDays: el('#safety-days').value, excessDays: el('#excess-days').value, defaultLead: el('#default-lead').value }, firstRow);
+    if (rows.length > 1000) message(`Analisando ${rows.length.toLocaleString('pt-BR')} linhas...`);
+    const analyzed = await processInChunks(rows, analyzeChunk, {
+      firstRow: currentSheet().headerRow + 2,
+      onProgress: rows.length > 1000 ? (processed, total) => message(`Analisando ${processed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} linhas...`) : undefined,
+    });
+    if (run !== refreshRun) return;
+    state.allResults = analyzed;
+  }
   state.results = analitico && !el('#show-hidden').checked ? state.allResults.filter(row => !row.hidden) : state.allResults;
   el('#hidden-toggle').hidden = !analitico;
   el('#results-section').hidden = false;
   const previousLocation = normalizeLocalKey(state.locationFilter);
-  const locationValues = [...new Set(state.allResults.map(row => String(rowLocation(row)).trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+  const locationValues = locationOptions(state.allResults);
   state.locationFilter = previousLocation
     ? locationValues.find(value => normalizeLocalKey(value) === previousLocation) ?? ''
     : '';
   el('#location-filter').innerHTML = '<option value="">Todos os locais</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
   el('#location-filter').value = state.locationFilter;
 
-  const summaryResults = state.results.filter(row => matchesLocation(row));
-  const summaryAllResults = state.allResults.filter(row => matchesLocation(row));
+  const summaryResults = state.results.filter(row => matchesLocation(row, state.locationFilter));
+  const summaryAllResults = state.allResults.filter(row => matchesLocation(row, state.locationFilter));
   const actions = analitico ? ANALITICO_ACTIONS : giro ? GIRO_ACTIONS : GENERIC_ACTIONS;
   const counts = analitico
-    ? [...actions.map(action => ({ action, count: summaryResults.filter(row => row.actions.includes(action)).length })), { action: 'Itens ocultos', count: summaryAllResults.filter(row => row.hidden).length }]
-    : actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length }));
+    ? [...actionCounts(summaryResults, actions, true), { action: 'Itens ocultos', count: summaryAllResults.filter(row => row.hidden).length }]
+    : actionCounts(summaryResults, actions, false);
   const locationTotal = summarizeLocationTotal(state.allResults, state.locationFilter);
   const localTotalCard = state.locationFilter || state.allResults.length > 0
     ? `<div class="summary-card local-total"><span>${state.locationFilter ? 'TOTAL DO LOCAL' : 'TOTAL GERAL'}</span><strong>${realCurrency(locationTotal)}</strong></div>`
@@ -136,7 +131,12 @@ function refresh() {
   if (actions.includes(previousFilter)) el('#filter').value = previousFilter;
   el('#filter').setAttribute('aria-label', 'Filtrar ação');
   el('#result-table').className = analitico ? 'analitico-table' : 'standard-table';
-  el('#table-head').innerHTML = analitico ? '<tr><th>ITEM / CÓDIGO</th><th>QTD. ATUAL</th><th>MÍN. / MÁX.</th><th>GIRO</th><th>CLASSIFICAÇÃO</th><th>AÇÃO</th><th>OUTROS DADOS</th></tr>' : giro ? '<tr><th>ITEM / FILIAL</th><th>ESTOQUE (R$)</th><th>CONSUMO (R$)</th><th>GIRO</th><th>RECOMENDAÇÃO</th><th>MOTIVO</th></tr>' : '<tr><th>ITEM</th><th>ESTOQUE</th><th>VENDAS / 30D</th><th>COBERTURA</th><th>RECOMENDAÇÃO</th><th>MOTIVO</th></tr>';
+  const headings = analitico
+    ? ['ITEM / CÓDIGO', 'QTD. ATUAL', 'MÍN. / MÁX.', 'GIRO', 'CLASSIFICAÇÃO', 'AÇÃO', 'OUTROS DADOS']
+    : giro
+      ? ['ITEM / FILIAL', 'ESTOQUE (R$)', 'CONSUMO (R$)', 'GIRO', 'RECOMENDAÇÃO', 'MOTIVO']
+      : ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO'];
+  el('#table-head').innerHTML = `<tr>${headings.map(heading => `<th scope="col">${heading}</th>`).join('')}</tr>`;
   const reviewCount = state.results.filter(row => row.action === 'Verificar dados').length;
   message(reviewCount ? `${reviewCount} ${reviewCount === 1 ? 'linha precisa' : 'linhas precisam'} de revisão. Consulte “Outros dados” para corrigir a planilha.` : '', reviewCount ? 'warning' : '');
   renderResults();
@@ -144,15 +144,11 @@ function refresh() {
 
 function slug(text) { return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 function visibleResults() {
-  const query = normalize(el('#search').value);
-  const filter = el('#filter').value;
-  const localFilter = state.locationFilter;
-  const analitico = isAnaliticoMode();
-  return state.results.filter(row => {
-    const localMatch = matchesLocation(row, localFilter);
-    const actionMatch = !filter || (analitico ? row.actions.includes(filter) : row.action === filter);
-    const searchMatch = !query || normalize(`${row.item} ${row.sku} ${row.branch || ''} ${row.location || ''} ${row.localCode || ''}`).includes(query);
-    return localMatch && actionMatch && searchMatch;
+  return filterResults(state.results, {
+    query: el('#search').value,
+    action: el('#filter').value,
+    location: state.locationFilter,
+    analitico: isAnaliticoMode(),
   });
 }
 function renderResults() {
@@ -161,10 +157,9 @@ function renderResults() {
   const analitico = isAnaliticoMode();
   const giro = !analitico && isGiroMode();
   const filtered = visibleResults();
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  state.page = Math.min(Math.max(state.page, 1), pageCount);
-  const start = (state.page - 1) * PAGE_SIZE;
-  const visible = filtered.slice(start, start + PAGE_SIZE);
+  const page = paginate(filtered, state.page, PAGE_SIZE);
+  state.page = page.page;
+  const { pageCount, start, rows: visible } = page;
   el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(action => `<span class="badge ${slug(action)}">${escapeHtml(action)}</span>`).join(' ') : `<span class="badge ${slug(row.action)}">${escapeHtml(row.action)}</span>`}</td><td class="reason">${escapeHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
   const itemLabel = filtered.length === 1 ? 'item' : 'itens';
   const filterLabel = query || filter || state.locationFilter ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
@@ -175,13 +170,9 @@ function renderResults() {
   el('#page-next').disabled = state.page === pageCount;
 }
 
-function csvField(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
 function exportData() {
-  const analitico = isAnaliticoMode();
-  const giro = !analitico && isGiroMode();
-  const headers = analitico ? ['Linha', 'Código do item', 'Nome do item', 'Código do local', 'Quantidade atual', 'Valor do saldo', 'Quantidade mínima', 'Quantidade máxima', 'Giro em dias', 'Dias desde última requisição', 'Média de consumo', 'Classificação da planilha', 'Motivo do bloqueio', 'Id Bloqueio', 'Última requisição', 'Ações'] : giro ? ['Linha', 'Item', 'SKU', 'Filial', 'Local', 'Grupo', 'Quantidade', 'Valor do estoque', 'Valor do consumo', 'Giro calculado em dias', 'Giro informado em dias', 'Recomendação', 'Motivo'] : ['Linha', 'Item', 'SKU', 'Estoque', 'Vendas 30 dias', 'Prazo dias', 'Cobertura dias', 'Ponto de reposição', 'Recomendação', 'Motivo'];
-  const rows = visibleResults().map(row => analitico ? [row.row, row.sku, row.item, row.localCode, row.stock, row.stockValue, row.minimum, row.maximum, row.coverage, row.daysSince, row.averageConsumption, row.classification, row.blockReason, row.blockId, row.lastRequest, row.action] : giro ? [row.row, row.item, row.sku, row.branch, row.location, row.group, row.stock, row.stockValue, row.consumption, row.coverage, row.reportedGiro, row.action, row.reason] : [row.row, row.item, row.sku, row.stock, row.sales, row.lead, row.coverage, row.reorderPoint, row.action, row.reason]);
-  return { headers, rows };
+  const mode = isAnaliticoMode() ? 'analitico' : isGiroMode() ? 'giro' : 'generic';
+  return buildExportData(visibleResults(), mode);
 }
 function exportName(extension) {
   const action = slug(el('#filter').value || 'todas-as-acoes');
@@ -195,8 +186,7 @@ function saveBlob(blob, fileName) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function exportCsv() {
-  const { headers, rows } = exportData();
-  const content = '\uFEFF' + [headers, ...rows].map(row => row.map(csvField).join(';')).join('\r\n');
+  const content = buildCsv(exportData());
   saveBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), exportName('csv'));
 }
 async function exportXlsx() {
@@ -243,13 +233,12 @@ async function loadFile(file) {
     el('#show-hidden').checked = false;
     el('#search').value = '';
     el('#filter').value = '';
-    state.locationFilter = '';
-    state.page = 1;
+    resetDashboardState(state);
     setConfigExpanded(false);
     el('#file-name').textContent = file.name;
     el('#workspace').hidden = false;
     el('.shell').classList.add('has-data');
-    renderMapping(); renderSettings(); refresh();
+    renderMapping(); renderSettings(); await refresh();
   } catch (error) { message(error.message || 'Não foi possível abrir o arquivo.', true); }
   finally { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); }
 }
@@ -264,7 +253,7 @@ el('#filter').addEventListener('change', () => { state.page = 1; renderResults()
 el('#location-filter').addEventListener('change', () => {
   state.locationFilter = el('#location-filter').value;
   state.page = 1;
-  refresh();
+  refresh({ reanalyze: false });
 });
 function changePage(direction) {
   state.page += direction;
@@ -279,7 +268,7 @@ el('#theme-toggle').addEventListener('click', () => {
   try { localStorage.setItem('giro-estoque-theme', theme); } catch { /* A escolha vale até fechar a página. */ }
 });
 el('#config-toggle').addEventListener('click', () => setConfigExpanded(el('#config-grid').hidden));
-el('#show-hidden').addEventListener('change', () => { state.page = 1; refresh(); });
+el('#show-hidden').addEventListener('change', () => { state.page = 1; refresh({ reanalyze: false }); });
 el('#export-menu').querySelectorAll('[data-export]').forEach(button => button.addEventListener('click', async () => {
   el('#export-menu').open = false;
   try {

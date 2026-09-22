@@ -1,5 +1,5 @@
 export const fields = [
-  { key: 'item', label: 'Nome do item', required: true, aliases: ['item', 'produto', 'descricao', 'descrição', 'nome', 'nome do sku', 'nm item'] },
+  { key: 'item', label: 'Nome do item', required: true, aliases: ['item', 'produto', 'descricao', 'descrição', 'nome', 'nome do sku', 'nm item', 'ds item'] },
   { key: 'sku', label: 'Código / SKU', required: false, aliases: ['sku', 'codigo', 'código', 'referencia', 'referência', 'cd item'] },
   { key: 'stock', label: 'Quantidade em estoque', required: false, aliases: ['estoque', 'estoque atual', 'saldo', 'quantidade em estoque', 'qtd estoque', 'quantidade', 'qtde atual'] },
   { key: 'sales', label: 'Vendas nos últimos 30 dias', required: true, aliases: ['vendas 30 dias', 'vendas nos ultimos 30 dias', 'vendas mensais', 'vendas', 'saida 30 dias', 'saídas 30 dias'] },

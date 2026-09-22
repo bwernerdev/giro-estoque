@@ -1,4 +1,3 @@
-.top-actions { display: flex; align-items: center; gap: 24px; }
 .theme-toggle { color: #d8e5ee; background: #1c2b3a; border: 1px solid #34495a; border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .theme-toggle:hover { background: #2a3e50; }
 .theme-toggle:focus-visible { outline: 3px solid #b9e74c; outline-offset: 2px; }
@@ -7,7 +6,7 @@ html[data-theme="dark"] { color: #e8eff6; background: #0f1723; color-scheme: dar
 html[data-theme="dark"] .topbar { background: #080e17; border-color: #253447; }
 html[data-theme="dark"] .theme-toggle { color: #e8eff6; background: #243448; border-color: #40566b; }
 html[data-theme="dark"] .theme-toggle:hover { background: #31465d; }
-html[data-theme="dark"] .brand-light, html[data-theme="dark"] .top-label { color: #a8bacb; }
+html[data-theme="dark"] .brand-light { color: #a8bacb; }
 html[data-theme="dark"] .eyebrow, html[data-theme="dark"] .section-kicker { color: #b8dd73; }
 html[data-theme="dark"] .hero em { color: #b7df6c; }
 html[data-theme="dark"] .hero p, html[data-theme="dark"] .upload-card p, html[data-theme="dark"] .panel-intro, html[data-theme="dark"] .formula-note, html[data-theme="dark"] .table-footer, html[data-theme="dark"] footer { color: #a8b6c6; }
@@ -40,11 +39,11 @@ html[data-theme="dark"] td:first-child small, html[data-theme="dark"] td.reason 
 html[data-theme="dark"] .hidden-item { background: #29291f; }
 html[data-theme="dark"] .hidden-indicator { background: #52442a; color: #f4d789; }
 html[data-theme="dark"] .badge { background: #2e492c; color: #cde8ad; }
-html[data-theme="dark"] .badge.bloquear, html[data-theme="dark"] .badge.verificar-dados, html[data-theme="dark"] .badge.bloquear-m-max { background: #4a2b34; color: #ffb4c0; }
+html[data-theme="dark"] .badge.bloquear, html[data-theme="dark"] .badge.verificar-dados { background: #4a2b34; color: #ffb4c0; }
 html[data-theme="dark"] .badge.bloquear-e-transferir-obsoleto, html[data-theme="dark"] .badge.transferir-obsoleto, html[data-theme="dark"] .badge.comprar, html[data-theme="dark"] .badge.planejar-reposicao { background: #4e3928; color: #ffd29c; }
 html[data-theme="dark"] .badge.desbloquear, html[data-theme="dark"] .badge.zerar-min-max, html[data-theme="dark"] .badge.avaliar-excesso, html[data-theme="dark"] .badge.avaliar-sem-giro { background: #293b56; color: #b7d2ff; }
-html[data-theme="dark"] .badge.sem-acao-definida, html[data-theme="dark"] .badge.sem-movimento, html[data-theme="dark"] .badge.estoque-zerado { background: #344153; color: #cfdae5; }
+html[data-theme="dark"] .badge.sem-acao-definida, html[data-theme="dark"] .badge.sem-movimento { background: #344153; color: #cfdae5; }
 html[data-theme="dark"] .message { color: #b8df82; }
 html[data-theme="dark"] .message.error { color: #ffb1a4; }
 
-@media (max-width: 620px) { .top-actions { gap: 0; } .theme-toggle { padding: 8px 10px; } }
+@media (max-width: 620px) { .theme-toggle { padding: 8px 10px; } }

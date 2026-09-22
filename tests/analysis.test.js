@@ -17,6 +17,13 @@ test('reconhece cabeçalhos comuns e recomenda ações distintas', () => {
   assert.equal(results[0].reorderPoint, 14);
 });
 
+test('reconhece Ds Item como nome do item', () => {
+  const mapping = suggestMapping(['Cd Item', 'Ds Item', 'Qtde Atual']);
+  assert.equal(mapping.sku, 0);
+  assert.equal(mapping.item, 1);
+  assert.equal(mapping.stock, 2);
+});
+
 test('preserva a classificação informada na planilha Analítico', () => {
   const headers = ['Cd Item', 'Nm Item', 'Qtde Atual', 'Qnt Min', 'Qnt Max', 'Giro Estoque (Dias)', 'Itens Acima de 90 dias'];
   const mapping = suggestMapping(headers);
