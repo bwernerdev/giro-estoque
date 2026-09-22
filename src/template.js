@@ -2,7 +2,7 @@ export function renderApp() {
   return `
     <div class="shell">
       <header class="topbar">
-        <div class="brand"><span class="brand-mark">↗</span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div>
+        <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="./assets/images/favicon.webp" alt="" /></span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">☾ Modo escuro</button>
       </header>
       <main>

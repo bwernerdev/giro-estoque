@@ -19,6 +19,10 @@ export const fields = [
   { key: 'blockId', label: 'Id Bloqueio', required: false, aliases: ['id bloqueio'] },
   { key: 'lastRequest', label: 'Última requisição', required: false, aliases: ['dt ultima req', 'data ultima requisicao'] },
   { key: 'localCode', label: 'Código do local', required: false, aliases: ['cd local estoque'] },
+  { key: 'shelfCode', label: 'Código da prateleira', required: false, aliases: ['cd prateleira', 'codigo prateleira', 'código prateleira', 'prateleira'] },
+  { key: 'partitionCode', label: 'Código da repartição', required: false, aliases: ['cd reparticao', 'codigo reparticao', 'código reparticao', 'reparticao', 'repartição'] },
+  { key: 'divisionCode', label: 'Código da divisão', required: false, aliases: ['cd divisao', 'codigo divisao', 'código divisao', 'divisao', 'divisão'] },
+  { key: 'address', label: 'Endereço do item', required: false, aliases: ['endereco do item', 'endereço do item', 'endereco', 'endereço', 'logradouro', 'localizacao', 'localização'] },
 ];
 
 export const ANALITICO_REQUIRED_KEYS = ['item', 'stock', 'minimum', 'maximum', 'daysSince', 'classification', 'blockReason', 'blockId', 'localCode'];
@@ -80,11 +84,15 @@ export function analyze(rows, mapping, settings, firstRow = 2) {
     const get = key => mapping[key] >= 0 ? cells[mapping[key]] : null;
     const item = String(get('item') ?? '').trim();
     const sku = String(get('sku') ?? '').trim();
+    const shelfCode = String(get('shelfCode') ?? '').trim();
+    const partitionCode = String(get('partitionCode') ?? '').trim();
+    const divisionCode = String(get('divisionCode') ?? '').trim();
+    const address = String(get('address') ?? '').trim();
     const stock = parseNumber(get('stock'));
     const sales = parseNumber(get('sales'));
     const leadValue = parseNumber(get('lead'));
     const lead = leadValue === null ? defaultLead : leadValue;
-    const base = { row: index + firstRow, item, sku, stock, sales, lead, coverage: null, reorderPoint: null, action: 'Verificar dados', reason: '' };
+    const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, stock, sales, lead, coverage: null, reorderPoint: null, action: 'Verificar dados', reason: '' };
     if (!item || stock === null || sales === null || stock < 0 || sales < 0 || lead < 0) {
       return { ...base, reason: 'Nome, estoque, vendas ou prazo ausente/inválido.' };
     }
@@ -109,11 +117,15 @@ export function analyzeGiro(rows, mapping, settings, firstRow = 2) {
     const branch = String(get('branch') ?? '').trim();
     const location = String(get('location') ?? '').trim();
     const group = String(get('group') ?? '').trim();
+    const shelfCode = String(get('shelfCode') ?? '').trim();
+    const partitionCode = String(get('partitionCode') ?? '').trim();
+    const divisionCode = String(get('divisionCode') ?? '').trim();
+    const address = String(get('address') ?? '').trim();
     const stock = parseNumber(get('stock'));
     const stockValue = parseNumber(get('stockValue'));
     const consumption = parseNumber(get('consumption'));
     const reportedGiro = parseNumber(get('giroDays'));
-    const base = { row: index + firstRow, item, sku, branch, location, group, stock, stockValue, consumption, coverage: null, reportedGiro, action: 'Verificar dados', reason: '' };
+    const base = { row: index + firstRow, item, sku, branch, location, group, shelfCode, partitionCode, divisionCode, address, stock, stockValue, consumption, coverage: null, reportedGiro, action: 'Verificar dados', reason: '' };
     if (!item || (stockValue !== null && stockValue < 0) || (consumption !== null && consumption < 0)) return { ...base, reason: 'Nome, valor do estoque ou consumo inválido.' };
     if (stockValue === null && consumption !== null && consumption > 0) return { ...base, action: 'Confirmar saldo', reason: 'Há consumo, mas quantidade e valor do estoque estão em branco; confirmar saldo antes de repor.' };
     if (stockValue === null) return { ...base, reason: 'Valor do estoque em branco.' };
@@ -132,6 +144,10 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const get = key => mapping[key] >= 0 ? cells[mapping[key]] : null;
     const item = String(get('item') ?? '').trim();
     const sku = String(get('sku') ?? '').trim();
+    const shelfCode = String(get('shelfCode') ?? '').trim();
+    const partitionCode = String(get('partitionCode') ?? '').trim();
+    const divisionCode = String(get('divisionCode') ?? '').trim();
+    const address = String(get('address') ?? '').trim();
     const stock = parseAnaliticoNumber(get('stock'));
     const minimum = parseAnaliticoNumber(get('minimum'));
     const maximum = parseAnaliticoNumber(get('maximum'));
@@ -146,7 +162,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const localCode = String(get('localCode') ?? '').trim();
     const localNumber = parseAnaliticoNumber(get('localCode'));
     const isObsoleteLocation = OBSOLETE_LOCATION_CODES.has(localNumber);
-    const base = { row: index + firstRow, item, sku, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
+    const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
     const issues = [];
     const checkNumber = (key, label, value, required = false) => {
       if (!(mapping[key] >= 0)) {

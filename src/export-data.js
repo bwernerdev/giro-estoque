@@ -1,19 +1,50 @@
+function formatCurrency(value) {
+  const numericValue = Number(value ?? 0);
+  if (!Number.isFinite(numericValue)) return 'R$ 0,00';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numericValue);
+}
+
+function unitPriceValue(row) {
+  const stock = Number(row.stock ?? 0);
+  const totalValue = Number(row.stockValue ?? 0);
+  if (!Number.isFinite(stock) || !Number.isFinite(totalValue) || stock === 0) return 0;
+  return totalValue / stock;
+}
+
+function includeLocationDetails(rows) {
+  const fieldDefs = [
+    { key: 'shelfCode', label: 'Prateleira' },
+    { key: 'partitionCode', label: 'Reparticao' },
+    { key: 'address', label: 'Endereço do item' },
+  ];
+  const activeFields = fieldDefs.filter(({ key }) => rows.some(row => String(row[key] ?? '').trim() !== ''));
+  return {
+    headers: activeFields.map(({ label }) => label),
+    rows: rows.map(row => activeFields.map(({ key }) => row[key] ?? '')),
+  };
+}
+
 export function buildExportData(rows, mode) {
+  const locationDetails = includeLocationDetails(rows);
+  const baseHeaders = ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo'];
+
   if (mode === 'analitico') {
     return {
-      headers: ['Linha', 'Código do item', 'Nome do item', 'Código do local', 'Quantidade atual', 'Valor do saldo', 'Quantidade mínima', 'Quantidade máxima', 'Giro em dias', 'Dias desde última requisição', 'Média de consumo', 'Classificação da planilha', 'Motivo do bloqueio', 'Id Bloqueio', 'Última requisição', 'Ações'],
-      rows: rows.map(row => [row.row, row.sku, row.item, row.localCode, row.stock, row.stockValue, row.minimum, row.maximum, row.coverage, row.daysSince, row.averageConsumption, row.classification, row.blockReason, row.blockId, row.lastRequest, row.action]),
+      headers: baseHeaders,
+      rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.localCode, row.stock, formatCurrency(unitPriceValue(row)), formatCurrency(row.stockValue ?? 0)]),
     };
   }
+
   if (mode === 'giro') {
     return {
-      headers: ['Linha', 'Item', 'SKU', 'Filial', 'Local', 'Grupo', 'Quantidade', 'Valor do estoque', 'Valor do consumo', 'Giro calculado em dias', 'Giro informado em dias', 'Recomendação', 'Motivo'],
-      rows: rows.map(row => [row.row, row.item, row.sku, row.branch, row.location, row.group, row.stock, row.stockValue, row.consumption, row.coverage, row.reportedGiro, row.action, row.reason]),
+      headers: baseHeaders,
+      rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.location, row.stock, formatCurrency(unitPriceValue(row)), formatCurrency(row.stockValue ?? 0)]),
     };
   }
+
   return {
-    headers: ['Linha', 'Item', 'SKU', 'Estoque', 'Vendas 30 dias', 'Prazo dias', 'Cobertura dias', 'Ponto de reposição', 'Recomendação', 'Motivo'],
-    rows: rows.map(row => [row.row, row.item, row.sku, row.stock, row.sales, row.lead, row.coverage, row.reorderPoint, row.action, row.reason]),
+    headers: baseHeaders,
+    rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.location ?? row.localCode ?? '', row.stock, formatCurrency(unitPriceValue(row)), formatCurrency(row.stockValue ?? 0)]),
   };
 }
 

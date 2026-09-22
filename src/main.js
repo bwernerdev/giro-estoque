@@ -194,25 +194,66 @@ async function exportXlsx() {
   const { headers, rows } = exportData();
   const workbook = new globalThis.ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Itens filtrados');
-  sheet.addRow(headers);
-  rows.forEach(row => sheet.addRow(row));
-  sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C2B3A' } };
+  sheet.columns = headers.map((header, index) => ({
+    key: `col${index}`,
+    width: Math.min(42, Math.max(12, header.length + 3)),
+  }));
+  const headerRow = sheet.addRow(headers);
+  headerRow.eachCell((cell, colNumber) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C2B3A' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF2B3A4A' } },
+      left: { style: 'thin', color: { argb: 'FF2B3A4A' } },
+      bottom: { style: 'thin', color: { argb: 'FF2B3A4A' } },
+      right: { style: 'thin', color: { argb: 'FF2B3A4A' } },
+    };
+    cell.numFmt = '@';
+    cell.value = String(cell.value ?? '');
+  });
+  rows.forEach((row, rowIndex) => {
+    const dataRow = sheet.addRow(row.map(value => {
+      if (typeof value === 'string' && value.startsWith('R$')) {
+        const numeric = Number(String(value).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+        return Number.isFinite(numeric) ? numeric : value;
+      }
+      return value;
+    }));
+    dataRow.eachCell((cell, colNumber) => {
+      const header = headers[colNumber - 1] ?? '';
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      if (rowIndex % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      if (['Valor unitário', 'Valor do saldo'].includes(header)) {
+        const numericValue = Number(String(cell.value ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+        if (Number.isFinite(numericValue)) {
+          cell.value = numericValue;
+          cell.numFmt = '[$R$-pt-BR] #,##0.00';
+        }
+      }
+    });
+  });
   sheet.views = [{ state: 'frozen', ySplit: 1 }];
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(rows.length + 1, 2), column: headers.length } };
-  sheet.columns.forEach((column, index) => { column.width = Math.min(42, Math.max(12, headers[index].length + 3)); });
   const buffer = await workbook.xlsx.writeBuffer();
   saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx'));
 }
 function exportPdf() {
   const analitico = isAnaliticoMode();
   const giro = !analitico && isGiroMode();
-  const columns = analitico
-    ? [['Código', row => row.sku], ['Item', row => row.item], ['Local', row => row.localCode], ['Saldo', row => row.stock], ['Mín./máx.', row => `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}`], ['Dias sem requisição', row => row.daysSince], ['Classificação', row => row.classification], ['Ações', row => row.action], ['Outros dados', row => row.reason]]
-    : giro
-      ? [['SKU', row => row.sku], ['Item', row => row.item], ['Filial', row => row.branch], ['Local', row => row.location], ['Quantidade', row => row.stock], ['Giro (dias)', row => row.coverage], ['Recomendação', row => row.action], ['Motivo', row => row.reason]]
-      : [['SKU', row => row.sku], ['Item', row => row.item], ['Estoque', row => row.stock], ['Vendas/30 dias', row => row.sales], ['Cobertura', row => row.coverage], ['Recomendação', row => row.action], ['Motivo', row => row.reason]];
   const rows = visibleResults();
+  const hasAddress = rows.some(row => row.address || row.itemAddress || row.endereco || row.shelfCode || row.partitionCode);
+  const columns = analitico
+    ? [['Código', row => row.sku], ['Item', row => row.item], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Local', row => row.localCode], ['Saldo', row => row.stock], ['Mín./máx.', row => `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}`], ['Dias sem requisição', row => row.daysSince], ['Classificação', row => row.classification], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Ações', row => row.action], ['Outros dados', row => row.reason]]
+    : giro
+      ? [['SKU', row => row.sku], ['Item', row => row.item], ['Filial', row => row.branch], ['Local', row => row.location], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Quantidade', row => row.stock], ['Giro (dias)', row => row.coverage], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Recomendação', row => row.action], ['Motivo', row => row.reason]]
+      : [['SKU', row => row.sku], ['Item', row => row.item], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Estoque', row => row.stock], ['Vendas/30 dias', row => row.sales], ['Cobertura', row => row.coverage], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Recomendação', row => row.action], ['Motivo', row => row.reason]];
   const filter = el('#filter').value || 'Todas as ações';
   const search = el('#search').value.trim();
   const local = state.locationFilter ? ` · Local: ${escapeHtml(state.locationFilter)}` : '';

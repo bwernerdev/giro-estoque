@@ -57,10 +57,16 @@ test('processa planilhas grandes em blocos preservando linhas e progresso', asyn
 });
 
 test('exporta todas as linhas filtradas com CSV compatível', () => {
-  const data = buildExportData([{ row: 2, sku: '10', item: 'Peça; especial', localCode: '1', stock: 2, action: 'BLOQUEAR' }], 'analitico');
+  const data = buildExportData([{ row: 2, sku: '10', item: 'Peça; especial', shelfCode: 'A1', partitionCode: 'B2', localCode: '1', stock: 2, stockValue: 1234.56, action: 'BLOQUEAR', address: 'Rua A, 123' }], 'analitico');
   const csv = buildCsv(data);
-  assert.equal(data.headers.at(-1), 'Ações');
+  assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo']);
   assert.match(csv, /^\uFEFF/);
+  assert.match(csv, /"10"/);
   assert.match(csv, /"Peça; especial"/);
-  assert.match(csv, /"BLOQUEAR"/);
+  assert.match(csv, /"A1"/);
+  assert.match(csv, /"B2"/);
+  assert.match(csv, /"1"/);
+  assert.match(csv, /"2"/);
+  assert.match(csv, /"R\$\s*1\.234,56|R\$\s*1.234,56|R\$\s*1234,56/);
+  assert.doesNotMatch(csv, /BLOQUEAR/);
 });
