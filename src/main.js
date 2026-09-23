@@ -1,11 +1,11 @@
-import { importFile } from './import.js?v=20260923-6';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-6';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-6';
-import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260923-6';
-import { renderApp } from './template.js?v=20260923-6';
+import { importFile } from './import.js?v=20260923-7';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-7';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-7';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260923-7';
+import { renderApp } from './template.js?v=20260923-7';
 
 const app = document.querySelector('#app');
-const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false };
+const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null };
 const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
@@ -50,6 +50,11 @@ function setConfigExpanded(expanded) {
   el('#config-toggle').textContent = expanded ? 'Fechar configuração ▴' : 'Abrir configuração ▾';
 }
 function currentSheet() { return state.sheets[state.sheet]; }
+function renderImportContext() {
+  if (!state.fileName || !currentSheet()) { el('#import-context').textContent = ''; return; }
+  const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
+  el('#import-context').innerHTML = `<span><strong>Arquivo:</strong> ${escapeHtml(state.fileName)}</span><span><strong>Aba:</strong> ${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span><strong>Importado às:</strong> ${escapeHtml(importedAt)}</span>` : ''}`;
+}
 function dataRows() { return currentSheet().rows.slice(currentSheet().headerRow + 1).filter(row => row.some(value => String(value ?? '').trim()) && (state.mapping.item < 0 || String(row[state.mapping.item] ?? '').trim())); }
 
 function isMapped(key) { return state.mapping[key] >= 0; }
@@ -77,7 +82,7 @@ function renderMapping() {
   const headers = currentSheet().rows[currentSheet().headerRow] || [];
   const required = new Set(requiredKeys());
   el('#mapping').innerHTML = `<label class="sheet-select">Aba<select id="sheet-select">${state.sheets.map((sheet, i) => `<option value="${i}" ${i === state.sheet ? 'selected' : ''}>${escapeHtml(sheet.name)}</option>`).join('')}</select></label>` + fields.map(field => `<label>${field.label}${required.has(field.key) ? ' <span class="required">*</span>' : ''}<select data-map="${field.key}"><option value="-1">Não selecionar</option>${headers.map((header, i) => `<option value="${i}" ${state.mapping[field.key] === i ? 'selected' : ''}>${escapeHtml(header || `Coluna ${i + 1}`)}</option>`).join('')}</select></label>`).join('');
-  el('#sheet-select').addEventListener('change', event => { state.sheet = Number(event.target.value); state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []); renderMapping(); renderSettings(); refresh(); });
+  el('#sheet-select').addEventListener('change', event => { state.sheet = Number(event.target.value); state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []); renderImportContext(); renderMapping(); renderSettings(); refresh(); });
   el('#mapping').querySelectorAll('[data-map]').forEach(select => select.addEventListener('change', () => {
     state.mapping[select.dataset.map] = Number(select.value);
     renderMapping();
@@ -131,10 +136,10 @@ async function refresh({ reanalyze = true } = {}) {
     : actionCounts(summaryResults, actions, false);
   const locationTotal = summarizeLocationTotal(state.allResults, state.locationFilter);
   const localTotalCard = state.locationFilter || state.allResults.length > 0
-    ? `<div class="summary-card local-total"><span>${state.locationFilter ? 'TOTAL DO LOCAL' : 'TOTAL GERAL'}</span><strong>${realCurrency(locationTotal)}</strong></div>`
+    ? `<div class="summary-card local-total"><div><span>${state.locationFilter ? 'VALOR DO ESTOQUE NO LOCAL' : 'VALOR TOTAL DO ESTOQUE'}</span><small>Soma da coluna Vl Saldo${state.locationFilter ? ` · Local ${escapeHtml(state.locationFilter)}` : ''}</small></div><strong>${realCurrency(locationTotal)}</strong></div>`
     : '';
   const previousFilter = el('#filter').value;
-  el('#summary').innerHTML = `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></button>` + counts.map(({ action, count }) => {
+  el('#summary').innerHTML = (localTotalCard || '') + `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></button>` + counts.map(({ action, count }) => {
     const hiddenCard = action === 'Itens ocultos';
     const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
     return `<button type="button" class="summary-card summary-filter ${slug(action)}${count === 0 ? ' is-empty' : ''}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
@@ -169,6 +174,10 @@ function actionIcon(action) {
 }
 function badgeHtml(action) {
   return `<span class="badge ${slug(action)}"><span class="badge-icon" aria-hidden="true">${actionIcon(action)}</span>${escapeHtml(action)}</span>`;
+}
+function detailsHtml(reason) {
+  if (!reason) return '<span class="no-details">—</span>';
+  return `<details class="row-details"><summary>Ver detalhes</summary><p>${escapeHtml(reason)}</p></details>`;
 }
 function visibleResults() {
   return filterResults(state.results, {
@@ -211,10 +220,11 @@ function renderResults() {
   const page = paginate(filtered, state.page, PAGE_SIZE);
   state.page = page.page;
   const { pageCount, start, rows: visible } = page;
-  el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(badgeHtml).join(' ') : badgeHtml(row.action)}</td><td class="reason">${escapeHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
+  el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(badgeHtml).join(' ') : badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
   const itemLabel = filtered.length === 1 ? 'item' : 'itens';
   const filterLabel = query || filter || state.locationFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
   el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
+  el('#filtered-count').textContent = `${filtered.length.toLocaleString('pt-BR')} de ${state.allResults.length.toLocaleString('pt-BR')} ${state.allResults.length === 1 ? 'item' : 'itens'}`;
   el('#pagination').hidden = pageCount <= 1;
   el('#page-label').textContent = `Página ${state.page} de ${pageCount}`;
   el('#page-previous').disabled = state.page === 1;
@@ -322,11 +332,13 @@ async function loadFile(file) {
     el('#search').value = '';
     el('#filter').value = '';
     resetDashboardState(state);
+    state.fileName = file.name;
+    state.importedAt = new Date();
     setConfigExpanded(false);
     el('#file-name').textContent = file.name;
     el('#workspace').hidden = false;
     el('.shell').classList.add('has-data');
-    renderMapping(); renderSettings(); await refresh();
+    renderImportContext(); renderMapping(); renderSettings(); await refresh();
   } catch (error) { message(error.message || 'Não foi possível abrir o arquivo.', true); }
   finally { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); }
 }

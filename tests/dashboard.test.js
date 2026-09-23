@@ -21,6 +21,11 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.equal(document.querySelectorAll('[data-export]').length, 3);
   assert.ok(document.querySelector('#density-toggle'));
   assert.ok(document.querySelector('#clear-filters'));
+  assert.ok(document.querySelector('#import-context'));
+  assert.ok(document.querySelector('#filtered-count'));
+  assert.equal(document.querySelector('label[for="location-filter"]'), null);
+  assert.equal(document.querySelector('#location-filter').closest('label').textContent.trim(), 'LocalTodos os locais');
+  assert.equal(document.querySelector('#filter').closest('label').textContent.trim(), 'AçãoTodas as recomendações');
   assert.equal(document.querySelector('#pagination').getAttribute('aria-label'), 'Páginas de resultados');
 });
 
