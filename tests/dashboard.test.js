@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { actionCounts, filterResults, locationOptions, paginate, processInChunks, resetDashboardState } from '../src/dashboard.js';
-import { buildCsv, buildExportData, currencyNumber } from '../src/export-data.js';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
 
 const rows = [
@@ -85,7 +85,7 @@ test('preserva quatro casas decimais no valor unitário exportado', () => {
   assert.equal(currencyNumber(398.2125), 398.2125);
 });
 
-test('inclui os dias desde a última movimentação ao exportar Bloquear', () => {
+test('inclui os dias desde a última movimentação em todas as ações, menos Desbloquear', () => {
   const data = buildExportData([{
     sku: '392720',
     item: 'Calça EPI',
@@ -97,4 +97,9 @@ test('inclui os dias desde a última movimentação ao exportar Bloquear', () =>
 
   assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Dias desde a última movimentação', 'Valor unitário', 'Valor do saldo']);
   assert.equal(data.rows[0][6], 114);
+  assert.equal(shouldIncludeDaysSince('analitico', ''), true);
+  assert.equal(shouldIncludeDaysSince('analitico', 'BLOQUEAR'), true);
+  assert.equal(shouldIncludeDaysSince('analitico', 'TRANSFERIR OBSOLETO'), true);
+  assert.equal(shouldIncludeDaysSince('analitico', 'DESBLOQUEAR'), false);
+  assert.equal(shouldIncludeDaysSince('giro', 'BLOQUEAR'), false);
 });

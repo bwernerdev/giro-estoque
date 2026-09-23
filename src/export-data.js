@@ -22,6 +22,10 @@ export function currencyNumber(value) {
   return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
+export function shouldIncludeDaysSince(mode, action) {
+  return mode === 'analitico' && action !== 'DESBLOQUEAR';
+}
+
 export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
   const baseHeaders = ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo'];
 

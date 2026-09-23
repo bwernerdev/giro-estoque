@@ -1,8 +1,8 @@
-import { importFile } from './import.js?v=20260923-5';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-5';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-5';
-import { buildCsv, buildExportData, currencyNumber } from './export-data.js?v=20260923-5';
-import { renderApp } from './template.js?v=20260923-5';
+import { importFile } from './import.js?v=20260923-6';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-6';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-6';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260923-6';
+import { renderApp } from './template.js?v=20260923-6';
 
 const app = document.querySelector('#app');
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false };
@@ -226,7 +226,7 @@ function renderResults() {
 function exportData() {
   const mode = isAnaliticoMode() ? 'analitico' : isGiroMode() ? 'giro' : 'generic';
   return buildExportData(visibleResults(), mode, {
-    includeDaysSince: mode === 'analitico' && el('#filter').value === 'BLOQUEAR',
+    includeDaysSince: shouldIncludeDaysSince(mode, el('#filter').value),
   });
 }
 function exportName(extension) {
@@ -295,8 +295,9 @@ function exportPdf() {
   const giro = !analitico && isGiroMode();
   const rows = visibleResults();
   const hasAddress = rows.some(row => row.address || row.itemAddress || row.endereco);
+  const includeDaysSince = shouldIncludeDaysSince(analitico ? 'analitico' : giro ? 'giro' : 'generic', el('#filter').value);
   const columns = analitico
-    ? [['Código', row => row.sku], ['Item', row => row.item], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Local', row => row.localCode], ['Saldo', row => row.stock], ['Mín./máx.', row => `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}`], ['Dias sem requisição', row => row.daysSince], ['Classificação', row => row.classification], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Ações', row => row.action], ['Outros dados', row => row.reason]]
+    ? [['Código', row => row.sku], ['Item', row => row.item], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Local', row => row.localCode], ['Saldo', row => row.stock], ['Mín./máx.', row => `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}`], ...(includeDaysSince ? [['Dias desde a última movimentação', row => row.daysSince]] : []), ['Classificação', row => row.classification], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Ações', row => row.action], ['Outros dados', row => row.reason]]
     : giro
       ? [['SKU', row => row.sku], ['Item', row => row.item], ['Filial', row => row.branch], ['Local', row => row.location], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Quantidade', row => row.stock], ['Giro (dias)', row => row.coverage], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Recomendação', row => row.action], ['Motivo', row => row.reason]]
       : [['SKU', row => row.sku], ['Item', row => row.item], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Estoque', row => row.stock], ['Vendas/30 dias', row => row.sales], ['Cobertura', row => row.coverage], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Recomendação', row => row.action], ['Motivo', row => row.reason]];
