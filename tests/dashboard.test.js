@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { actionCounts, filterResults, locationOptions, paginate, processInChunks, resetDashboardState } from '../src/dashboard.js';
-import { buildCsv, buildExportData } from '../src/export-data.js';
+import { buildCsv, buildExportData, currencyNumber } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
 
 const rows = [
@@ -75,4 +75,12 @@ test('exporta todas as linhas filtradas com CSV compatível', () => {
   assert.match(csv, /"2"/);
   assert.match(csv, /"R\$\s*1\.234,56|R\$\s*1.234,56|R\$\s*1234,56/);
   assert.doesNotMatch(csv, /BLOQUEAR/);
+});
+
+test('preserva quatro casas decimais no valor unitário exportado', () => {
+  const data = buildExportData([{ sku: '61086', item: 'Elemento filtrante', localCode: '7', stock: 2, stockValue: 796.425 }], 'analitico');
+  assert.equal(data.rows[0][6].replace(/\s/g, ' '), 'R$ 398,2125');
+  assert.equal(data.rows[0][7].replace(/\s/g, ' '), 'R$ 796,43');
+  assert.equal(currencyNumber(data.rows[0][6]), 398.2125);
+  assert.equal(currencyNumber(398.2125), 398.2125);
 });

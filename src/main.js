@@ -1,8 +1,8 @@
-import { importFile } from './import.js?v=20260923-1';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-1';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-1';
-import { buildCsv, buildExportData } from './export-data.js?v=20260923-1';
-import { renderApp } from './template.js?v=20260923-1';
+import { importFile } from './import.js?v=20260923-2';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-2';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-2';
+import { buildCsv, buildExportData, currencyNumber } from './export-data.js?v=20260923-2';
+import { renderApp } from './template.js?v=20260923-2';
 
 const app = document.querySelector('#app');
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false };
@@ -266,13 +266,7 @@ async function exportXlsx() {
     cell.value = String(cell.value ?? '');
   });
   rows.forEach((row, rowIndex) => {
-    const dataRow = sheet.addRow(row.map(value => {
-      if (typeof value === 'string' && value.startsWith('R$')) {
-        const numeric = Number(String(value).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
-        return Number.isFinite(numeric) ? numeric : value;
-      }
-      return value;
-    }));
+    const dataRow = sheet.addRow(row);
     dataRow.eachCell((cell, colNumber) => {
       const header = headers[colNumber - 1] ?? '';
       cell.border = {
@@ -284,11 +278,8 @@ async function exportXlsx() {
       cell.alignment = { vertical: 'middle', horizontal: 'left' };
       if (rowIndex % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
       if (['Valor unitário', 'Valor do saldo'].includes(header)) {
-        const numericValue = Number(String(cell.value ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
-        if (Number.isFinite(numericValue)) {
-          cell.value = numericValue;
-          cell.numFmt = '[$R$-pt-BR] #,##0.00';
-        }
+        cell.value = currencyNumber(cell.value);
+        cell.numFmt = header === 'Valor unitário' ? '[$R$-pt-BR] #,##0.0000' : '[$R$-pt-BR] #,##0.00';
       }
     });
   });
