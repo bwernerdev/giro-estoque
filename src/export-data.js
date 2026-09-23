@@ -22,13 +22,26 @@ export function currencyNumber(value) {
   return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
-export function buildExportData(rows, mode) {
+export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
   const baseHeaders = ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo'];
 
   if (mode === 'analitico') {
+    const headers = includeDaysSince
+      ? [...baseHeaders.slice(0, 6), 'Dias desde a última movimentação', ...baseHeaders.slice(6)]
+      : baseHeaders;
     return {
-      headers: baseHeaders,
-      rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.localCode, row.stock, formatCurrency(unitPriceValue(row), 4), formatCurrency(row.stockValue ?? 0)]),
+      headers,
+      rows: rows.map(row => [
+        row.sku,
+        row.item,
+        row.shelfCode ?? '',
+        row.partitionCode ?? '',
+        row.localCode,
+        row.stock,
+        ...(includeDaysSince ? [row.daysSince ?? ''] : []),
+        formatCurrency(unitPriceValue(row), 4),
+        formatCurrency(row.stockValue ?? 0),
+      ]),
     };
   }
 

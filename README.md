@@ -37,6 +37,8 @@ Itens com **Sem ação definida** ficam ocultos por padrão, assim como os itens
 
 O menu **Exportar**, ao lado dos filtros, oferece Excel (.xlsx), CSV e PDF. A tabela mostra até **50 itens por página**. As exportações incluem todos os itens que correspondem ao filtro de ação, à busca e à opção **Mostrar itens ocultos**, inclusive os de outras páginas. Para PDF, o navegador abre a impressão; selecione **Salvar como PDF** como destino.
 
+Ao exportar com a ação **BLOQUEAR** selecionada, os arquivos Excel e CSV incluem também a coluna **Dias desde a última movimentação**, preenchida com o valor de `Dif Dias`.
+
 O sistema procura o cabeçalho nas primeiras 20 linhas e reconhece o relatório **BBOG6656 - Giro De Estoques Almoxarifado Por Filial**. É possível corrigir o mapeamento após a importação. Arquivos Excel podem conter várias abas; escolha a aba na interface.
 
 Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm Item` como nome do item.

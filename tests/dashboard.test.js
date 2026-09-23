@@ -84,3 +84,17 @@ test('preserva quatro casas decimais no valor unitário exportado', () => {
   assert.equal(currencyNumber(data.rows[0][6]), 398.2125);
   assert.equal(currencyNumber(398.2125), 398.2125);
 });
+
+test('inclui os dias desde a última movimentação ao exportar Bloquear', () => {
+  const data = buildExportData([{
+    sku: '392720',
+    item: 'Calça EPI',
+    localCode: '4',
+    stock: 2,
+    stockValue: 159.54,
+    daysSince: 114,
+  }], 'analitico', { includeDaysSince: true });
+
+  assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Dias desde a última movimentação', 'Valor unitário', 'Valor do saldo']);
+  assert.equal(data.rows[0][6], 114);
+});
