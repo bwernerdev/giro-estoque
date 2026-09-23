@@ -10,7 +10,7 @@ html[data-theme="dark"] .brand-light { color: #a8bacb; }
 html[data-theme="dark"] .eyebrow, html[data-theme="dark"] .section-kicker { color: #b8dd73; }
 html[data-theme="dark"] .hero em { color: #b7df6c; }
 html[data-theme="dark"] .hero p, html[data-theme="dark"] .upload-card p, html[data-theme="dark"] .panel-intro, html[data-theme="dark"] .formula-note, html[data-theme="dark"] .table-footer, html[data-theme="dark"] footer { color: #a8b6c6; }
-html[data-theme="dark"] .upload-card, html[data-theme="dark"] .panel, html[data-theme="dark"] .summary-card, html[data-theme="dark"] .table-panel { background: #182433; border-color: #32445a; box-shadow: none; }
+html[data-theme="dark"] .upload-card, html[data-theme="dark"] .panel, html[data-theme="dark"] .summary-card, html[data-theme="dark"] .table-panel { background: #182433; border-color: #3b5169; box-shadow: none; }
 html[data-theme="dark"] .upload-card { border-style: dashed; }
 html[data-theme="dark"] .upload-card.dragging { background: #223628; border-color: #a8d064; }
 html[data-theme="dark"] .upload-card small, html[data-theme="dark"] .summary-card small { color: #a5b4c3; }
@@ -19,25 +19,25 @@ html[data-theme="dark"] .file-pill { background: #293b2c; color: #c7e79a; }
 html[data-theme="dark"] .secondary-button { background: #223348; border-color: #405369; color: #d8efbd; }
 html[data-theme="dark"] .secondary-button:hover { background: #2d4259; }
 html[data-theme="dark"] .export-options { background: #182433; border-color: #405369; box-shadow: 0 8px 24px #0008; }
-html[data-theme="dark"] .export-menu summary { background: linear-gradient(180deg, #bfe15d, #a4cf3d); border-color: #8eb735; color: #183014; }
-html[data-theme="dark"] .export-menu summary:hover { background: linear-gradient(180deg, #c8ea67, #addd42); }
+html[data-theme="dark"] .export-menu summary { background: linear-gradient(180deg, #b4da55, #9dcb3d); border-color: #88ad39; color: #183014; }
+html[data-theme="dark"] .export-menu summary:hover { background: linear-gradient(180deg, #bde35c, #a5d442); }
 html[data-theme="dark"] .export-options button { color: #e8eff6; }
 html[data-theme="dark"] .export-options button:hover, html[data-theme="dark"] .export-options button:focus-visible { background: #2d4259; }
 html[data-theme="dark"] .pagination button { background: #223348; border-color: #405369; color: #d8efbd; }
 html[data-theme="dark"] .mapping-grid label, html[data-theme="dark"] .settings-grid label, html[data-theme="dark"] .hidden-toggle { color: #c5d2df; }
-html[data-theme="dark"] select, html[data-theme="dark"] input[type="number"], html[data-theme="dark"] input[type="search"] { background: #111c2a; border-color: #41536a; color: #eef4f9; }
+html[data-theme="dark"] select, html[data-theme="dark"] input[type="number"], html[data-theme="dark"] input[type="search"] { background: #111c2a; border-color: #4b6179; color: #eef4f9; }
 html[data-theme="dark"] select option { background: #182433; color: #eef4f9; }
 html[data-theme="dark"] input::placeholder { color: #8fa2b3; }
-html[data-theme="dark"] .search-label { background: #111c2a; border-color: #41536a; color: #9fb0c1; }
+html[data-theme="dark"] .search-label { background: #111c2a; border-color: #4b6179; color: #afbfce; }
 html[data-theme="dark"] .search-label input { background: transparent; }
 html[data-theme="dark"] .formula-note, html[data-theme="dark"] .table-footer, html[data-theme="dark"] footer { border-color: #32445a; }
 html[data-theme="dark"] .summary-card span, html[data-theme="dark"] th { color: #a8b8c8; }
 html[data-theme="dark"] .summary-card strong { color: #edf5ff; }
-html[data-theme="dark"] .summary-card.local-total strong { color: #bfe77c; }
+html[data-theme="dark"] .summary-card.local-total strong { color: #b5d982; }
 html[data-theme="dark"] th { background: #202f41; }
 html[data-theme="dark"] td { border-color: #2b3b50; color: #d4e0ea; }
 html[data-theme="dark"] td:first-child strong { color: #f0f5fa; }
-html[data-theme="dark"] td:first-child small, html[data-theme="dark"] td.reason { color: #aab9c8; }
+html[data-theme="dark"] td:first-child small, html[data-theme="dark"] td.reason { color: #bac7d3; }
 html[data-theme="dark"] .hidden-item { background: #29291f; }
 html[data-theme="dark"] .hidden-indicator { background: #52442a; color: #f4d789; }
 html[data-theme="dark"] .badge { background: #2e492c; color: #cde8ad; }

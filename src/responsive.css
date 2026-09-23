@@ -27,9 +27,9 @@
   .upload-card.loading .primary-button::after { content: '…'; }
   .summary-card { border-radius: 14px; min-height: 112px; overflow: hidden; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
   .summary-filter { width: 100%; appearance: none; font: inherit; text-align: left; }
-  .summary-filter.is-empty { background: #f8fafb; opacity: .7; }
+  .summary-filter.is-empty { background: #f8fafb; opacity: .82; }
   .summary-filter.is-empty.is-active { opacity: 1; }
-  .summary-filter.is-active { border-color: #7da72f; box-shadow: 0 0 0 2px rgba(125, 167, 47, .2), 0 10px 26px rgba(12, 26, 38, .07); }
+  .summary-filter.is-active { border-color: #7da72f; background: linear-gradient(145deg, #fbfef5, #fff); box-shadow: 0 0 0 2px rgba(125, 167, 47, .2), 0 10px 26px rgba(12, 26, 38, .07); }
   .summary-card.local-total { grid-column: span 2; }
   .message.warning { color: #8a5a12; }
   #result-table tbody tr { transition: background-color .14s ease; }
@@ -70,15 +70,15 @@
   html[data-theme="dark"] .summary-card:hover { border-color: #465b72; box-shadow: 0 10px 26px rgba(0, 0, 0, .2); }
 }
 
-html[data-theme="dark"] #result-table tbody tr:nth-child(even):not(.hidden-item) { background: #1a2737; }
-html[data-theme="dark"] #result-table tbody tr:hover { background: #1d2b3b; }
+html[data-theme="dark"] #result-table tbody tr:nth-child(even):not(.hidden-item) { background: #1c2b3d; }
+html[data-theme="dark"] #result-table tbody tr:hover { background: #223348; }
 html[data-theme="dark"] .message.warning { color: #f1c873; }
 html[data-theme="dark"] .search-label:focus-within { background: #152233; }
 html[data-theme="dark"] .table-tools { background: #182433; border-color: #32445a; }
 html[data-theme="dark"] .active-filters { background: #1c2b3b; border-color: #32445a; color: #b7c5d2; }
 html[data-theme="dark"] .active-filters button { background: #304328; color: #d2efaa; }
 html[data-theme="dark"] .summary-filter.is-empty { background: #141f2d; }
-html[data-theme="dark"] .summary-filter.is-active { border-color: #a8d064; box-shadow: 0 0 0 2px rgba(168, 208, 100, .2); }
+html[data-theme="dark"] .summary-filter.is-active { border-color: #9fc45e; background: linear-gradient(145deg, #20312e, #182433); box-shadow: 0 0 0 2px rgba(159, 196, 94, .24), 0 10px 24px rgba(0, 0, 0, .2); }
 
 html[data-density="compact"] #result-table th { padding-block: 10px; }
 html[data-density="compact"] #result-table td { padding-block: 10px; }
