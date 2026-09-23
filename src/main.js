@@ -1,8 +1,8 @@
-import { importFile } from './import.js?v=20260923-2';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-2';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-2';
-import { buildCsv, buildExportData, currencyNumber } from './export-data.js?v=20260923-2';
-import { renderApp } from './template.js?v=20260923-2';
+import { importFile } from './import.js?v=20260923-4';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260923-4';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260923-4';
+import { buildCsv, buildExportData, currencyNumber } from './export-data.js?v=20260923-4';
+import { renderApp } from './template.js?v=20260923-4';
 
 const app = document.querySelector('#app');
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false };

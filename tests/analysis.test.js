@@ -92,7 +92,7 @@ test('mantém visíveis as linhas inválidas e informa o campo que precisa de co
   const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
   const results = analyzeAnalitico([
     ['Saldo negativo', -1, 180, 'Desbloqueado', 'Desbloqueado', 0, 0, 'Sem Saldo', 7],
-    ['Status ausente', 2, 180, '', 'Desbloqueado', 0, 0, 'Item com Giro', 7],
+    ['Status ausente', 2, 180, '', '', 0, 0, 'Item com Giro', 7],
     ['Limites invertidos', 2, 180, 'Desbloqueado', 'Desbloqueado', 8, 4, 'Item com Giro', 7],
   ], mapping);
 
@@ -100,6 +100,17 @@ test('mantém visíveis as linhas inválidas e informa o campo que precisa de co
   assert.match(results[0].reason, /Qtde Atual: valor negativo/);
   assert.match(results[1].reason, /Ds Motivo Bloqueio: valor ausente/);
   assert.match(results[2].reason, /Qnt Min: maior que Qnt Max/);
+});
+
+test('usa Id Bloqueio desbloqueado quando o motivo está vazio', () => {
+  const mapping = suggestMapping(['Cd Item', 'Ds Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  const [result] = analyzeAnalitico([
+    [392720, 'Calça EPI', 2, 114, '', 'Desbloqueado', 0, 0, 'Item de Giro Baixo/Sem Saida', 4],
+  ], mapping);
+
+  assert.deepEqual(result.actions, ['BLOQUEAR']);
+  assert.equal(result.hidden, false);
+  assert.match(result.reason, /considerado como Desbloqueado pelo Id Bloqueio/);
 });
 
 test('aplica ao local 1 as mesmas regras de obsoleto do local 298', () => {

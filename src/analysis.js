@@ -179,17 +179,19 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     checkNumber('maximum', 'Qnt Max', maximum);
     if (mapping.daysSince >= 0) checkNumber('daysSince', 'Dif Dias', daysSince);
     if (mapping.localCode >= 0) checkNumber('localCode', 'Cd Local Estoque', localNumber);
-    const reasonStatus = normalize(blockReason);
+    const rawReasonStatus = normalize(blockReason);
+    const blockStatus = normalize(blockId);
+    const reasonStatus = rawReasonStatus || (blockStatus === 'desbloqueado' ? 'desbloqueado' : '');
     if (mapping.blockReason >= 0 && !['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) {
       issues.push(`Ds Motivo Bloqueio: ${blockReason ? 'valor não reconhecido' : 'valor ausente'}`);
     }
-    const blockStatus = normalize(blockId);
     if (mapping.blockId >= 0 && blockStatus !== 'desbloqueado' && !blockStatus.startsWith('bloqueado')) {
       issues.push(`Id Bloqueio: ${blockId ? 'valor não reconhecido' : 'valor ausente'}`);
     }
     if (minimum !== null && maximum !== null && minimum > maximum) issues.push('Qnt Min: maior que Qnt Max');
     if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
     const details = [daysSince === null ? '' : `${formatNumber(daysSince)} dias desde a última requisição`, blockReason, blockId ? `Id Bloqueio: ${blockId}` : ''].filter(Boolean);
+    if (!rawReasonStatus && reasonStatus === 'desbloqueado') details.push('Motivo do bloqueio considerado como Desbloqueado pelo Id Bloqueio.');
     const alreadyBlocked = blockId ? blockStatus.startsWith('bloqueado') : false;
     const hiddenByStatus = stock === 0 && minimum === 0 && maximum === 0 && reasonStatus === 'desbloqueado';
     const actions = [];

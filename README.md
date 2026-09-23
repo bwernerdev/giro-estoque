@@ -20,6 +20,8 @@ O padrão principal é a aba **Analítico** da `PLANILHA.xlsx`. A primeira linha
 
 Antes de aplicar as regras, o sistema valida as colunas obrigatórias e os valores de cada item. Quantidades negativas, mínimo maior que máximo, status não reconhecido e valores obrigatórios ausentes recebem **Verificar dados**. Essas linhas permanecem visíveis, mostram o campo que precisa de correção em **Outros dados** e entram no respectivo filtro e cartão do resumo.
 
+Quando `Ds Motivo Bloqueio` estiver vazio e `Id Bloqueio` informar exatamente **Desbloqueado**, o sistema considera o item desbloqueado para aplicar as regras. Valores preenchidos, conflitantes ou não reconhecidos continuam recebendo **Verificar dados**.
+
 Regras de ação fornecidas pelo usuário:
 
 - `Dif Dias >= 90`, `Qtde Atual > 0` e `Ds Motivo Bloqueio = Desbloqueado`: **BLOQUEAR**.
