@@ -19,6 +19,8 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.equal(document.querySelector('.primary-button').getAttribute('tabindex'), '0');
   assert.equal(document.querySelector('#result-table caption').textContent, 'Resultados da análise de estoque');
   assert.equal(document.querySelectorAll('[data-export]').length, 3);
+  assert.ok(document.querySelector('#density-toggle'));
+  assert.ok(document.querySelector('#clear-filters'));
   assert.equal(document.querySelector('#pagination').getAttribute('aria-label'), 'Páginas de resultados');
 });
 
@@ -26,6 +28,7 @@ test('filtra por busca, ação e local sem perder correspondências', () => {
   assert.deepEqual(filterResults(rows, { query: '100', analitico: true }).map(row => row.item), ['Parafuso']);
   assert.deepEqual(filterResults(rows, { action: 'ZERAR MIN/MAX', analitico: true }).map(row => row.item), ['Arruela']);
   assert.deepEqual(filterResults(rows, { location: '298', analitico: true }).map(row => row.item), ['Porca']);
+  assert.deepEqual(filterResults(rows, { hiddenOnly: true, analitico: true }).map(row => row.item), ['Porca']);
   assert.deepEqual(locationOptions(rows), ['1', '7', '298']);
   assert.deepEqual(actionCounts(rows, ['BLOQUEAR', 'ZERAR MIN/MAX'], true).map(item => item.count), [1, 1]);
 });
@@ -37,10 +40,11 @@ test('pagina sem descartar itens e limita a página atual', () => {
 });
 
 test('reinicia filtros ao importar uma nova planilha', () => {
-  const state = { page: 4, locationFilter: '298', sheets: ['anterior'] };
+  const state = { page: 4, locationFilter: '298', hiddenOnly: true, sheets: ['anterior'] };
   resetDashboardState(state);
   assert.equal(state.page, 1);
   assert.equal(state.locationFilter, '');
+  assert.equal(state.hiddenOnly, false);
   assert.deepEqual(state.sheets, ['anterior']);
 });
 

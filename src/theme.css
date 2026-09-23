@@ -19,6 +19,8 @@ html[data-theme="dark"] .file-pill { background: #293b2c; color: #c7e79a; }
 html[data-theme="dark"] .secondary-button { background: #223348; border-color: #405369; color: #d8efbd; }
 html[data-theme="dark"] .secondary-button:hover { background: #2d4259; }
 html[data-theme="dark"] .export-options { background: #182433; border-color: #405369; box-shadow: 0 8px 24px #0008; }
+html[data-theme="dark"] .export-menu summary { background: linear-gradient(180deg, #bfe15d, #a4cf3d); border-color: #8eb735; color: #183014; }
+html[data-theme="dark"] .export-menu summary:hover { background: linear-gradient(180deg, #c8ea67, #addd42); }
 html[data-theme="dark"] .export-options button { color: #e8eff6; }
 html[data-theme="dark"] .export-options button:hover, html[data-theme="dark"] .export-options button:focus-visible { background: #2d4259; }
 html[data-theme="dark"] .pagination button { background: #223348; border-color: #405369; color: #d8efbd; }

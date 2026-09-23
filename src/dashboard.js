@@ -15,12 +15,12 @@ export function locationOptions(rows) {
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
 }
 
-export function filterResults(rows, { query = '', action = '', location = '', analitico = false } = {}) {
+export function filterResults(rows, { query = '', action = '', location = '', analitico = false, hiddenOnly = false } = {}) {
   const normalizedQuery = normalize(query);
   return rows.filter(row => {
     const actionMatch = !action || (analitico ? row.actions.includes(action) : row.action === action);
     const searchValue = `${row.item ?? ''} ${row.sku ?? ''} ${row.branch ?? ''} ${row.location ?? ''} ${row.localCode ?? ''}`;
-    return matchesLocation(row, location) && actionMatch && (!normalizedQuery || normalize(searchValue).includes(normalizedQuery));
+    return matchesLocation(row, location) && actionMatch && (!hiddenOnly || row.hidden) && (!normalizedQuery || normalize(searchValue).includes(normalizedQuery));
   });
 }
 
@@ -41,6 +41,7 @@ export function actionCounts(rows, actions, analitico) {
 export function resetDashboardState(state) {
   state.page = 1;
   state.locationFilter = '';
+  state.hiddenOnly = false;
   return state;
 }
 

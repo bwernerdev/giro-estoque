@@ -5,7 +5,7 @@ import { buildCsv, buildExportData } from './export-data.js';
 import { renderApp } from './template.js';
 
 const app = document.querySelector('#app');
-const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '' };
+const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false };
 const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
@@ -33,6 +33,12 @@ function setTheme(theme) {
   document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#080e17' : '#0b1725');
 }
 try { setTheme(localStorage.getItem('giro-estoque-theme')); } catch { setTheme('light'); }
+function setDensity(compact) {
+  document.documentElement.dataset.density = compact ? 'compact' : 'comfortable';
+  el('#density-toggle').textContent = compact ? 'Modo confortável' : 'Modo compacto';
+  el('#density-toggle').setAttribute('aria-pressed', String(compact));
+}
+try { setDensity(localStorage.getItem('controle-estoque-density') === 'compact'); } catch { setDensity(false); }
 function message(text, tone = '') {
   const type = tone === true ? 'error' : tone;
   el('#message').textContent = text;
@@ -127,8 +133,12 @@ async function refresh({ reanalyze = true } = {}) {
   const localTotalCard = state.locationFilter || state.allResults.length > 0
     ? `<div class="summary-card local-total"><span>${state.locationFilter ? 'TOTAL DO LOCAL' : 'TOTAL GERAL'}</span><strong>${realCurrency(locationTotal)}</strong></div>`
     : '';
-  el('#summary').innerHTML = `<div class="summary-card total"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></div>` + counts.map(({ action, count }) => `<div class="summary-card ${slug(action)}"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></div>`).join('') + (localTotalCard || '');
   const previousFilter = el('#filter').value;
+  el('#summary').innerHTML = `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></button>` + counts.map(({ action, count }) => {
+    const hiddenCard = action === 'Itens ocultos';
+    const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
+    return `<button type="button" class="summary-card summary-filter ${slug(action)}${count === 0 ? ' is-empty' : ''}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
+  }).join('') + (localTotalCard || '');
   el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + actions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
   if (actions.includes(previousFilter)) el('#filter').value = previousFilter;
   el('#filter').setAttribute('aria-label', 'Filtrar ação');
@@ -145,13 +155,52 @@ async function refresh({ reanalyze = true } = {}) {
 }
 
 function slug(text) { return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+function actionIcon(action) {
+  const normalized = String(action).toUpperCase();
+  if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return '!';
+  if (normalized.includes('DESBLOQUEAR')) return '↗';
+  if (normalized.includes('ZERAR')) return '0';
+  if (normalized.includes('TRANSFERIR')) return '→';
+  if (normalized.includes('BLOQUEAR')) return '⊘';
+  if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return '+';
+  if (normalized.includes('REDUZIR')) return '−';
+  if (normalized.includes('MANTER')) return '✓';
+  return '•';
+}
+function badgeHtml(action) {
+  return `<span class="badge ${slug(action)}"><span class="badge-icon" aria-hidden="true">${actionIcon(action)}</span>${escapeHtml(action)}</span>`;
+}
 function visibleResults() {
   return filterResults(state.results, {
     query: el('#search').value,
     action: el('#filter').value,
     location: state.locationFilter,
     analitico: isAnaliticoMode(),
+    hiddenOnly: state.hiddenOnly,
   });
+}
+function updateSummarySelection() {
+  const selectedAction = el('#filter').value;
+  el('#summary').querySelectorAll('.summary-filter').forEach(card => {
+    const selected = card.hasAttribute('data-summary-hidden')
+      ? state.hiddenOnly
+      : card.hasAttribute('data-summary-clear')
+        ? !selectedAction && !state.hiddenOnly
+        : card.dataset.summaryAction === selectedAction && !state.hiddenOnly;
+    card.classList.toggle('is-active', selected);
+    card.setAttribute('aria-pressed', String(selected));
+  });
+}
+function renderActiveFilters(filteredCount) {
+  const parts = [];
+  const query = el('#search').value.trim();
+  if (state.locationFilter) parts.push(`Local ${state.locationFilter}`);
+  if (el('#filter').value) parts.push(el('#filter').value);
+  if (query) parts.push(`Busca: “${query}”`);
+  if (state.hiddenOnly) parts.push('Somente itens ocultos');
+  else if (el('#show-hidden').checked && isAnaliticoMode()) parts.push('Itens ocultos incluídos');
+  el('#active-filters').hidden = parts.length === 0;
+  el('#active-filters-text').textContent = parts.length ? `${parts.join(' · ')} · ${filteredCount} ${filteredCount === 1 ? 'item' : 'itens'}` : '';
 }
 function renderResults() {
   const query = el('#search').value.trim().toLowerCase();
@@ -162,14 +211,16 @@ function renderResults() {
   const page = paginate(filtered, state.page, PAGE_SIZE);
   state.page = page.page;
   const { pageCount, start, rows: visible } = page;
-  el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(action => `<span class="badge ${slug(action)}">${escapeHtml(action)}</span>`).join(' ') : `<span class="badge ${slug(row.action)}">${escapeHtml(row.action)}</span>`}</td><td class="reason">${escapeHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
+  el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(badgeHtml).join(' ') : badgeHtml(row.action)}</td><td class="reason">${escapeHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
   const itemLabel = filtered.length === 1 ? 'item' : 'itens';
-  const filterLabel = query || filter || state.locationFilter ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
+  const filterLabel = query || filter || state.locationFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
   el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
   el('#pagination').hidden = pageCount <= 1;
   el('#page-label').textContent = `Página ${state.page} de ${pageCount}`;
   el('#page-previous').disabled = state.page === 1;
   el('#page-next').disabled = state.page === pageCount;
+  updateSummarySelection();
+  renderActiveFilters(filtered.length);
 }
 
 function exportData() {
@@ -298,7 +349,7 @@ upload.addEventListener('dragover', event => { event.preventDefault(); upload.cl
 upload.addEventListener('dragleave', () => upload.classList.remove('dragging'));
 upload.addEventListener('drop', event => { event.preventDefault(); upload.classList.remove('dragging'); loadFile(event.dataTransfer.files[0]); });
 el('#search').addEventListener('input', () => { state.page = 1; renderResults(); });
-el('#filter').addEventListener('change', () => { state.page = 1; renderResults(); });
+el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; renderResults(); });
 el('#location-filter').addEventListener('change', () => {
   state.locationFilter = el('#location-filter').value;
   state.page = 1;
@@ -316,8 +367,41 @@ el('#theme-toggle').addEventListener('click', () => {
   setTheme(theme);
   try { localStorage.setItem('giro-estoque-theme', theme); } catch { /* A escolha vale até fechar a página. */ }
 });
+el('#density-toggle').addEventListener('click', () => {
+  const compact = document.documentElement.dataset.density !== 'compact';
+  setDensity(compact);
+  try { localStorage.setItem('controle-estoque-density', compact ? 'compact' : 'comfortable'); } catch { /* A escolha vale até fechar a página. */ }
+});
 el('#config-toggle').addEventListener('click', () => setConfigExpanded(el('#config-grid').hidden));
-el('#show-hidden').addEventListener('change', () => { state.page = 1; refresh({ reanalyze: false }); });
+el('#show-hidden').addEventListener('change', () => {
+  state.page = 1;
+  if (!el('#show-hidden').checked) state.hiddenOnly = false;
+  refresh({ reanalyze: false });
+});
+el('#summary').addEventListener('click', event => {
+  const card = event.target.closest('.summary-filter');
+  if (!card) return;
+  state.page = 1;
+  if (card.hasAttribute('data-summary-hidden')) {
+    state.hiddenOnly = true;
+    el('#show-hidden').checked = true;
+    el('#filter').value = '';
+    refresh({ reanalyze: false });
+    return;
+  }
+  state.hiddenOnly = false;
+  el('#filter').value = card.dataset.summaryAction ?? '';
+  renderResults();
+});
+el('#clear-filters').addEventListener('click', () => {
+  state.page = 1;
+  state.locationFilter = '';
+  state.hiddenOnly = false;
+  el('#search').value = '';
+  el('#filter').value = '';
+  el('#show-hidden').checked = false;
+  refresh({ reanalyze: false });
+});
 el('#export-menu').querySelectorAll('[data-export]').forEach(button => button.addEventListener('click', async () => {
   el('#export-menu').open = false;
   el('#export-menu summary').focus();

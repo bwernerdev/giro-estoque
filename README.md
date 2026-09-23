@@ -10,6 +10,8 @@ Após importar uma planilha, a apresentação e a área de importação ficam co
 
 Use o botão **Modo escuro** no cabeçalho para alternar o tema. A escolha fica salva no navegador.
 
+Os cartões do resumo também funcionam como filtros da tabela. O cartão selecionado fica destacado, e a faixa acima da tabela mostra os filtros ativos e permite limpá-los de uma vez. A barra de busca e filtros permanece visível durante a rolagem. Use **Modo compacto** para reduzir a altura das linhas e visualizar mais itens; essa preferência também fica salva no navegador.
+
 A análise acontece no navegador; a planilha não é enviada a um servidor. A biblioteca ExcelJS e as fontes visuais estão incluídas no projeto para que o Go Live funcione sem depender da internet. Planilhas grandes são analisadas em blocos e exibem o andamento da leitura.
 
 ## Planilha

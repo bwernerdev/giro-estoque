@@ -39,9 +39,11 @@ export function renderApp() {
                   <select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos os locais</option></select>
                   <select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select>
                   <label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> Mostrar itens ocultos</label>
+                  <button id="density-toggle" class="secondary-button density-toggle" type="button" aria-pressed="false">Modo compacto</button>
                   <details id="export-menu" class="export-menu"><summary class="secondary-button">Exportar ▾</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
                 </div>
               </div>
+              <div id="active-filters" class="active-filters" hidden><span id="active-filters-text"></span><button id="clear-filters" type="button">Limpar filtros</button></div>
               <div class="table-scroll"><table id="result-table"><caption class="sr-only">Resultados da análise de estoque</caption><thead id="table-head"></thead><tbody id="result-rows"></tbody></table></div>
               <div id="table-footer" class="table-footer"><span id="page-status"></span><nav id="pagination" class="pagination" aria-label="Páginas de resultados" hidden><button id="page-previous" type="button">Anterior</button><span id="page-label"></span><button id="page-next" type="button">Próxima</button></nav></div>
             </div>
