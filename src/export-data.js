@@ -11,21 +11,7 @@ function unitPriceValue(row) {
   return totalValue / stock;
 }
 
-function includeLocationDetails(rows) {
-  const fieldDefs = [
-    { key: 'shelfCode', label: 'Prateleira' },
-    { key: 'partitionCode', label: 'Reparticao' },
-    { key: 'address', label: 'Endereço do item' },
-  ];
-  const activeFields = fieldDefs.filter(({ key }) => rows.some(row => String(row[key] ?? '').trim() !== ''));
-  return {
-    headers: activeFields.map(({ label }) => label),
-    rows: rows.map(row => activeFields.map(({ key }) => row[key] ?? '')),
-  };
-}
-
 export function buildExportData(rows, mode) {
-  const locationDetails = includeLocationDetails(rows);
   const baseHeaders = ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo'];
 
   if (mode === 'analitico') {

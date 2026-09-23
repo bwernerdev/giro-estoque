@@ -1,8 +1,10 @@
+const brandIconUrl = new URL('../assets/images/favicon.webp', import.meta.url).href;
+
 export function renderApp() {
   return `
     <div class="shell">
       <header class="topbar">
-        <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="./assets/images/favicon.webp" alt="" /></span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div>
+        <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="${brandIconUrl}" alt="" /></span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">☾ Modo escuro</button>
       </header>
       <main>
@@ -14,7 +16,7 @@ export function renderApp() {
         <section class="upload-card" id="upload-card">
           <div class="upload-icon">⇧</div>
           <div><h2>Importar planilha</h2><p>Arraste um arquivo aqui ou selecione no computador</p><small>Excel .xlsx ou CSV · análise local no navegador</small></div>
-          <label class="primary-button" for="file-input">Selecionar arquivo <span>→</span></label>
+          <label class="primary-button" for="file-input" role="button" tabindex="0">Selecionar arquivo <span>→</span></label>
           <input id="file-input" type="file" accept=".xlsx,.csv" hidden>
         </section>
         <div id="message" role="status" aria-live="polite"></div>

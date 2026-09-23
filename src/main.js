@@ -99,7 +99,9 @@ async function refresh({ reanalyze = true } = {}) {
     if (rows.length > 1000) message(`Analisando ${rows.length.toLocaleString('pt-BR')} linhas...`);
     const analyzed = await processInChunks(rows, analyzeChunk, {
       firstRow: currentSheet().headerRow + 2,
-      onProgress: rows.length > 1000 ? (processed, total) => message(`Analisando ${processed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} linhas...`) : undefined,
+      onProgress: rows.length > 1000 ? (processed, total) => {
+        if (run === refreshRun) message(`Analisando ${processed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} linhas...`);
+      } : undefined,
     });
     if (run !== refreshRun) return;
     state.allResults = analyzed;
@@ -248,7 +250,7 @@ function exportPdf() {
   const analitico = isAnaliticoMode();
   const giro = !analitico && isGiroMode();
   const rows = visibleResults();
-  const hasAddress = rows.some(row => row.address || row.itemAddress || row.endereco || row.shelfCode || row.partitionCode);
+  const hasAddress = rows.some(row => row.address || row.itemAddress || row.endereco);
   const columns = analitico
     ? [['Código', row => row.sku], ['Item', row => row.item], ['Cd Prateleira', row => row.shelfCode ?? ''], ['Cd Reparticao', row => row.partitionCode ?? ''], ['Local', row => row.localCode], ['Saldo', row => row.stock], ['Mín./máx.', row => `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}`], ['Dias sem requisição', row => row.daysSince], ['Classificação', row => row.classification], ...(hasAddress ? [['Endereço do item', row => row.address ?? row.itemAddress ?? row.endereco ?? '']] : []), ['Ações', row => row.action], ['Outros dados', row => row.reason]]
     : giro
@@ -286,6 +288,12 @@ async function loadFile(file) {
 
 el('#file-input').addEventListener('change', event => { const file = event.target.files[0]; event.target.value = ''; loadFile(file); });
 const upload = el('#upload-card');
+const fileButton = upload.querySelector('.primary-button');
+fileButton.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  el('#file-input').click();
+});
 upload.addEventListener('dragover', event => { event.preventDefault(); upload.classList.add('dragging'); });
 upload.addEventListener('dragleave', () => upload.classList.remove('dragging'));
 upload.addEventListener('drop', event => { event.preventDefault(); upload.classList.remove('dragging'); loadFile(event.dataTransfer.files[0]); });
@@ -312,6 +320,7 @@ el('#config-toggle').addEventListener('click', () => setConfigExpanded(el('#conf
 el('#show-hidden').addEventListener('change', () => { state.page = 1; refresh({ reanalyze: false }); });
 el('#export-menu').querySelectorAll('[data-export]').forEach(button => button.addEventListener('click', async () => {
   el('#export-menu').open = false;
+  el('#export-menu summary').focus();
   try {
     if (button.dataset.export === 'xlsx') await exportXlsx();
     else if (button.dataset.export === 'pdf') exportPdf();
@@ -319,4 +328,8 @@ el('#export-menu').querySelectorAll('[data-export]').forEach(button => button.ad
   } catch (error) { message(error.message || 'Não foi possível exportar os itens.', true); }
 }));
 document.addEventListener('click', event => { if (!el('#export-menu').contains(event.target)) el('#export-menu').open = false; });
-document.addEventListener('keydown', event => { if (event.key === 'Escape') el('#export-menu').open = false; });
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !el('#export-menu').open) return;
+  el('#export-menu').open = false;
+  el('#export-menu summary').focus();
+});
