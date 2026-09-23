@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { actionCounts, filterResults, locationOptions, paginate, processInChunks, resetDashboardState } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
+import { buildSummaryMarkup } from '../src/main.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -36,6 +38,28 @@ test('filtra por busca, ação e local sem perder correspondências', () => {
   assert.deepEqual(filterResults(rows, { hiddenOnly: true, analitico: true }).map(row => row.item), ['Porca']);
   assert.deepEqual(locationOptions(rows), ['1', '7', '298']);
   assert.deepEqual(actionCounts(rows, ['BLOQUEAR', 'ZERAR MIN/MAX'], true).map(item => item.count), [1, 1]);
+});
+
+test('renderiza apenas um card de valor total do estoque e mantém a linha inferior como resumo', () => {
+  const actions = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
+  const markup = buildSummaryMarkup({
+    summaryResults: [{ item: 'A' }, { item: 'B' }],
+    summaryAllResults: [{ item: 'A' }, { item: 'B' }, { item: 'C', hidden: true }],
+    actions,
+    locationFilter: '',
+    locationTotal: 44302.87,
+  });
+
+  assert.match(markup, /VALOR TOTAL DO ESTOQUE/);
+  assert.doesNotMatch(markup, /VALOR TOTAL DO ESTOQUE[\s\S]*VALOR TOTAL DO ESTOQUE/);
+  assert.match(markup, /ITENS NO PAINEL/);
+  assert.equal((markup.match(/summary-card/g) || []).length, 8);
+});
+
+test('cards vazios não recebem altura menor que os demais no resumo', () => {
+  const css = readFileSync(new URL('../src/responsive.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(css, /\.summary-filter\.is-empty\s*\{[^}]*min-height\s*:\s*88px/i);
+  assert.doesNotMatch(css, /\.summary-filter\.is-empty\s*\{[^}]*height\s*:\s*auto/i);
 });
 
 test('pagina sem descartar itens e limita a página atual', () => {
