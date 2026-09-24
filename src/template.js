@@ -35,7 +35,7 @@ export function renderApp() {
             <div id="summary" class="summary-grid"></div>
             <div class="table-panel">
               <div class="table-tools">
-                <label class="search-label"><span aria-hidden="true">⌕</span><span class="sr-only">Buscar item ou código</span><input id="search" type="search" placeholder="Buscar item ou código"></label>
+                <label class="filter-field search-field"><span>Pesquisa</span><span class="search-label"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Buscar item ou código"></span></label>
                 <div class="table-filters">
                   <label class="filter-field"><span>Local</span><select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos os locais</option></select></label>
                   <label class="filter-field"><span>Ação</span><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select></label>
