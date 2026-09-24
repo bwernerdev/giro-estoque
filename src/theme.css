@@ -1,8 +1,8 @@
 .theme-toggle { color: #d8e5ee; background: #1c2b3a; border: 1px solid #34495a; border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .theme-toggle:hover { background: #2a3e50; }
-.theme-toggle:focus-visible { outline: 3px solid #b9e74c; outline-offset: 2px; }
+.theme-toggle:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
 
-html[data-theme="dark"] { color: #e8eff6; background: #0f1723; color-scheme: dark; }
+html[data-theme="dark"] { --color-page: #0f1723; --color-surface: #182433; --color-surface-muted: #202f41; --color-text: #e8eff6; --color-text-strong: #edf5ff; --color-text-muted: #a8b6c6; --color-border: #3b5169; --color-border-control: #4b6179; --color-focus: #9fc45e; --scrollbar-thumb: #52677c; --scrollbar-track: #111c2a; color: var(--color-text); background: var(--color-page); color-scheme: dark; }
 html[data-theme="dark"] .topbar { background: #080e17; border-color: #253447; }
 html[data-theme="dark"] .theme-toggle { color: #e8eff6; background: #243448; border-color: #40566b; }
 html[data-theme="dark"] .theme-toggle:hover { background: #31465d; }
@@ -56,3 +56,17 @@ html[data-theme="dark"] .message { color: #b8df82; }
 html[data-theme="dark"] .message.error { color: #ffb1a4; }
 
 @media (max-width: 620px) { .theme-toggle { padding: 8px 10px; } }
+
+html[data-theme="dark"] #result-table tbody tr:nth-child(even):not(.hidden-item) { background: #1c2b3d; }
+html[data-theme="dark"] #result-table tbody tr:hover { background: #223348; }
+html[data-theme="dark"] .message.warning { color: #f1c873; }
+html[data-theme="dark"] .search-label:focus-within { background: #152233; }
+html[data-theme="dark"] .table-tools { background: #182433; border-color: #32445a; }
+html[data-theme="dark"] .active-filters { background: #1c2b3b; border-color: #32445a; color: #b7c5d2; }
+html[data-theme="dark"] .active-filters button { background: #304328; color: #d2efaa; }
+html[data-theme="dark"] .summary-filter.is-empty { background: #141f2d; }
+html[data-theme="dark"] .summary-filter.is-active { border-color: #9fc45e; background: linear-gradient(145deg, #20312e, #182433); box-shadow: 0 0 0 2px rgba(159, 196, 94, .24), 0 10px 24px rgba(0, 0, 0, .2); }
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-theme="dark"] .summary-card:hover { border-color: #465b72; box-shadow: 0 10px 26px rgba(0, 0, 0, .2); }
+}
