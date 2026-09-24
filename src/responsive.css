@@ -20,7 +20,7 @@
   #result-table .badge { max-width: 100%; white-space: normal; }
   .search-label { transition: border-color .15s ease, background-color .15s ease; }
   .search-label:focus-within { border-color: #92bd38; background: #fbfdf7; }
-  .table-filters { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
+  .table-filters { flex: 0 0 auto; min-width: max-content; flex-wrap: nowrap; }
   .table-filters select { width: min(100%, 210px); min-width: 130px; }
   #location-filter { min-width: 140px; }
   .upload-card.loading { opacity: .72; pointer-events: none; }
@@ -94,7 +94,7 @@ html[data-density="compact"] #result-table .badge { padding-block: 5px; }
 @media screen and (max-width: 1180px) {
   .table-tools { flex-wrap: wrap; }
   .search-field { flex: 1 1 100%; max-width: none; }
-  .table-filters { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
+  .table-filters { width: 100%; min-width: 0; flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
   .filter-field { flex: 1 1 180px; }
   .table-filters select { width: 100%; }
 }
