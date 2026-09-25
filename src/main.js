@@ -138,8 +138,9 @@ if (typeof document !== 'undefined') {
   }
 
   const initialMessage = el('#message');
-  if (initialMessage && !initialMessage.textContent.trim()) {
-    initialMessage.textContent = 'Importe uma planilha para começar.';
+  if (initialMessage) {
+    initialMessage.textContent = '';
+    initialMessage.className = '';
   }
   function currentSheet() { return state.sheets[state.sheet]; }
   function renderImportContext() {

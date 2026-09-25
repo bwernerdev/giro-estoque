@@ -15,14 +15,13 @@ export function renderApp() {
           <div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE MATERIAIS</div>
           <h1>Entenda o giro<br>de cada <em>item.</em></h1>
           <p>Consulte quantidades, limites, classificação e ações por item.</p>
-          <div class="hero-badges" aria-label="Vantagens do aplicativo">
-            <span>✓ análise local</span>
-            <span>✓ Excel e CSV</span>
-            <span>✓ instala como app</span>
-          </div>
         </section>
         <section class="upload-card" id="upload-card">
-          <div class="upload-icon">⇧</div>
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path d="M12 3.5a1 1 0 0 1 1 1v9.59l2.7-2.7a1 1 0 0 1 1.4 1.42l-4.42 4.43a1 1 0 0 1-1.4 0L6.9 13.22a1 1 0 0 1 1.4-1.42l2.7 2.7V4.5a1 1 0 0 1 1-1Zm-7 12a1 1 0 0 1 1 1v1.5h12v-1.5a1 1 0 1 1 2 0v2.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2.5a1 1 0 0 1 1-1Z" fill="currentColor"/>
+            </svg>
+          </div>
           <div class="upload-copy">
             <h2>Importar planilha</h2>
             <p>Arraste um arquivo aqui ou selecione no computador.</p>
@@ -33,7 +32,7 @@ export function renderApp() {
             <input id="file-input" type="file" accept=".xlsx,.csv" hidden>
           </div>
         </section>
-        <div id="message" role="status" aria-live="polite">Importe uma planilha para começar.</div>
+        <div id="message" role="status" aria-live="polite"></div>
         <section id="workspace" hidden>
           <div class="section-head">
             <div><h2>Preparar análise</h2></div>
