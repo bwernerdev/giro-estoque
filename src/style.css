@@ -118,6 +118,18 @@ button {
   border-bottom:1px solid #253444
 }
 
+.topbar-actions {
+  display:flex;
+  align-items:center;
+  gap:12px
+}
+
+.install-button {
+  min-height:38px;
+  font-size:12px;
+  padding:0 12px
+}
+
 .brand {
   display:flex;
   align-items:center;

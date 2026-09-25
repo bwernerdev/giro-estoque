@@ -1,0 +1,20 @@
+{
+  "name": "Giro de Estoque",
+  "short_name": "Giro Estoque",
+  "description": "Aplicativo para analisar giro de estoque com planilhas Excel e CSV.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafb",
+  "theme_color": "#0b1725",
+  "icons": [
+    {
+      "src": "./assets/images/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

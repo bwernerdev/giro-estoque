@@ -53,6 +53,46 @@ if (app) app.innerHTML = renderApp();
 
 const el = typeof document !== 'undefined' ? selector => document.querySelector(selector) : () => null;
 if (typeof document !== 'undefined') {
+  let deferredInstallPrompt = null;
+  const installButton = el('#install-app');
+
+  function setInstallButton(visible) {
+    if (!installButton) return;
+    installButton.hidden = !visible;
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(() => {
+        /* O app continua funcionando mesmo sem service worker. */
+      });
+    });
+  }
+
+  if (installButton) {
+    installButton.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setInstallButton(false);
+      }
+      deferredInstallPrompt = null;
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    setInstallButton(true);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    setInstallButton(false);
+    const messageNode = el('#message');
+    if (messageNode) messageNode.textContent = 'Aplicativo instalado com sucesso.';
+  });
+
   function setTheme(theme) {
     const dark = theme === 'dark';
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';

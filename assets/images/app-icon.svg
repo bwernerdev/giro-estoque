@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Giro de Estoque">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0b1725"/>
+      <stop offset="100%" stop-color="#1f4d3f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="1" y2="0">
+      <stop offset="0%" stop-color="#cfe96d"/>
+      <stop offset="100%" stop-color="#86b52f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect x="90" y="98" width="332" height="316" rx="42" fill="#ffffff" opacity="0.08"/>
+  <path d="M148 334V182h118c42 0 74 31 74 75s-32 79-74 79H168v-2h98c31 0 53-20 53-54s-22-54-53-54h-98v-2h98c32 0 57 24 57 60s-25 60-57 60h-98z" fill="url(#accent)"/>
+  <path d="M164 148h170l-24 38h-146z" fill="#edf7be"/>
+  <path d="M340 196h46v136h-46z" fill="#edf7be" opacity="0.95"/>
+  <path d="M302 210h82v52h-82zm-20 78h102v52H282z" fill="#ffffff" opacity="0.9"/>
+  <path d="M146 333l62-54 72 65 74-97 44 34" fill="none" stroke="#dff3a2" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="146" cy="333" r="16" fill="#dff3a2"/>
+  <circle cx="208" cy="279" r="16" fill="#dff3a2"/>
+  <circle cx="280" cy="344" r="16" fill="#dff3a2"/>
+  <circle cx="354" cy="247" r="16" fill="#dff3a2"/>
+</svg>

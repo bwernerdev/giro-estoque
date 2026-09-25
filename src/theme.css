@@ -1,11 +1,15 @@
 .theme-toggle { color: #d8e5ee; background: #1c2b3a; border: 1px solid #34495a; border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .theme-toggle:hover { background: #2a3e50; }
 .theme-toggle:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.install-button { color: #183014; background: linear-gradient(180deg, #bfe76a, #9dd73b); border-color: #7caf2e; }
+.install-button:hover { background: linear-gradient(180deg, #c9f171, #abd940); }
 
 html[data-theme="dark"] { --color-page: #0f1723; --color-surface: #182433; --color-surface-muted: #202f41; --color-text: #e8eff6; --color-text-strong: #edf5ff; --color-text-muted: #a8b6c6; --color-border: #3b5169; --color-border-control: #4b6179; --color-focus: #9fc45e; --color-hidden-row: #29291f; --color-badge-warning-bg: #4e3928; --scrollbar-thumb: #52677c; --scrollbar-track: #111c2a; color: var(--color-text); background: var(--color-page); color-scheme: dark; }
 html[data-theme="dark"] .topbar { background: #080e17; border-color: #253447; }
 html[data-theme="dark"] .theme-toggle { color: #e8eff6; background: #243448; border-color: #40566b; }
 html[data-theme="dark"] .theme-toggle:hover { background: #31465d; }
+html[data-theme="dark"] .install-button { color: #ecf9cf; background: linear-gradient(180deg, #4b6f2a, #31561d); border-color: #6da74a; }
+html[data-theme="dark"] .install-button:hover { background: linear-gradient(180deg, #567d2d, #3d6a21); }
 html[data-theme="dark"] .brand-light { color: #a8bacb; }
 html[data-theme="dark"] .eyebrow, html[data-theme="dark"] .section-kicker { color: #b8dd73; }
 html[data-theme="dark"] .hero em { color: #b7df6c; }
