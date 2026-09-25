@@ -2,7 +2,7 @@ import { parseNumber } from './analysis.js?v=20260925-4';
 
 function formatCurrency(value, fractionDigits = 2) {
   if (value === null || value === undefined) return '';
-  const numericValue = Number(value ?? 0);
+  const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return 'R$ 0,00';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -20,9 +20,7 @@ function unitPriceValue(row) {
   return totalValue / stock;
 }
 
-export function currencyNumber(value) {
-  return parseNumber(value);
-}
+
 
 export function shouldIncludeDaysSince(mode, action) {
   return mode === 'analitico' && action !== 'DESBLOQUEAR';

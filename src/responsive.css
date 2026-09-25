@@ -120,8 +120,8 @@ html[data-density="compact"] #result-table .badge { padding-block: 5px; }
   .table-footer, .active-filters { flex-wrap: wrap; }
   .table-tools { position: static; }
   .summary-grid { grid-template-columns: 1fr; }
-  .summary-card.local-total { grid-column: auto; }
-  .summary-card.local-total { flex-direction: column; align-items: flex-start; }
+  /* grid-column e flex consolidados de regras anteriormente duplicadas */
+  .summary-card.local-total { grid-column: auto; flex-direction: column; align-items: flex-start; }
   .import-context span:first-child { max-width: 100%; }
   .results-counter { flex-wrap: wrap; }
 }

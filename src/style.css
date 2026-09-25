@@ -72,6 +72,8 @@
   --color-badge-neutral-text:#5b6975;
   --scrollbar-thumb:#b7c2ca;
   --scrollbar-track:#edf1f3;
+  --color-topbar:#0b1725;
+  --color-topbar-border:#253444;
   font-family:"DM Sans",Arial,sans-serif;
   color:var(--color-text);
   background:var(--color-page);
@@ -118,13 +120,13 @@ button {
 
 .topbar {
   height:74px;
-  background:#0b1725;
+  background:var(--color-topbar);
   color:#fff;
   display:flex;
   align-items:center;
   justify-content:space-between;
   padding:0 max(5vw,calc((100vw - 1320px)/2));
-  border-bottom:1px solid #253444
+  border-bottom:1px solid var(--color-topbar-border)
 }
 
 .topbar-actions {
@@ -284,8 +286,7 @@ main {
 .upload-icon svg {
   width:34px;
   height:34px;
-  display:block;
-  line-height:1;
+  display:block
 }
 
 .upload-copy {
@@ -324,7 +325,7 @@ main {
   align-items:center;
   justify-content:center;
   min-height:48px;
-  margin-left:auto;
+  margin-left:auto; /* posiciona à direita em contextos flex; também usado como <label> */
   padding:0 20px;
   border:0;
   border-radius:10px;
@@ -334,7 +335,7 @@ main {
   font-weight:800;
   line-height:1.2;
   white-space:nowrap;
-  cursor:pointer;
+  cursor:pointer; /* necessário: .primary-button é usado em <label>, não apenas <button> */
   box-shadow:0 8px 18px rgba(115,149,36,.18)
 }
 
@@ -506,11 +507,7 @@ select:focus,input:focus {
   border-color:#92bd38
 }
 
-select:focus-visible,input:focus-visible {
-  outline:2px solid var(--color-focus);
-  outline-offset:2px;
-  box-shadow:none
-}
+
 
 .mapping-grid select,.settings-grid input {
   width:100%;

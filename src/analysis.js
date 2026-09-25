@@ -13,7 +13,7 @@ export const fields = [
   { key: 'minimum', label: 'Quantidade mínima', required: false, aliases: ['qnt min', 'quantidade minima', 'estoque minimo'] },
   { key: 'maximum', label: 'Quantidade máxima', required: false, aliases: ['qnt max', 'quantidade maxima', 'estoque maximo'] },
   { key: 'daysSince', label: 'Dias desde a última requisição', required: false, aliases: ['dif dias'] },
-  { key: 'averageConsumption', label: 'Média de consumo', required: false, aliases: ['media de consumo', 'media de conusmo'] },
+  { key: 'averageConsumption', label: 'Média de consumo', required: false, aliases: ['media de consumo', 'media de conusmo' /* alias intencional: captura planilhas com o typo original */] },
   { key: 'classification', label: 'Classificação do giro', required: false, aliases: ['itens acima de 90 dias'] },
   { key: 'blockReason', label: 'Motivo do bloqueio', required: false, aliases: ['ds motivo bloqueio'] },
   { key: 'blockId', label: 'Id Bloqueio', required: false, aliases: ['id bloqueio'] },
@@ -33,9 +33,8 @@ export function normalize(value) {
 }
 
 export function normalizeLocalKey(value) {
-  const normalized = String(value ?? '').trim();
-  if (!normalized) return '';
-  return normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const trimmed = String(value ?? '').trim();
+  return trimmed ? normalize(trimmed) : '';
 }
 
 export function stockLocation(row) {

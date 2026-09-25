@@ -12,16 +12,12 @@ function searchableText(row) {
   return searchTextCache.get(row);
 }
 
-export function rowLocation(row) {
-  return stockLocation(row);
-}
-
 export function matchesLocation(row, location) {
-  return !location || normalizeLocalKey(rowLocation(row)) === normalizeLocalKey(location);
+  return !location || normalizeLocalKey(stockLocation(row)) === normalizeLocalKey(location);
 }
 
 export function locationOptions(rows) {
-  return [...new Set(rows.map(row => String(rowLocation(row)).trim()).filter(Boolean))]
+  return [...new Set(rows.map(row => String(stockLocation(row)).trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
 }
 

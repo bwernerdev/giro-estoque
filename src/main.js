@@ -1,16 +1,19 @@
-import { importFile, selectDataRows } from './import.js?v=20260925-4';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260925-4';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260925-4';
-import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260925-4';
-import { renderApp } from './template.js?v=20260925-4';
+import { importFile, selectDataRows } from './import.js';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, parseNumber, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js';
+import { buildCsv, buildExportData, shouldIncludeDaysSince } from './export-data.js';
+import { renderApp } from './template.js';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
-const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null };
-state.mode = 'auto';
-state.numberFormat = 'pt-BR';
-state.settings = {
-  generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' },
-  giro: { shortDays: '30', excessDays: '90', longDays: '365' },
+const state = {
+  sheets: [], sheet: 0, mapping: {}, allResults: [], results: [],
+  page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null,
+  mode: 'auto',
+  numberFormat: 'pt-BR',
+  settings: {
+    generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' },
+    giro: { shortDays: '30', excessDays: '90', longDays: '365' },
+  },
 };
 const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
@@ -121,8 +124,9 @@ if (typeof document !== 'undefined') {
   function setTheme(theme) {
     const dark = theme === 'dark';
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    el('#theme-toggle').textContent = dark ? '☀ Modo claro' : '☾ Modo escuro';
-    el('#theme-toggle').setAttribute('aria-pressed', String(dark));
+    const toggle = el('#theme-toggle');
+    toggle.textContent = dark ? '☀ Modo claro' : '☾ Modo escuro';
+    toggle.setAttribute('aria-pressed', String(dark));
     document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#080e17' : '#0b1725');
   }
   try { setTheme(localStorage.getItem('giro-estoque-theme')); } catch { setTheme('light'); }
@@ -132,8 +136,7 @@ if (typeof document !== 'undefined') {
     el('#density-toggle').setAttribute('aria-pressed', String(compact));
   }
   try { setDensity(localStorage.getItem('controle-estoque-density') === 'compact'); } catch { setDensity(false); }
-  function message(text, tone = '') {
-    const type = tone === true ? 'error' : tone;
+  function message(text, type = '') {
     el('#message').textContent = text;
     el('#message').className = text ? `message${type ? ` ${type}` : ''}` : '';
   }
@@ -212,9 +215,9 @@ if (typeof document !== 'undefined') {
     const giro = !analitico && isGiroMode();
     const required = new Set(requiredKeys());
     const missing = fields.filter(field => required.has(field.key) && !isMapped(field.key));
-    if (missing.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message(`Selecione as colunas: ${missing.map(field => field.label).join(', ')}.`, true); return; }
+    if (missing.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message(`Selecione as colunas: ${missing.map(field => field.label).join(', ')}.`, 'error'); return; }
     const selected = fields.map(field => state.mapping[field.key]).filter(value => value >= 0);
-    if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', true); return; }
+    if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', 'error'); return; }
     if (reanalyze) {
       const rows = dataRows();
       const mapping = { ...state.mapping };
@@ -381,7 +384,7 @@ if (typeof document !== 'undefined') {
       width: Math.min(42, Math.max(12, header.length + 3)),
     }));
     const headerRow = sheet.addRow(headers);
-    headerRow.eachCell((cell, colNumber) => {
+    headerRow.eachCell((cell, _colNumber) => {
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C2B3A' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -407,7 +410,7 @@ if (typeof document !== 'undefined') {
         cell.alignment = { vertical: 'middle', horizontal: 'left' };
         if (rowIndex % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         if (['Valor unitário', 'Valor do saldo'].includes(header)) {
-          cell.value = currencyNumber(cell.value);
+          cell.value = parseNumber(cell.value);
           cell.numFmt = header === 'Valor unitário' ? '[$R$-pt-BR] #,##0.0000' : '[$R$-pt-BR] #,##0.00';
         }
       });
@@ -459,7 +462,7 @@ if (typeof document !== 'undefined') {
       el('#workspace').hidden = false;
       el('.shell').classList.add('has-data');
       renderImportContext(); renderMapping(); renderSettings(); await refresh();
-    } catch (error) { if (run === importRun) message(error.message || 'Não foi possível abrir o arquivo.', true); }
+    } catch (error) { if (run === importRun) message(error.message || 'Não foi possível abrir o arquivo.', 'error'); }
     finally { if (run === importRun) { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); } }
   }
 
