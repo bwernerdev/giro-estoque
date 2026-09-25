@@ -1,20 +1,22 @@
-const CACHE_NAME = 'giro-estoque-app-v1';
+const CACHE_VERSION = '2026-09-25-1';
+const CACHE_NAME = `giro-estoque-app-v${CACHE_VERSION}`;
+const APP_SHELL = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './assets/images/favicon.webp',
+  './assets/images/app-icon.svg',
+  './src/style.css',
+  './src/theme.css',
+  './src/responsive.css',
+  './src/main.js',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll([
-        './',
-        './index.html',
-        './manifest.webmanifest',
-        './assets/images/favicon.webp',
-        './assets/images/app-icon.svg',
-        './src/style.css',
-        './src/theme.css',
-        './src/responsive.css',
-        './src/main.js',
-      ])
-    ).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -26,6 +28,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
@@ -33,18 +41,18 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match('./index.html'));
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        return caches.match('./index.html');
+      })
   );
 });

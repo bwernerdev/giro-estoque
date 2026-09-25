@@ -62,10 +62,31 @@ if (typeof document !== 'undefined') {
   }
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js').catch(() => {
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('./service-worker.js');
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+
+        registration.addEventListener('updatefound', () => {
+          const installing = registration.installing;
+          if (!installing) return;
+
+          installing.addEventListener('statechange', () => {
+            if (installing.state === 'activated' && navigator.serviceWorker.controller) {
+              if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+            }
+          });
+        });
+
+        await registration.update();
+      } catch {
         /* O app continua funcionando mesmo sem service worker. */
-      });
+      }
     });
   }
 
