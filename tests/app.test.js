@@ -119,3 +119,14 @@ test('uma importação vazia preserva a planilha anterior e seus controles', asy
   await waitFor(() => app.el('#message').textContent === '');
   assert.equal(app.el('#filtered-count').textContent, '1 de 1 item');
 });
+
+test('o evento de instalação do app não exibe mensagem de sucesso', async t => {
+  const app = await boot(t);
+  const message = app.el('#message');
+  message.textContent = 'Estado atual do app';
+  message.className = 'message';
+  const installEvent = new message.ownerDocument.defaultView.Event('appinstalled', { bubbles: true });
+  message.dispatchEvent(installEvent);
+  assert.equal(message.textContent, 'Estado atual do app');
+  assert.equal(message.className, 'message');
+});

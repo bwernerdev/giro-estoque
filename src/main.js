@@ -89,8 +89,6 @@ if (typeof document !== 'undefined') {
 
   window.addEventListener('appinstalled', () => {
     setInstallButton(false);
-    const messageNode = el('#message');
-    if (messageNode) messageNode.textContent = 'Aplicativo instalado com sucesso.';
   });
 
   function setTheme(theme) {
