@@ -490,6 +490,10 @@ main {
 }
 
 .config-toggle {
+  min-height:var(--control-height-sm);
+  height:var(--control-height-sm);
+  padding:0 14px;
+  font-size:12px;
   white-space:nowrap
 }
 
@@ -498,6 +502,7 @@ main {
   overflow:hidden;
   padding:0 14px;
   height:var(--control-height-sm);
+  min-height:var(--control-height-sm);
   display:inline-flex;
   align-items:center;
   border-radius:100px;
@@ -506,7 +511,8 @@ main {
   font-size:12px;
   font-weight:700;
   text-overflow:ellipsis;
-  white-space:nowrap
+  white-space:nowrap;
+  box-sizing:border-box
 }
 
 /* ──────────────────────────────────────────────────────────────────────────── */
@@ -934,6 +940,8 @@ input:focus-visible {
 
 .export-menu summary {
   min-height:var(--control-height);
+  height:var(--control-height);
+  min-width:138px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -947,6 +955,7 @@ input:focus-visible {
   line-height:1.2;
   list-style:none;
   white-space:nowrap;
+  box-sizing:border-box;
   cursor:pointer;
   transition:background .15s ease
 }
@@ -973,15 +982,18 @@ input:focus-visible {
 
 .export-options button {
   width:100%;
+  min-height:36px;
   display:flex;
   align-items:center;
-  padding:10px 12px;
+  padding:8px 12px;
   border:0;
   border-radius:var(--radius-sm);
   background:transparent;
   color:#263748;
   font-size:13px;
   text-align:left;
+  box-sizing:border-box;
+  cursor:pointer;
   transition:background .12s ease
 }
 
@@ -995,7 +1007,14 @@ input:focus-visible {
 /* ──────────────────────────────────────────────────────────────────────────── */
 .density-toggle {
   min-height:var(--control-height);
+  height:var(--control-height);
+  min-width:138px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 var(--control-padding-x);
   white-space:nowrap;
+  box-sizing:border-box;
   align-self:flex-end
 }
 
@@ -1083,9 +1102,14 @@ td.reason {
 /* Row details (expandível)                                                      */
 /* ──────────────────────────────────────────────────────────────────────────── */
 .row-details summary {
+  min-height:26px;
+  height:26px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   width:max-content;
   max-width:100%;
-  padding:5px 8px;
+  padding:0 10px;
   border:1px solid #dce5e8;
   border-radius:var(--radius-sm);
   background:#f8fafb;
@@ -1094,6 +1118,7 @@ td.reason {
   font-weight:700;
   list-style:none;
   cursor:pointer;
+  box-sizing:border-box;
   transition:background .12s ease
 }
 
@@ -1144,15 +1169,20 @@ td.reason {
 /* Badges de ação                                                                */
 /* ──────────────────────────────────────────────────────────────────────────── */
 .badge {
-  display:inline-block;
-  padding:6px 10px;
+  min-height:26px;
+  height:26px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 10px;
   border:0;
   border-radius:var(--radius-sm);
   background:#edf3e3;
   color:#567b26;
   font-size:11px;
   font-weight:800;
-  white-space:nowrap
+  white-space:nowrap;
+  box-sizing:border-box
 }
 
 td .badge + .badge {
@@ -1221,6 +1251,11 @@ td .badge + .badge {
 
 .pagination button {
   min-height:var(--control-height-sm);
+  height:var(--control-height-sm);
+  min-width:90px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   padding:0 14px;
   border:1px solid #d4dde2;
   border-radius:var(--radius-sm);
@@ -1229,6 +1264,7 @@ td .badge + .badge {
   font-size:12px;
   font-weight:700;
   line-height:1.2;
+  box-sizing:border-box;
   transition:background .15s ease,border-color .15s ease
 }
 
