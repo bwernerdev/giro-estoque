@@ -629,7 +629,7 @@ select:focus-visible,input:focus-visible {
 }
 
 .summary-card.desbloquear,.summary-card.zerar-min-max,.summary-card.avaliar-excesso,.summary-card.avaliar-sem-giro {
-  border-top:3px solid #6882b9
+  border-top:3px solid #6aa68a
 }
 
 .summary-card.bloquear-e-transferir-obsoleto,.summary-card.transferir-obsoleto,.summary-card.comprar {
@@ -999,8 +999,8 @@ td .badge+.badge {
 }
 
 .badge.desbloquear,.badge.zerar-min-max,.badge.avaliar-excesso,.badge.avaliar-sem-giro,.badge.reduzir-compras,.badge.avaliar-transferencia {
-  background:#eaf0fb;
-  color:#496ca8
+  background:#e5f3eb;
+  color:#2d6a53
 }
 
 .badge.bloquear-e-transferir-obsoleto,.badge.transferir-obsoleto,.badge.comprar,.badge.planejar-reposicao {
@@ -1009,8 +1009,8 @@ td .badge+.badge {
 }
 
 .badge.sem-acao-definida,.badge.sem-movimento {
-  background:#eef0f3;
-  color:#677582
+  background:#edf2f4;
+  color:#5b6975
 }
 
 .empty-row {

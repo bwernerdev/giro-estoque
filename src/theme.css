@@ -54,8 +54,8 @@ html[data-theme="dark"] .hidden-indicator { background: #52442a; color: #f4d789;
 html[data-theme="dark"] .badge { background: #2e492c; color: #cde8ad; }
 html[data-theme="dark"] .badge.bloquear, html[data-theme="dark"] .badge.verificar-dados { background: #4a2b34; color: #ffb4c0; }
 html[data-theme="dark"] .badge.bloquear-e-transferir-obsoleto, html[data-theme="dark"] .badge.transferir-obsoleto, html[data-theme="dark"] .badge.comprar, html[data-theme="dark"] .badge.planejar-reposicao { background: #4e3928; color: #ffd29c; }
-html[data-theme="dark"] .badge.desbloquear, html[data-theme="dark"] .badge.zerar-min-max, html[data-theme="dark"] .badge.avaliar-excesso, html[data-theme="dark"] .badge.avaliar-sem-giro { background: #293b56; color: #b7d2ff; }
-html[data-theme="dark"] .badge.sem-acao-definida, html[data-theme="dark"] .badge.sem-movimento { background: #344153; color: #cfdae5; }
+html[data-theme="dark"] .badge.desbloquear, html[data-theme="dark"] .badge.zerar-min-max, html[data-theme="dark"] .badge.avaliar-excesso, html[data-theme="dark"] .badge.avaliar-sem-giro { background: #1f3d35; color: #cfe9da; }
+html[data-theme="dark"] .badge.sem-acao-definida, html[data-theme="dark"] .badge.sem-movimento { background: #35404a; color: #dfe9ef; }
 html[data-theme="dark"] .message { color: #b8df82; }
 html[data-theme="dark"] .message.error { color: #ffb1a4; }
 
