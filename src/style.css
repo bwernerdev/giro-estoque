@@ -181,11 +181,24 @@ button {
   gap:10px
 }
 
-/* Botão "Instalar app" — mesmo sistema de .secondary-button, tamanho menor para não dominar a topbar */
-.install-button {
+/* Botões da topbar — dimensões, raio e alinhamento rigorosamente idênticos */
+.install-button,
+.theme-toggle {
   min-height:var(--control-height-sm);
+  height:var(--control-height-sm);
+  min-width:130px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   padding:0 var(--control-padding-x);
-  font-size:12px
+  border-radius:var(--radius-md);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.2;
+  white-space:nowrap;
+  box-sizing:border-box;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease
 }
 
 /* ──────────────────────────────────────────────────────────────────────────── */

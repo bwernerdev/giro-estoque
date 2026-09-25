@@ -28,7 +28,7 @@
 .install-button {
   color: #183014;
   background: linear-gradient(180deg, #bfe76a, #9dd73b);
-  border-color: #7caf2e;
+  border: 1px solid #7caf2e;
 }
 
 .install-button:hover {
@@ -396,7 +396,11 @@ html[data-theme="dark"] .summary-filter.is-active {
 
 /* ─── Responsivo ────────────────────────────────────────────────────────────── */
 @media (max-width: 620px) {
-  .theme-toggle { padding: 8px 10px; }
+  .theme-toggle,
+  .install-button {
+    min-width: 0;
+    padding: 0 10px;
+  }
 }
 
 /* ─── Hover (apenas dispositivos com mouse preciso) ─────────────────────────── */
