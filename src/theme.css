@@ -1,13 +1,19 @@
 /* ─── Botões da topbar (modo claro) ─────────────────────────────────────────── */
 .theme-toggle {
+  min-height: var(--control-height-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--control-padding-x);
   color: #d8e5ee;
   background: #1c2b3a;
   border: 1px solid #34495a;
-  border-radius: 8px;
-  padding: 9px 12px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
   white-space: nowrap;
+  transition: background .15s ease, border-color .15s ease;
 }
 
 .theme-toggle:hover {

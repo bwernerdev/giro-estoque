@@ -1,5 +1,3 @@
-import { parseNumber } from './analysis.js?v=20260925-4';
-
 function formatCurrency(value, fractionDigits = 2) {
   if (value === null || value === undefined) return '';
   const numericValue = Number(value);
@@ -18,6 +16,12 @@ function unitPriceValue(row) {
   const totalValue = Number(row.stockValue);
   if (!Number.isFinite(stock) || !Number.isFinite(totalValue) || stock === 0) return null;
   return totalValue / stock;
+}
+
+export function currencyNumber(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const numericValue = Number(String(value ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
 

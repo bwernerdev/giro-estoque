@@ -1,7 +1,7 @@
 import { importFile, selectDataRows } from './import.js';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, parseNumber, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
 import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js';
-import { buildCsv, buildExportData, shouldIncludeDaysSince } from './export-data.js';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
@@ -410,7 +410,7 @@ if (typeof document !== 'undefined') {
         cell.alignment = { vertical: 'middle', horizontal: 'left' };
         if (rowIndex % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         if (['Valor unitário', 'Valor do saldo'].includes(header)) {
-          cell.value = parseNumber(cell.value);
+          cell.value = currencyNumber(cell.value);
           cell.numFmt = header === 'Valor unitário' ? '[$R$-pt-BR] #,##0.0000' : '[$R$-pt-BR] #,##0.00';
         }
       });
