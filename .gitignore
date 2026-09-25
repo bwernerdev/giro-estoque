@@ -3,3 +3,5 @@ dist/
 .npm-cache/
 review-*.png
 .chrome-*/
+test-results/
+playwright-report/

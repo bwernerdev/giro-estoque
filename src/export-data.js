@@ -1,4 +1,7 @@
+import { parseNumber } from './analysis.js?v=20260925-4';
+
 function formatCurrency(value, fractionDigits = 2) {
+  if (value === null || value === undefined) return '';
   const numericValue = Number(value ?? 0);
   if (!Number.isFinite(numericValue)) return 'R$ 0,00';
   return new Intl.NumberFormat('pt-BR', {
@@ -10,16 +13,15 @@ function formatCurrency(value, fractionDigits = 2) {
 }
 
 function unitPriceValue(row) {
-  const stock = Number(row.stock ?? 0);
-  const totalValue = Number(row.stockValue ?? 0);
-  if (!Number.isFinite(stock) || !Number.isFinite(totalValue) || stock === 0) return 0;
+  if (row.stock == null || row.stockValue == null) return null;
+  const stock = Number(row.stock);
+  const totalValue = Number(row.stockValue);
+  if (!Number.isFinite(stock) || !Number.isFinite(totalValue) || stock === 0) return null;
   return totalValue / stock;
 }
 
 export function currencyNumber(value) {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
-  const numericValue = Number(String(value ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(numericValue) ? numericValue : 0;
+  return parseNumber(value);
 }
 
 export function shouldIncludeDaysSince(mode, action) {
@@ -34,7 +36,7 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
       ? [...baseHeaders.slice(0, 6), 'Dias desde a última movimentação', ...baseHeaders.slice(6)]
       : baseHeaders;
     return {
-      headers,
+      headers: [...headers, 'Classificação', 'Ações', 'Motivo', 'Linha na planilha'],
       rows: rows.map(row => [
         row.sku,
         row.item,
@@ -44,26 +46,33 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
         row.stock,
         ...(includeDaysSince ? [row.daysSince ?? ''] : []),
         formatCurrency(unitPriceValue(row), 4),
-        formatCurrency(row.stockValue ?? 0),
+        formatCurrency(row.stockValue),
+        row.classification ?? '',
+        row.action ?? '',
+        row.reason ?? '',
+        row.row ?? '',
       ]),
     };
   }
 
   if (mode === 'giro') {
     return {
-      headers: baseHeaders,
-      rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.location, row.stock, formatCurrency(unitPriceValue(row), 4), formatCurrency(row.stockValue ?? 0)]),
+      headers: [...baseHeaders, 'Giro (dias)', 'Recomendação', 'Motivo', 'Linha na planilha'],
+      rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.location, row.stock, formatCurrency(unitPriceValue(row), 4), formatCurrency(row.stockValue), row.coverage, row.action, row.reason, row.row ?? '']),
     };
   }
 
   return {
-    headers: baseHeaders,
-    rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.location ?? row.localCode ?? '', row.stock, formatCurrency(unitPriceValue(row), 4), formatCurrency(row.stockValue ?? 0)]),
+    headers: [...baseHeaders, 'Cobertura (dias)', 'Recomendação', 'Motivo', 'Linha na planilha'],
+    rows: rows.map(row => [row.sku, row.item, row.shelfCode ?? '', row.partitionCode ?? '', row.localCode || row.location || '', row.stock, formatCurrency(unitPriceValue(row), 4), formatCurrency(row.stockValue), row.coverage, row.action, row.reason, row.row ?? '']),
   };
 }
 
 export function csvField(value) {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+  let text = typeof value === 'number' ? String(value).replace('.', ',') : String(value ?? '');
+  // Quoting CSV separators alone does not stop spreadsheet formula interpretation.
+  if (typeof value === 'string' && (/^[\s\u0000-\u001f]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text))) text = "'" + text;
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 export function buildCsv(data) {

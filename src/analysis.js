@@ -38,6 +38,10 @@ export function normalizeLocalKey(value) {
   return normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+export function stockLocation(row) {
+  return [row?.localCode, row?.location, row?.branch].find(value => String(value ?? '').trim() !== '') ?? '';
+}
+
 export function suggestMapping(headers) {
   const result = {};
   for (const field of fields) {
@@ -57,29 +61,38 @@ export function findHeaderRow(rows) {
   return best.index;
 }
 
-export function parseNumber(value) {
+export function detectAnalysisMode(mapping) {
+  const mapped = key => mapping[key] >= 0;
+  if (mapped('classification') || (mapped('daysSince') && mapped('blockReason'))) return 'analitico';
+  if (mapped('stock') && mapped('sales')) return 'generic';
+  if (mapped('stockValue') || mapped('consumption')) return 'giro';
+  return 'generic';
+}
+
+export function parseNumber(value, numberFormat = 'pt-BR') {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (value === null || value === undefined || String(value).trim() === '') return null;
-  let text = String(value).trim().replace(/\s/g, '').replace(/[^\d,.-]/g, '');
-  if (!text || text === '-') return null;
-  const comma = text.lastIndexOf(',');
-  const dot = text.lastIndexOf('.');
-  if (comma > dot) text = text.replace(/\./g, '').replace(',', '.');
-  else if (dot > comma && comma >= 0) text = text.replace(/,/g, '');
-  else if (comma >= 0) text = text.replace(',', '.');
+  if (typeof value !== 'string') return null;
+  let text = value.trim().replace(/^R\$\s*/, '');
+  const international = numberFormat === 'en-US';
+  const pattern = international
+    ? /^[+-]?(?:\d+|[1-9]\d{0,2}(?:,\d{3})+)(?:\.\d+)?$/
+    : /^[+-]?(?:\d+|[1-9]\d{0,2}(?:\.\d{3})+)(?:,\d+)?$/;
+  if (!pattern.test(text)) return null;
+  text = international ? text.replace(/,/g, '') : text.replace(/\./g, '').replace(',', '.');
   const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function parseAnaliticoNumber(value) {
-  if (typeof value === 'string' && !/^-?[\d.,\s]+$/.test(value.trim())) return null;
-  return parseNumber(value);
+function parseAnaliticoNumber(value, numberFormat) {
+  if (typeof value === 'string' && !/^[+-]?[\d.,]+$/.test(value.trim())) return null;
+  return parseNumber(value, numberFormat);
 }
 
 export function analyze(rows, mapping, settings, firstRow = 2) {
-  const safetyDays = Math.max(0, parseNumber(settings.safetyDays) ?? 0);
-  const excessDays = Math.max(1, parseNumber(settings.excessDays) ?? 90);
-  const defaultLead = Math.max(0, parseNumber(settings.defaultLead) ?? 7);
+  const parse = value => parseNumber(value, settings.numberFormat);
+  const safetyDays = Math.max(0, parseNumber(settings.safetyDays, 'en-US') ?? 0);
+  const excessDays = Math.max(1, parseNumber(settings.excessDays, 'en-US') ?? 90);
+  const defaultLead = Math.max(0, parseNumber(settings.defaultLead, 'en-US') ?? 7);
   return rows.map((cells, index) => {
     const get = key => mapping[key] >= 0 ? cells[mapping[key]] : null;
     const item = String(get('item') ?? '').trim();
@@ -88,12 +101,14 @@ export function analyze(rows, mapping, settings, firstRow = 2) {
     const partitionCode = String(get('partitionCode') ?? '').trim();
     const divisionCode = String(get('divisionCode') ?? '').trim();
     const address = String(get('address') ?? '').trim();
-    const stock = parseNumber(get('stock'));
-    const sales = parseNumber(get('sales'));
-    const leadValue = parseNumber(get('lead'));
-    const lead = leadValue === null ? defaultLead : leadValue;
-    const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, stock, sales, lead, coverage: null, reorderPoint: null, action: 'Verificar dados', reason: '' };
-    if (!item || stock === null || sales === null || stock < 0 || sales < 0 || lead < 0) {
+    const stock = parse(get('stock'));
+    const stockValue = parse(get('stockValue'));
+    const location = String(get('location') ?? '').trim();
+    const localCode = String(get('localCode') ?? '').trim();
+    const sales = parse(get('sales'));
+    const lead = String(get('lead') ?? '').trim() === '' ? defaultLead : parse(get('lead'));
+    const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, location, localCode, stock, stockValue, sales, lead, coverage: null, reorderPoint: null, action: 'Verificar dados', reason: '' };
+    if (!item || stock === null || sales === null || lead === null || stock < 0 || sales < 0 || lead < 0) {
       return { ...base, reason: 'Nome, estoque, vendas ou prazo ausente/inválido.' };
     }
     if (sales === 0) return { ...base, action: stock > 0 ? 'Avaliar sem giro' : 'Sem movimento', reason: stock > 0 ? 'Há estoque, mas nenhuma venda registrada em 30 dias.' : 'Sem estoque e sem vendas registradas.' };
@@ -107,9 +122,10 @@ export function analyze(rows, mapping, settings, firstRow = 2) {
 }
 
 export function analyzeGiro(rows, mapping, settings, firstRow = 2) {
-  const shortDays = Math.max(0, parseNumber(settings.shortDays) ?? 30);
-  const excessDays = Math.max(shortDays, parseNumber(settings.excessDays) ?? 90);
-  const longDays = Math.max(excessDays, parseNumber(settings.longDays) ?? 365);
+  const parse = value => parseNumber(value, settings.numberFormat);
+  const shortDays = Math.max(0, parseNumber(settings.shortDays, 'en-US') ?? 30);
+  const excessDays = Math.max(shortDays, parseNumber(settings.excessDays, 'en-US') ?? 90);
+  const longDays = Math.max(excessDays, parseNumber(settings.longDays, 'en-US') ?? 365);
   return rows.map((cells, index) => {
     const get = key => mapping[key] >= 0 ? cells[mapping[key]] : null;
     const item = String(get('item') ?? '').trim();
@@ -121,12 +137,13 @@ export function analyzeGiro(rows, mapping, settings, firstRow = 2) {
     const partitionCode = String(get('partitionCode') ?? '').trim();
     const divisionCode = String(get('divisionCode') ?? '').trim();
     const address = String(get('address') ?? '').trim();
-    const stock = parseNumber(get('stock'));
-    const stockValue = parseNumber(get('stockValue'));
-    const consumption = parseNumber(get('consumption'));
-    const reportedGiro = parseNumber(get('giroDays'));
+    const stock = parse(get('stock'));
+    const stockValue = parse(get('stockValue'));
+    const consumption = parse(get('consumption'));
+    const reportedGiro = parse(get('giroDays'));
     const base = { row: index + firstRow, item, sku, branch, location, group, shelfCode, partitionCode, divisionCode, address, stock, stockValue, consumption, coverage: null, reportedGiro, action: 'Verificar dados', reason: '' };
-    if (!item || (stockValue !== null && stockValue < 0) || (consumption !== null && consumption < 0)) return { ...base, reason: 'Nome, valor do estoque ou consumo inválido.' };
+    const invalidNumber = ['stock', 'stockValue', 'consumption'].some(key => String(get(key) ?? '').trim() !== '' && parse(get(key)) === null);
+    if (!item || invalidNumber || (stock !== null && stock < 0) || (stockValue !== null && stockValue < 0) || (consumption !== null && consumption < 0)) return { ...base, reason: 'Nome, quantidade, valor do estoque ou consumo inválido.' };
     if (stockValue === null && consumption !== null && consumption > 0) return { ...base, action: 'Confirmar saldo', reason: 'Há consumo, mas quantidade e valor do estoque estão em branco; confirmar saldo antes de repor.' };
     if (stockValue === null) return { ...base, reason: 'Valor do estoque em branco.' };
     if (consumption === null || consumption === 0) return { ...base, action: 'Investigar sem consumo', reason: 'Há estoque, mas não há consumo registrado no período.' };
@@ -139,7 +156,9 @@ export function analyzeGiro(rows, mapping, settings, firstRow = 2) {
   });
 }
 
-export function analyzeAnalitico(rows, mapping, firstRow = 2) {
+export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = 'pt-BR' } = {}) {
+  const parse = value => parseNumber(value, numberFormat);
+  const parseQuantity = value => parseAnaliticoNumber(value, numberFormat);
   return rows.map((cells, index) => {
     const get = key => mapping[key] >= 0 ? cells[mapping[key]] : null;
     const item = String(get('item') ?? '').trim();
@@ -148,19 +167,19 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     const partitionCode = String(get('partitionCode') ?? '').trim();
     const divisionCode = String(get('divisionCode') ?? '').trim();
     const address = String(get('address') ?? '').trim();
-    const stock = parseAnaliticoNumber(get('stock'));
-    const minimum = parseAnaliticoNumber(get('minimum'));
-    const maximum = parseAnaliticoNumber(get('maximum'));
-    const stockValue = parseNumber(get('stockValue'));
-    const coverage = parseNumber(get('giroDays'));
-    const daysSince = parseAnaliticoNumber(get('daysSince'));
-    const averageConsumption = parseNumber(get('averageConsumption'));
+    const stock = parseQuantity(get('stock'));
+    const minimum = parseQuantity(get('minimum'));
+    const maximum = parseQuantity(get('maximum'));
+    const stockValue = parse(get('stockValue'));
+    const coverage = parse(get('giroDays'));
+    const daysSince = parseQuantity(get('daysSince'));
+    const averageConsumption = parse(get('averageConsumption'));
     const classification = String(get('classification') ?? '').trim();
     const blockReason = String(get('blockReason') ?? '').trim();
     const blockId = String(get('blockId') ?? '').trim();
     const lastRequest = String(get('lastRequest') ?? '').trim();
     const localCode = String(get('localCode') ?? '').trim();
-    const localNumber = parseAnaliticoNumber(get('localCode'));
+    const localNumber = parseQuantity(get('localCode'));
     const isObsoleteLocation = OBSOLETE_LOCATION_CODES.has(localNumber);
     const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
     const issues = [];
@@ -219,7 +238,7 @@ export function summarizeLocationTotal(rows, localFilter) {
     }, 0);
   }
   return rows.reduce((total, row) => {
-    const localValue = normalizeLocalKey(row?.localCode ?? row?.location ?? row?.branch ?? '');
+    const localValue = normalizeLocalKey(stockLocation(row));
     if (localValue !== filterValue) return total;
     const amount = parseNumber(row.stockValue);
     return total + (Number.isFinite(amount) ? amount : 0);

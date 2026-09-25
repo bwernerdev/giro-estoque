@@ -1,4 +1,4 @@
-import { normalize, normalizeLocalKey } from './analysis.js';
+import { normalize, normalizeLocalKey, stockLocation } from './analysis.js?v=20260925-4';
 
 export const PAGE_SIZE = 50;
 const searchTextCache = new WeakMap();
@@ -13,7 +13,7 @@ function searchableText(row) {
 }
 
 export function rowLocation(row) {
-  return row.localCode ?? row.location ?? row.branch ?? '';
+  return stockLocation(row);
 }
 
 export function matchesLocation(row, location) {

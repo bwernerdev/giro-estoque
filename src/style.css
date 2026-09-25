@@ -1044,6 +1044,7 @@ button:focus-visible,.primary-button:focus-visible,.export-menu summary:focus-vi
   }
 
   #print-report th {
+    position:static;
     background:#e8edf1!important;
     color:#172332!important;
     print-color-adjust:exact

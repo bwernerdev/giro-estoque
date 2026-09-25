@@ -1,17 +1,24 @@
-import { importFile } from './import.js?v=20260925-3';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260925-3';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260925-3';
-import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260925-3';
-import { renderApp } from './template.js?v=20260925-3';
+import { importFile, selectDataRows } from './import.js?v=20260925-4';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260925-4';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260925-4';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260925-4';
+import { renderApp } from './template.js?v=20260925-4';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null };
+state.mode = 'auto';
+state.numberFormat = 'pt-BR';
+state.settings = {
+  generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' },
+  giro: { shortDays: '30', excessDays: '90', longDays: '365' },
+};
 const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 let refreshRun = 0;
 let searchRenderFrame = 0;
+let importRun = 0;
 
 function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
@@ -76,11 +83,12 @@ if (typeof document !== 'undefined') {
     const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
     el('#import-context').innerHTML = `<span><strong>Arquivo:</strong> ${escapeHtml(state.fileName)}</span><span><strong>Aba:</strong> ${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span><strong>Importado às:</strong> ${escapeHtml(importedAt)}</span>` : ''}`;
   }
-  function dataRows() { return currentSheet().rows.slice(currentSheet().headerRow + 1).filter(row => row.some(value => String(value ?? '').trim()) && (state.mapping.item < 0 || String(row[state.mapping.item] ?? '').trim())); }
+  function dataRows() { return selectDataRows(currentSheet().rows, state.mapping, currentSheet().headerRow + 1); }
 
   function isMapped(key) { return state.mapping[key] >= 0; }
-  function isGiroMode() { return isMapped('stockValue') || isMapped('consumption'); }
-  function isAnaliticoMode() { return isMapped('classification') || (isMapped('daysSince') && isMapped('blockReason')); }
+  function currentMode() { return state.mode === 'auto' ? detectAnalysisMode(state.mapping) : state.mode; }
+  function isGiroMode() { return currentMode() === 'giro'; }
+  function isAnaliticoMode() { return currentMode() === 'analitico'; }
   function requiredKeys() {
     if (isAnaliticoMode()) return ANALITICO_REQUIRED_KEYS;
     if (isGiroMode()) return ['item', 'stockValue', 'consumption'];
@@ -91,18 +99,33 @@ if (typeof document !== 'undefined') {
     el('.config-grid').classList.toggle('single-panel', isAnaliticoMode());
     if (isAnaliticoMode()) return;
     const giro = isGiroMode();
+    const settings = state.settings[giro ? 'giro' : 'generic'];
     el('#criteria-intro').textContent = giro ? 'Limites sugeridos para decidir o que fazer com o giro. Ajuste conforme sua política de estoque.' : 'Limites provisórios para estoque e vendas dos últimos 30 dias.';
     el('#settings-grid').innerHTML = giro
       ? '<label>Cobertura curta até (dias)<input id="short-days" type="number" min="0" step="1" value="30"></label><label>Reduzir compras acima de (dias)<input id="excess-days" type="number" min="1" step="1" value="90"></label><label>Avaliar transferência acima de (dias)<input id="long-days" type="number" min="1" step="1" value="365"></label>'
       : '<label>Dias de segurança<input id="safety-days" type="number" min="0" step="1" value="7"></label><label>Excesso após (dias)<input id="excess-days" type="number" min="1" step="1" value="90"></label><label>Prazo padrão (dias)<input id="default-lead" type="number" min="0" step="1" value="7"></label>';
     el('#formula-note').textContent = giro ? 'Giro em dias = valor do estoque ÷ valor do consumo × 30. Sem consumo, o giro é indefinido.' : 'Média diária = vendas ÷ 30 · Ponto de reposição = média diária × (prazo + segurança)';
-    el('#settings-grid').querySelectorAll('input').forEach(input => input.addEventListener('input', refresh));
+    el('#settings-grid').querySelectorAll('input').forEach(input => {
+      const key = input.id.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      input.value = settings[key];
+      input.addEventListener('input', () => { settings[key] = input.value; refresh(); });
+    });
   }
 
   function renderMapping() {
     const headers = currentSheet().rows[currentSheet().headerRow] || [];
     const required = new Set(requiredKeys());
     el('#mapping').innerHTML = `<label class="sheet-select">Aba<select id="sheet-select">${state.sheets.map((sheet, i) => `<option value="${i}" ${i === state.sheet ? 'selected' : ''}>${escapeHtml(sheet.name)}</option>`).join('')}</select></label>` + fields.map(field => `<label>${field.label}${required.has(field.key) ? ' <span class="required">*</span>' : ''}<select data-map="${field.key}"><option value="-1">Não selecionar</option>${headers.map((header, i) => `<option value="${i}" ${state.mapping[field.key] === i ? 'selected' : ''}>${escapeHtml(header || `Coluna ${i + 1}`)}</option>`).join('')}</select></label>`).join('');
+    el('#mapping').insertAdjacentHTML('afterbegin', '<label>Tipo de análise<select id="analysis-mode"><option value="auto">Automático</option><option value="generic">Estoque e vendas</option><option value="giro">Giro por valor de consumo</option><option value="analitico">Analítico</option></select></label><label>Formato dos números em texto<select id="number-format"><option value="pt-BR">Brasileiro: 1.234,56</option><option value="en-US">Internacional: 1,234.56</option></select></label>');
+    el('#analysis-mode').value = state.mode;
+    el('#number-format').value = state.numberFormat;
+    el('#analysis-mode').addEventListener('change', event => {
+      state.mode = event.target.value;
+      state.page = 1;
+      state.hiddenOnly = false;
+      renderMapping(); renderSettings(); refresh();
+    });
+    el('#number-format').addEventListener('change', event => { state.numberFormat = event.target.value; refresh(); });
     el('#sheet-select').addEventListener('change', event => { state.sheet = Number(event.target.value); state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []); renderImportContext(); renderMapping(); renderSettings(); refresh(); });
     el('#mapping').querySelectorAll('[data-map]').forEach(select => select.addEventListener('change', () => {
       state.mapping[select.dataset.map] = Number(select.value);
@@ -123,11 +146,14 @@ if (typeof document !== 'undefined') {
     if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', true); return; }
     if (reanalyze) {
       const rows = dataRows();
-      const analyzeChunk = analitico
-        ? (chunk, firstRow) => analyzeAnalitico(chunk, state.mapping, firstRow)
-        : giro
-          ? (chunk, firstRow) => analyzeGiro(chunk, state.mapping, { shortDays: el('#short-days').value, excessDays: el('#excess-days').value, longDays: el('#long-days').value }, firstRow)
-          : (chunk, firstRow) => analyze(chunk, state.mapping, { safetyDays: el('#safety-days').value, excessDays: el('#excess-days').value, defaultLead: el('#default-lead').value }, firstRow);
+      const mapping = { ...state.mapping };
+      const settings = { ...state.settings[currentMode()], numberFormat: state.numberFormat };
+      const analyzeChunk = chunk => {
+        const cells = chunk.map(entry => entry.cells);
+        const results = analitico ? analyzeAnalitico(cells, mapping, 2, settings)
+          : giro ? analyzeGiro(cells, mapping, settings) : analyze(cells, mapping, settings);
+        return results.map((result, index) => ({ ...result, row: chunk[index].row }));
+      };
       if (rows.length > 1000) message(`Analisando ${rows.length.toLocaleString('pt-BR')} linhas...`);
       const analyzed = await processInChunks(rows, analyzeChunk, {
         firstRow: currentSheet().headerRow + 2,
@@ -176,7 +202,7 @@ if (typeof document !== 'undefined') {
         : ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO'];
     el('#table-head').innerHTML = `<tr>${headings.map(heading => `<th scope="col">${heading}</th>`).join('')}</tr>`;
     const reviewCount = state.results.filter(row => row.action === 'Verificar dados').length;
-    message(reviewCount ? `${reviewCount} ${reviewCount === 1 ? 'linha precisa' : 'linhas precisam'} de revisão. Consulte “Outros dados” para corrigir a planilha.` : '', reviewCount ? 'warning' : '');
+    message(reviewCount ? `${reviewCount} ${reviewCount === 1 ? 'linha precisa' : 'linhas precisam'} de revisão. Consulte “${analitico ? 'Outros dados' : 'Motivo'}” para corrigir a planilha.` : '', reviewCount ? 'warning' : '');
     renderResults();
   }
 
@@ -340,12 +366,15 @@ if (typeof document !== 'undefined') {
 
   async function loadFile(file) {
     if (!file) return;
+    const run = ++importRun;
     message('Lendo planilha...');
     upload.setAttribute('aria-busy', 'true');
     upload.classList.add('loading');
     try {
-      state.sheets = (await importFile(file)).map(sheet => ({ ...sheet, headerRow: findHeaderRow(sheet.rows) }));
-      if (!state.sheets.length || !state.sheets.some(sheet => sheet.rows.length > sheet.headerRow + 1)) throw new Error('Não encontrei linhas de dados na planilha.');
+      const sheets = (await importFile(file)).map(sheet => ({ ...sheet, headerRow: findHeaderRow(sheet.rows) }));
+      if (run !== importRun) return;
+      if (!sheets.length || !sheets.some(sheet => sheet.rows.length > sheet.headerRow + 1)) throw new Error('Não encontrei linhas de dados na planilha.');
+      state.sheets = sheets;
       state.sheet = state.sheets.findIndex(sheet => sheet.rows.length > sheet.headerRow + 1);
       state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []);
       el('#show-hidden').checked = false;
@@ -359,8 +388,8 @@ if (typeof document !== 'undefined') {
       el('#workspace').hidden = false;
       el('.shell').classList.add('has-data');
       renderImportContext(); renderMapping(); renderSettings(); await refresh();
-    } catch (error) { message(error.message || 'Não foi possível abrir o arquivo.', true); }
-    finally { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); }
+    } catch (error) { if (run === importRun) message(error.message || 'Não foi possível abrir o arquivo.', true); }
+    finally { if (run === importRun) { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); } }
   }
 
   el('#file-input').addEventListener('change', event => { const file = event.target.files[0]; event.target.value = ''; loadFile(file); });

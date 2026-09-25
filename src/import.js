@@ -1,3 +1,19 @@
+import { normalize } from './analysis.js?v=20260925-4';
+
+// Only explicit total labels are discarded; ambiguous rows remain available for review.
+export function selectDataRows(rows, mapping, startIndex = 1) {
+  const totalLabels = new Set(['total', 'subtotal', 'total geral', 'soma']);
+  return rows.slice(startIndex).flatMap((cells, index) => {
+    if (!cells.some(value => String(value ?? '').trim())) return [];
+    const item = String(cells[mapping.item] ?? '').trim();
+    const sku = String(cells[mapping.sku] ?? '').trim();
+    const explicitTotal = totalLabels.has(normalize(item))
+      || (!item && cells.some(value => totalLabels.has(normalize(value))));
+    if ((!sku || totalLabels.has(normalize(sku))) && explicitTotal) return [];
+    return [{ cells, row: startIndex + index + 1 }];
+  });
+}
+
 function cellValue(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'object') {

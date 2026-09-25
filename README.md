@@ -6,7 +6,13 @@ Sistema web local para importar `.xlsx` ou `.csv` e analisar materiais.
 
 Abra `http://127.0.0.1:5500/giro-estoque/` com a extensão **Go Live** servindo a pasta `projetos`. O projeto também pode ser iniciado com `npm install` e `npm run dev`.
 
+Para produção, execute `npm ci` e `npm run build`, depois publique o conteúdo de `dist/`. Os caminhos são relativos: a distribuição funciona tanto na raiz quanto em uma subpasta como `/giro-estoque/`. Acesse pelo endereço da pasta com a barra final. No PowerShell com scripts desabilitados, use `npm.cmd` em lugar de `npm`.
+
 Após importar uma planilha, a apresentação e a área de importação ficam compactas para mostrar os resultados mais cedo. **Preparar análise** fica recolhido. Use **Abrir configuração** para revisar a aba e o mapeamento de colunas; se faltar uma coluna necessária, a área abre automaticamente. É possível selecionar novamente o mesmo arquivo para atualizar a análise.
+
+Em **Tipo de análise**, a opção automática prioriza Analítico quando há suas colunas específicas e estoque/vendas quando ambas as colunas existem. Uma coluna adicional de valor de estoque não muda uma análise de vendas para giro monetário. Também é possível selecionar o tipo manualmente. Os critérios são preservados por tipo de análise durante a sessão, inclusive ao remapear colunas ou trocar de aba.
+
+O **Formato dos números em texto** começa em **Brasileiro: 1.234,56**. Nesse formato, `1.234` significa 1234 e a vírgula separa os decimais. Para arquivos que usam ponto decimal, selecione **Internacional: 1,234.56**. Células numéricas do Excel mantêm seu valor original em ambos os casos. Textos malformados, como `abc12`, `1e3` e agrupamentos inválidos, não são convertidos em números. A leitura não mistura formatos na mesma análise.
 
 Use o botão **Modo escuro** no cabeçalho para alternar o tema. A escolha fica salva no navegador.
 
@@ -16,7 +22,7 @@ A análise acontece no navegador; a planilha não é enviada a um servidor. A bi
 
 ## Planilha
 
-O padrão principal é a aba **Analítico** da `PLANILHA.xlsx`. A primeira linha contém cabeçalhos como `Cd Item`, `Nm Item`, `Qtde Atual`, `Qnt Min`, `Qnt Max`, `Giro Estoque (Dias)` e `Itens Acima de 90 dias`. O sistema exibe a classificação **exatamente como está na planilha**. Linhas de soma sem item são ignoradas.
+O padrão principal é a aba **Analítico** da `PLANILHA.xlsx`. A primeira linha contém cabeçalhos como `Cd Item`, `Nm Item`, `Qtde Atual`, `Qnt Min`, `Qnt Max`, `Giro Estoque (Dias)` e `Itens Acima de 90 dias`. O sistema exibe a classificação **exatamente como está na planilha**. Linhas vazias e totalizadores explicitamente identificados como `Total`, `Subtotal`, `Total geral` ou `Soma`, sem código de item, são ignorados. Linhas sem nome ou totalizadores sem identificação permanecem para revisão, com o número original da linha preservado.
 
 Antes de aplicar as regras, o sistema valida as colunas obrigatórias e os valores de cada item. Quantidades negativas, mínimo maior que máximo, status não reconhecido e valores obrigatórios ausentes recebem **Verificar dados**. Essas linhas permanecem visíveis, mostram o campo que precisa de correção em **Outros dados** e entram no respectivo filtro e cartão do resumo.
 
@@ -37,6 +43,8 @@ Itens com **Sem ação definida** ficam ocultos por padrão, assim como os itens
 
 O menu **Exportar**, ao lado dos filtros, oferece Excel (.xlsx), CSV e PDF. A tabela mostra até **50 itens por página**. As exportações incluem todos os itens que correspondem ao filtro de ação, à busca e à opção **Mostrar itens ocultos**, inclusive os de outras páginas. Para PDF, o navegador abre a impressão; selecione **Salvar como PDF** como destino.
 
+Excel e CSV incluem **Ações** ou **Recomendação**, **Motivo** e **Linha na planilha**, além da **Classificação** no modo Analítico. Valores monetários ausentes ficam em branco. O CSV usa ponto e vírgula e vírgula decimal; textos que podem ser interpretados como fórmulas recebem um apóstrofo de proteção. No XLSX, esses conteúdos são gravados como texto e os valores monetários como números.
+
 As exportações do modo Analítico incluem a coluna **Dias desde a última movimentação**, preenchida com o valor de `Dif Dias`. A coluna aparece no Excel, CSV e PDF para todas as ações e em **Todas as ações**, sendo removida somente quando **DESBLOQUEAR** estiver selecionado.
 
 O sistema procura o cabeçalho nas primeiras 20 linhas e reconhece o relatório **BBOG6656 - Giro De Estoques Almoxarifado Por Filial**. É possível corrigir o mapeamento após a importação. Arquivos Excel podem conter várias abas; escolha a aba na interface.
@@ -53,6 +61,14 @@ Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm
 - `src/style.css`, `src/theme.css` e `src/responsive.css`: estilos base, tema escuro e responsividade.
 
 Execute `npm test` para validar regras, filtros, paginação, nova importação, exportação e estrutura acessível da interface.
+
+Execute `npm run test:e2e` para gerar o build e testar no Google Chrome instalado: publicação em subpasta, leitura XLSX/CSV, preservação dos critérios, downloads, paginação, impressão e layout de celular. O servidor de teste usa apenas `127.0.0.1:4186`; capturas de tela, PDF e rastros de falhas ficam em `test-results/` (ignorado pelo Git).
+
+## Auditoria de dependências
+
+Em 25/09/2026, `npm audit` apontou dois alertas moderados na cadeia `exceljs → uuid`, referentes ao mesmo [aviso GHSA-w5hq-g745-h8pq](https://github.com/uuidjs/uuid/security/advisories/GHSA-w5hq-g745-h8pq). O aviso trata dos métodos `v3`, `v5` e `v6` com buffer externo; o ExcelJS 4.4.0 instalado usa `v4()` sem buffer para identificadores de formatação condicional. Não foi identificado uso do caminho afetado no fluxo desta aplicação. Os alertas permanecem: não foi aplicado o downgrade incompatível para ExcelJS 3.4.0 sugerido por `npm audit fix --force`. O bundle em `vendor/` deve ser revisado junto com qualquer futura atualização do pacote; a auditoria do npm cobre a árvore de dependências, não esse arquivo pré-compilado.
+
+## Cálculos
 
 No relatório BBOG6656, o giro é calculado como `Valor do Estoque ÷ Valor do Consumo × 30`. O arquivo de exemplo traz o giro como valor, sem fórmulas gravadas nas células. O sistema recalcula o valor e confere diferenças com a coluna `Giro em Dias`. Sem consumo, o giro é indefinido; esses itens recebem a recomendação **Investigar sem consumo**. Quando há consumo e o saldo está em branco, a recomendação é **Confirmar saldo** antes de decidir pela reposição.
 

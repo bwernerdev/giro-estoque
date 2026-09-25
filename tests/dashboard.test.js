@@ -95,7 +95,7 @@ test('processa planilhas grandes em blocos preservando linhas e progresso', asyn
 test('exporta todas as linhas filtradas com CSV compatível', () => {
   const data = buildExportData([{ row: 2, sku: '10', item: 'Peça; especial', shelfCode: 'A1', partitionCode: 'B2', localCode: '1', stock: 2, stockValue: 1234.56, action: 'BLOQUEAR', address: 'Rua A, 123' }], 'analitico');
   const csv = buildCsv(data);
-  assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo']);
+  assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Valor unitário', 'Valor do saldo', 'Classificação', 'Ações', 'Motivo', 'Linha na planilha']);
   assert.match(csv, /^\uFEFF/);
   assert.match(csv, /"10"/);
   assert.match(csv, /"Peça; especial"/);
@@ -104,7 +104,7 @@ test('exporta todas as linhas filtradas com CSV compatível', () => {
   assert.match(csv, /"1"/);
   assert.match(csv, /"2"/);
   assert.match(csv, /"R\$\s*1\.234,56|R\$\s*1.234,56|R\$\s*1234,56/);
-  assert.doesNotMatch(csv, /BLOQUEAR/);
+  assert.match(csv, /BLOQUEAR/);
 });
 
 test('preserva quatro casas decimais no valor unitário exportado', () => {
@@ -125,7 +125,7 @@ test('inclui os dias desde a última movimentação em todas as ações, menos D
     daysSince: 114,
   }], 'analitico', { includeDaysSince: true });
 
-  assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Dias desde a última movimentação', 'Valor unitário', 'Valor do saldo']);
+  assert.deepEqual(data.headers, ['Código', 'Nome do item', 'Prateleira', 'Reparticao', 'Local', 'Qtde', 'Dias desde a última movimentação', 'Valor unitário', 'Valor do saldo', 'Classificação', 'Ações', 'Motivo', 'Linha na planilha']);
   assert.equal(data.rows[0][6], 114);
   assert.equal(shouldIncludeDaysSince('analitico', ''), true);
   assert.equal(shouldIncludeDaysSince('analitico', 'BLOQUEAR'), true);
