@@ -4,7 +4,7 @@
 .install-button { color: #183014; background: linear-gradient(180deg, #bfe76a, #9dd73b); border-color: #7caf2e; }
 .install-button:hover { background: linear-gradient(180deg, #c9f171, #abd940); }
 
-html[data-theme="dark"] { --color-page: #0f1723; --color-surface: #182433; --color-surface-muted: #202f41; --color-text: #e8eff6; --color-text-strong: #edf5ff; --color-text-muted: #a8b6c6; --color-border: #3b5169; --color-border-control: #4b6179; --color-focus: #9fc45e; --color-hidden-row: #29291f; --color-badge-warning-bg: #4e3928; --scrollbar-thumb: #52677c; --scrollbar-track: #111c2a; color: var(--color-text); background: var(--color-page); color-scheme: dark; }
+html[data-theme="dark"] { --color-page: #0f1723; --color-surface: #182433; --color-surface-muted: #202f41; --color-text: #e8eff6; --color-text-strong: #edf5ff; --color-text-muted: #a8b6c6; --color-border: #3b5169; --color-border-control: #4b6179; --color-focus: #9fc45e; --color-hidden-row: #29291f; --color-badge-warning-bg: #4e3928; --color-badge-success-bg: #1f3d35; --color-badge-success-text: #cfe9da; --color-badge-success-border: #6aa68a; --color-badge-alert-bg: #4a2b34; --color-badge-alert-text: #ffb4c0; --color-badge-warning-soft: #4e3928; --color-badge-warning-text: #ffd29c; --color-badge-neutral-bg: #35404a; --color-badge-neutral-text: #dfe9ef; --scrollbar-thumb: #52677c; --scrollbar-track: #111c2a; color: var(--color-text); background: var(--color-page); color-scheme: dark; }
 html[data-theme="dark"] .topbar { background: #080e17; border-color: #253447; }
 html[data-theme="dark"] .theme-toggle { color: #e8eff6; background: #243448; border-color: #40566b; }
 html[data-theme="dark"] .theme-toggle:hover { background: #31465d; }
@@ -52,10 +52,10 @@ html[data-theme="dark"] .row-details p { color: #bac7d3; }
 html[data-theme="dark"] .hidden-item { background: #29291f; }
 html[data-theme="dark"] .hidden-indicator { background: #52442a; color: #f4d789; }
 html[data-theme="dark"] .badge { background: #2e492c; color: #cde8ad; }
-html[data-theme="dark"] .badge.bloquear, html[data-theme="dark"] .badge.verificar-dados { background: #4a2b34; color: #ffb4c0; }
-html[data-theme="dark"] .badge.bloquear-e-transferir-obsoleto, html[data-theme="dark"] .badge.transferir-obsoleto, html[data-theme="dark"] .badge.comprar, html[data-theme="dark"] .badge.planejar-reposicao { background: #4e3928; color: #ffd29c; }
-html[data-theme="dark"] .badge.desbloquear, html[data-theme="dark"] .badge.zerar-min-max, html[data-theme="dark"] .badge.avaliar-excesso, html[data-theme="dark"] .badge.avaliar-sem-giro { background: #1f3d35; color: #cfe9da; }
-html[data-theme="dark"] .badge.sem-acao-definida, html[data-theme="dark"] .badge.sem-movimento { background: #35404a; color: #dfe9ef; }
+html[data-theme="dark"] .badge.bloquear, html[data-theme="dark"] .badge.verificar-dados { background: var(--color-badge-alert-bg); color: var(--color-badge-alert-text); }
+html[data-theme="dark"] .badge.bloquear-e-transferir-obsoleto, html[data-theme="dark"] .badge.transferir-obsoleto, html[data-theme="dark"] .badge.comprar, html[data-theme="dark"] .badge.planejar-reposicao { background: var(--color-badge-warning-soft); color: var(--color-badge-warning-text); }
+html[data-theme="dark"] .badge.desbloquear, html[data-theme="dark"] .badge.zerar-min-max, html[data-theme="dark"] .badge.avaliar-excesso, html[data-theme="dark"] .badge.avaliar-sem-giro { background: var(--color-badge-success-bg); color: var(--color-badge-success-text); }
+html[data-theme="dark"] .badge.sem-acao-definida, html[data-theme="dark"] .badge.sem-movimento { background: var(--color-badge-neutral-bg); color: var(--color-badge-neutral-text); }
 html[data-theme="dark"] .message { color: #b8df82; }
 html[data-theme="dark"] .message.error { color: #ffb1a4; }
 

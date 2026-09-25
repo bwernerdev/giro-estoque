@@ -61,6 +61,15 @@
   --color-accent:#b9e74c;
   --color-hidden-row:#fffdf5;
   --color-badge-warning-bg:#fff0df;
+  --color-badge-success-bg:#e5f3eb;
+  --color-badge-success-text:#2d6a53;
+  --color-badge-success-border:#6aa68a;
+  --color-badge-alert-bg:#fbe9ec;
+  --color-badge-alert-text:#a6495c;
+  --color-badge-warning-soft:#fff0df;
+  --color-badge-warning-text:#ad6427;
+  --color-badge-neutral-bg:#edf2f4;
+  --color-badge-neutral-text:#5b6975;
   --scrollbar-thumb:#b7c2ca;
   --scrollbar-track:#edf1f3;
   font-family:"DM Sans",Arial,sans-serif;
@@ -629,7 +638,7 @@ select:focus-visible,input:focus-visible {
 }
 
 .summary-card.desbloquear,.summary-card.zerar-min-max,.summary-card.avaliar-excesso,.summary-card.avaliar-sem-giro {
-  border-top:3px solid #6aa68a
+  border-top:3px solid var(--color-badge-success-border)
 }
 
 .summary-card.bloquear-e-transferir-obsoleto,.summary-card.transferir-obsoleto,.summary-card.comprar {
@@ -994,23 +1003,23 @@ td .badge+.badge {
 }
 
 .badge.bloquear,.badge.verificar-dados,.badge.confirmar-saldo,.badge.investigar-sem-consumo {
-  background:#fbe9ec;
-  color:#a6495c
+  background:var(--color-badge-alert-bg);
+  color:var(--color-badge-alert-text)
 }
 
 .badge.desbloquear,.badge.zerar-min-max,.badge.avaliar-excesso,.badge.avaliar-sem-giro,.badge.reduzir-compras,.badge.avaliar-transferencia {
-  background:#e5f3eb;
-  color:#2d6a53
+  background:var(--color-badge-success-bg);
+  color:var(--color-badge-success-text)
 }
 
 .badge.bloquear-e-transferir-obsoleto,.badge.transferir-obsoleto,.badge.comprar,.badge.planejar-reposicao {
-  background:var(--color-badge-warning-bg);
-  color:#ad6427
+  background:var(--color-badge-warning-soft);
+  color:var(--color-badge-warning-text)
 }
 
 .badge.sem-acao-definida,.badge.sem-movimento {
-  background:#edf2f4;
-  color:#5b6975
+  background:var(--color-badge-neutral-bg);
+  color:var(--color-badge-neutral-text)
 }
 
 .empty-row {
