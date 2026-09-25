@@ -1,5 +1,3 @@
-const ExcelJS = globalThis.ExcelJS;
-
 function cellValue(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'object') {
@@ -20,6 +18,7 @@ export async function importFile(file) {
     return [{ name: 'CSV', rows: parseCsv(content.replace(/^\uFEFF/, ''), separator) }];
   }
   if (!/\.xlsx$/i.test(file.name)) throw new Error('Use um arquivo .xlsx ou .csv.');
+  const ExcelJS = globalThis.ExcelJS;
   if (!ExcelJS) throw new Error('A biblioteca de Excel não foi carregada. Recarregue a página.');
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await file.arrayBuffer());

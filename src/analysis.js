@@ -214,14 +214,14 @@ export function summarizeLocationTotal(rows, localFilter) {
   const filterValue = normalizeLocalKey(localFilter);
   if (!filterValue) {
     return rows.reduce((total, row) => {
-      const amount = parseNumber(row.stockValue ?? row.stock ?? 0);
+      const amount = parseNumber(row.stockValue);
       return total + (Number.isFinite(amount) ? amount : 0);
     }, 0);
   }
   return rows.reduce((total, row) => {
     const localValue = normalizeLocalKey(row?.localCode ?? row?.location ?? row?.branch ?? '');
     if (localValue !== filterValue) return total;
-    const amount = parseNumber(row.stockValue ?? row.stock ?? 0);
+    const amount = parseNumber(row.stockValue);
     return total + (Number.isFinite(amount) ? amount : 0);
   }, 0);
 }

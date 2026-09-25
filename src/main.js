@@ -1,8 +1,8 @@
-import { importFile } from './import.js?v=20260925-2';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260925-2';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260925-2';
-import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260925-2';
-import { renderApp } from './template.js?v=20260925-2';
+import { importFile } from './import.js?v=20260925-3';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260925-3';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260925-3';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260925-3';
+import { renderApp } from './template.js?v=20260925-3';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null };
@@ -11,6 +11,7 @@ const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Aval
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 let refreshRun = 0;
+let searchRenderFrame = 0;
 
 function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
@@ -373,7 +374,11 @@ if (typeof document !== 'undefined') {
   upload.addEventListener('dragover', event => { event.preventDefault(); upload.classList.add('dragging'); });
   upload.addEventListener('dragleave', () => upload.classList.remove('dragging'));
   upload.addEventListener('drop', event => { event.preventDefault(); upload.classList.remove('dragging'); loadFile(event.dataTransfer.files[0]); });
-  el('#search').addEventListener('input', () => { state.page = 1; renderResults(); });
+  el('#search').addEventListener('input', () => {
+    state.page = 1;
+    cancelAnimationFrame(searchRenderFrame);
+    searchRenderFrame = requestAnimationFrame(renderResults);
+  });
   el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; renderResults(); });
   el('#location-filter').addEventListener('change', () => {
     state.locationFilter = el('#location-filter').value;

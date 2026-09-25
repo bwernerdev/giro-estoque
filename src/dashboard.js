@@ -1,6 +1,16 @@
 import { normalize, normalizeLocalKey } from './analysis.js';
 
 export const PAGE_SIZE = 50;
+const searchTextCache = new WeakMap();
+
+function searchableText(row) {
+  if (!row || typeof row !== 'object') return '';
+  if (!searchTextCache.has(row)) {
+    const value = `${row.item ?? ''} ${row.sku ?? ''} ${row.branch ?? ''} ${row.location ?? ''} ${row.localCode ?? ''}`;
+    searchTextCache.set(row, normalize(value));
+  }
+  return searchTextCache.get(row);
+}
 
 export function rowLocation(row) {
   return row.localCode ?? row.location ?? row.branch ?? '';
@@ -19,8 +29,7 @@ export function filterResults(rows, { query = '', action = '', location = '', an
   const normalizedQuery = normalize(query);
   return rows.filter(row => {
     const actionMatch = !action || (analitico ? row.actions.includes(action) : row.action === action);
-    const searchValue = `${row.item ?? ''} ${row.sku ?? ''} ${row.branch ?? ''} ${row.location ?? ''} ${row.localCode ?? ''}`;
-    return matchesLocation(row, location) && actionMatch && (!hiddenOnly || row.hidden) && (!normalizedQuery || normalize(searchValue).includes(normalizedQuery));
+    return matchesLocation(row, location) && actionMatch && (!hiddenOnly || row.hidden) && (!normalizedQuery || searchableText(row).includes(normalizedQuery));
   });
 }
 
@@ -32,10 +41,14 @@ export function paginate(rows, page, pageSize = PAGE_SIZE) {
 }
 
 export function actionCounts(rows, actions, analitico) {
-  return actions.map(action => ({
-    action,
-    count: rows.filter(row => analitico ? row.actions.includes(action) : row.action === action).length,
-  }));
+  const counts = new Map(actions.map(action => [action, 0]));
+  rows.forEach(row => {
+    const rowActions = analitico ? row.actions : [row.action];
+    rowActions.forEach(action => {
+      if (counts.has(action)) counts.set(action, counts.get(action) + 1);
+    });
+  });
+  return actions.map(action => ({ action, count: counts.get(action) }));
 }
 
 export function resetDashboardState(state) {

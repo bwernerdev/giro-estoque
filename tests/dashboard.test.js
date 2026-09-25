@@ -25,6 +25,7 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.ok(document.querySelector('#clear-filters'));
   assert.ok(document.querySelector('#import-context'));
   assert.ok(document.querySelector('#filtered-count'));
+  assert.equal(document.querySelector('.results-counter').getAttribute('aria-live'), 'polite');
   assert.equal(document.querySelector('label[for="location-filter"]'), null);
   assert.equal(document.querySelector('#location-filter').closest('label').textContent.trim(), 'LocalTodos os locais');
   assert.equal(document.querySelector('#filter').closest('label').textContent.trim(), 'AçãoTodas as recomendações');

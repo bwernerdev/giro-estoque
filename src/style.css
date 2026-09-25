@@ -59,6 +59,8 @@
   --color-border-control:#dfe6e9;
   --color-focus:#7ea52d;
   --color-accent:#b9e74c;
+  --color-hidden-row:#fffdf5;
+  --color-badge-warning-bg:#fff0df;
   --scrollbar-thumb:#b7c2ca;
   --scrollbar-track:#edf1f3;
   font-family:"DM Sans",Arial,sans-serif;
@@ -887,7 +889,7 @@ td.reason {
 }
 
 .hidden-item {
-  background:var(--color-surface)cf5
+  background:var(--color-hidden-row)
 }
 
 .hidden-indicator {
@@ -929,7 +931,7 @@ td .badge+.badge {
 }
 
 .badge.bloquear-e-transferir-obsoleto,.badge.transferir-obsoleto,.badge.comprar,.badge.planejar-reposicao {
-  background:var(--color-surface)0df;
+  background:var(--color-badge-warning-bg);
   color:#ad6427
 }
 
