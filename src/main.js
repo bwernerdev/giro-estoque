@@ -117,6 +117,11 @@ if (typeof document !== 'undefined') {
     el('#config-toggle').setAttribute('aria-expanded', String(expanded));
     el('#config-toggle').textContent = expanded ? 'Fechar configuração ▴' : 'Abrir configuração ▾';
   }
+
+  const initialMessage = el('#message');
+  if (initialMessage && !initialMessage.textContent.trim()) {
+    initialMessage.textContent = 'Importe uma planilha para começar.';
+  }
   function currentSheet() { return state.sheets[state.sheet]; }
   function renderImportContext() {
     if (!state.fileName || !currentSheet()) { el('#import-context').textContent = ''; return; }

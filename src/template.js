@@ -15,14 +15,25 @@ export function renderApp() {
           <div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE MATERIAIS</div>
           <h1>Entenda o giro<br>de cada <em>item.</em></h1>
           <p>Consulte quantidades, limites, classificação e ações por item.</p>
+          <div class="hero-badges" aria-label="Vantagens do aplicativo">
+            <span>✓ análise local</span>
+            <span>✓ Excel e CSV</span>
+            <span>✓ instala como app</span>
+          </div>
         </section>
         <section class="upload-card" id="upload-card">
           <div class="upload-icon">⇧</div>
-          <div><h2>Importar planilha</h2><p>Arraste um arquivo aqui ou selecione no computador</p><small>Excel .xlsx ou CSV · análise local no navegador</small></div>
-          <label class="primary-button" for="file-input" role="button" tabindex="0">Selecionar arquivo <span>→</span></label>
-          <input id="file-input" type="file" accept=".xlsx,.csv" hidden>
+          <div class="upload-copy">
+            <h2>Importar planilha</h2>
+            <p>Arraste um arquivo aqui ou selecione no computador.</p>
+            <small>Excel .xlsx ou CSV · sem enviar dados para servidor</small>
+          </div>
+          <div class="upload-actions">
+            <label class="primary-button" for="file-input" role="button" tabindex="0">Selecionar arquivo <span>→</span></label>
+            <input id="file-input" type="file" accept=".xlsx,.csv" hidden>
+          </div>
         </section>
-        <div id="message" role="status" aria-live="polite"></div>
+        <div id="message" role="status" aria-live="polite">Importe uma planilha para começar.</div>
         <section id="workspace" hidden>
           <div class="section-head">
             <div><h2>Preparar análise</h2></div>

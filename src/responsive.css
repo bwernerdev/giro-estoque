@@ -6,6 +6,7 @@
   .shell.has-data .upload-card p,
   .shell.has-data .upload-card small { display: none; }
   .shell.has-data .upload-card .primary-button { padding: 11px 15px; }
+  .shell.has-data .upload-actions { margin-left: 0; }
   .shell.has-data .section-head { margin-top: 28px; }
 
   #result-table {
