@@ -97,14 +97,7 @@ if (typeof document !== 'undefined') {
 
   if (installButton) {
     installButton.addEventListener('click', async () => {
-      if (!deferredInstallPrompt) {
-        const messageNode = el('#message');
-        if (messageNode) {
-          messageNode.textContent = 'Seu navegador não permite instalação automática. Use o menu do navegador para instalar este app.';
-          messageNode.className = 'message warning';
-        }
-        return;
-      }
+      if (!deferredInstallPrompt) return;
 
       deferredInstallPrompt.prompt();
       const choice = await deferredInstallPrompt.userChoice;
