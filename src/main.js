@@ -1,8 +1,8 @@
-import { importFile } from './import.js?v=20260924-2';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260924-2';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260924-2';
-import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260924-2';
-import { renderApp } from './template.js?v=20260924-2';
+import { importFile } from './import.js?v=20260925-1';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js?v=20260925-1';
+import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js?v=20260925-1';
+import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js?v=20260925-1';
+import { renderApp } from './template.js?v=20260925-1';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
 const state = { sheets: [], sheet: 0, mapping: {}, allResults: [], results: [], page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null };

@@ -28,7 +28,7 @@ Regras de ação fornecidas pelo usuário:
 - `Dif Dias >= 180`, `Qtde Atual > 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: transferir a obsoleto, exceto nos locais **1** e **298**. Se `Id Bloqueio` já indica bloqueio, o texto exibido é **TRANSFERIR OBSOLETO**; caso contrário, **BLOQUEAR E TRANSFERIR OBSOLETO**. A condição adicional `Cd Local Estoque ≠ 7` para esse mesmo estado está contida nesta regra.
 - `Dif Dias >= 180`, `Qtde Atual > 0`, `Ds Motivo Bloqueio = Desbloqueado` e `Cd Local Estoque` diferente de **1**, **7** e **298**: **BLOQUEAR E TRANSFERIR OBSOLETO**. Neste caso, a transferência substitui **BLOQUEAR**; no local 7 permanece apenas **BLOQUEAR**.
 - Se o item já está nos locais obsoletos **1** ou **298**, não é recomendada nova transferência. Para `Dif Dias >= 180`, `Qtde Atual > 0` e status **Desbloqueado**, a ação é **BLOQUEAR**. Se `Id Bloqueio` já indicar bloqueio, essa ação não é repetida.
-- `Dif Dias >= 90`, `Qtde Atual = 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: **DESBLOQUEAR**.
+- `Dif Dias > 60`, `Qtde Atual = 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: **DESBLOQUEAR**.
 - `Qtde Atual > 0`, pelo menos um entre `Qnt Min` e `Qnt Max` diferente de zero, `Cd Local Estoque = 1` ou `298`, `Dif Dias >= 180` e `Id Bloqueio` começa por **Bloqueado**: **ZERAR MIN/MAX**.
 
 Um item bloqueado nos locais **1** ou **298** pode receber **ZERAR MIN/MAX** quando atender às condições dessa regra. Se não houver outra ação aplicável, fica **Sem ação definida** e oculto por padrão.

@@ -200,7 +200,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2) {
     }
     else if (daysSince !== null && daysSince >= 180 && stock > 0 && (reasonStatus === 'bloqueado por saldo' || (reasonStatus === 'desbloqueado' && localNumber !== null && localNumber !== 7))) actions.push(alreadyBlocked ? 'TRANSFERIR OBSOLETO' : 'BLOQUEAR E TRANSFERIR OBSOLETO');
     else if (daysSince !== null && daysSince >= 90 && stock > 0 && reasonStatus === 'desbloqueado') actions.push('BLOQUEAR');
-    if (daysSince !== null && daysSince >= 90 && stock === 0 && reasonStatus === 'bloqueado por saldo') actions.push('DESBLOQUEAR');
+    if (daysSince !== null && daysSince > 60 && stock === 0 && reasonStatus === 'bloqueado por saldo') actions.push('DESBLOQUEAR');
     if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && isObsoleteLocation && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
     if (!actions.length) actions.push('Sem ação definida');
     const hidden = hiddenByStatus || actions.includes('Sem ação definida');
