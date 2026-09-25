@@ -11,9 +11,9 @@
   "theme_color": "#0b1725",
   "icons": [
     {
-      "src": "./assets/images/app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./assets/images/favicon.webp",
+      "sizes": "256x256",
+      "type": "image/webp",
       "purpose": "any maskable"
     }
   ]

@@ -248,28 +248,35 @@ main {
   align-items:center;
   gap:23px;
   padding:28px 36px;
-  border:1px dashed #adc2b3;
-  border-radius:16px;
-  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(246,250,244,.9));
-  box-shadow:0 7px 28px rgba(24,47,40,.035)
+  border:1px dashed rgba(143, 170, 152, 0.9);
+  border-radius:18px;
+  background:linear-gradient(180deg, rgba(17, 27, 38, 0.78), rgba(13, 25, 35, 0.84));
+  box-shadow:0 10px 28px rgba(9, 18, 27, 0.18)
 }
 
 .upload-card.dragging {
-  border-color:#8dad4c;
-  background:#f2fbe5
+  border-color:#9ad763;
+  background:linear-gradient(180deg, rgba(24, 41, 31, 0.82), rgba(16, 29, 22, 0.9))
 }
 
 .upload-icon {
-  width:64px;
-  height:64px;
+  width:72px;
+  height:72px;
   flex:none;
   display:grid;
   place-items:center;
-  border-radius:14px;
-  background:linear-gradient(135deg, #edf7db, #dff0b0);
-  color:#658e19;
-  font-size:33px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.8)
+  border-radius:18px;
+  background:linear-gradient(135deg, #2d6f3c, #2a5638);
+  color:#d8f4a2;
+  border:1px solid rgba(170, 220, 115, 0.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(17, 26, 19, 0.2);
+}
+
+.upload-icon svg {
+  width:34px;
+  height:34px;
+  display:block;
+  line-height:1;
 }
 
 .upload-copy {
@@ -278,17 +285,22 @@ main {
 }
 
 .upload-card h2 {
-  margin:0 0 5px;
-  font:700 18px Manrope,sans-serif
+  margin:0 0 8px;
+  font:800 clamp(30px, 3vw, 42px)/1.15 Manrope,sans-serif;
+  letter-spacing:-.04em;
+  color:#f1f6f4;
 }
 
 .upload-card p {
-  margin:0 0 6px;
-  color:#566677
+  margin:0 0 8px;
+  color:#dfe8ec;
+  font-size:18px;
+  line-height:1.5;
 }
 
 .upload-card small {
-  color:#98a3af
+  color:#aab8c2;
+  font-size:14px;
 }
 
 .upload-actions {
