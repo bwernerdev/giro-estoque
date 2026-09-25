@@ -6,7 +6,7 @@ export function renderApp() {
       <header class="topbar">
         <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="${brandIconUrl}" alt="" /></span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div>
         <div class="topbar-actions">
-          <button id="install-app" class="secondary-button install-button" type="button" hidden>Instalar app</button>
+          <button id="install-app" class="secondary-button install-button" type="button">Instalar app</button>
           <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">☾ Modo escuro</button>
         </div>
       </header>

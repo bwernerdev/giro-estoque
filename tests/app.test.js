@@ -130,3 +130,9 @@ test('o evento de instalação do app não exibe mensagem de sucesso', async t =
   assert.equal(message.textContent, 'Estado atual do app');
   assert.equal(message.className, 'message');
 });
+
+test('o botão de instalar fica visível quando o app ainda não foi instalado', async t => {
+  const app = await boot(t);
+  const installButton = app.el('#install-app');
+  assert.equal(installButton.hidden, false);
+});

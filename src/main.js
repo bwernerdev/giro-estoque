@@ -58,8 +58,13 @@ if (typeof document !== 'undefined') {
 
   function setInstallButton(visible) {
     if (!installButton) return;
-    installButton.hidden = !visible;
+    const standalone = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(display-mode: standalone)').matches
+      : false;
+    installButton.hidden = !visible || standalone || navigator.standalone === true;
   }
+
+  setInstallButton(true);
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
@@ -92,7 +97,15 @@ if (typeof document !== 'undefined') {
 
   if (installButton) {
     installButton.addEventListener('click', async () => {
-      if (!deferredInstallPrompt) return;
+      if (!deferredInstallPrompt) {
+        const messageNode = el('#message');
+        if (messageNode) {
+          messageNode.textContent = 'Use o menu do navegador para instalar este app.';
+          messageNode.className = 'message warning';
+        }
+        return;
+      }
+
       deferredInstallPrompt.prompt();
       const choice = await deferredInstallPrompt.userChoice;
       if (choice.outcome === 'accepted') {
