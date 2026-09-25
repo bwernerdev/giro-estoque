@@ -328,12 +328,13 @@ html[data-theme="dark"] .row-details p {
 
 /* ─── Itens ocultos ─────────────────────────────────────────────────────────── */
 html[data-theme="dark"] .hidden-item {
-  background: #29291f;
+  background: rgba(30, 42, 56, .82);
 }
 
 html[data-theme="dark"] .hidden-indicator {
-  background: #52442a;
-  color: #f4d789;
+  border-color: rgba(158, 177, 206, .26);
+  background: rgba(129, 152, 184, .14);
+  color: #dfeafc;
 }
 
 /* ─── Badges de ação ────────────────────────────────────────────────────────── */

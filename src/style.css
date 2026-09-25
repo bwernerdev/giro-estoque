@@ -86,7 +86,9 @@
   --color-accent:#b9e74c;
 
   /* Estados especiais */
-  --color-hidden-row:#fffdf5;
+  --color-hidden-row:#f3f7fb;
+  --color-hidden-badge-bg:#eaf0f8;
+  --color-hidden-badge-text:#435b73;
 
   /* Badges */
   --color-badge-warning-bg:#fff0df;
@@ -1157,9 +1159,10 @@ td.reason {
   display:inline-block;
   margin-left:6px;
   padding:3px 6px;
+  border:1px solid rgba(82, 102, 127, .18);
   border-radius:4px;
-  background:#f8eac3;
-  color:#8b641b;
+  background:var(--color-hidden-badge-bg);
+  color:var(--color-hidden-badge-text);
   font-size:10px;
   font-weight:800;
   vertical-align:middle
