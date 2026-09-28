@@ -47,19 +47,30 @@
   .active-filters button { flex: none; }
   .badge { display: inline-flex; align-items: center; }
   .badge-icon { width: 16px; height: 16px; display: inline-grid; flex: none; place-items: center; margin-right: 5px; border-radius: 50%; background: rgba(255, 255, 255, .58); font-size: 10px; line-height: 1; }
-  #result-table td:nth-child(2),
-  #result-table td:nth-child(3),
-  #result-table td:nth-child(4),
-  #result-table th:nth-child(2),
-  #result-table th:nth-child(3),
-  #result-table th:nth-child(4) { text-align: right; font-variant-numeric: tabular-nums; }
-  .analitico-table th:nth-child(1) { width: 23%; }
-  .analitico-table th:nth-child(2) { width: 7%; }
-  .analitico-table th:nth-child(3) { width: 9%; }
-  .analitico-table th:nth-child(4) { width: 7%; }
-  .analitico-table th:nth-child(5) { width: 15%; }
-  .analitico-table th:nth-child(6) { width: 17%; }
-  .analitico-table th:nth-child(7) { width: 22%; }
+  .standard-table td:nth-child(2),
+  .standard-table td:nth-child(3),
+  .standard-table td:nth-child(4),
+  .standard-table th:nth-child(2),
+  .standard-table th:nth-child(3),
+  .standard-table th:nth-child(4) { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Analítico: cabeçalho centralizado sobre a coluna e valores curtos centralizados */
+  .analitico-table th { text-align: center; }
+  .analitico-table th:nth-child(1),
+  .analitico-table th:nth-child(8) { text-align: left; }
+  .analitico-table td:nth-child(2),
+  .analitico-table td:nth-child(3),
+  .analitico-table td:nth-child(4),
+  .analitico-table td:nth-child(5),
+  .analitico-table td:nth-child(6),
+  .analitico-table td:nth-child(7) { text-align: center; font-variant-numeric: tabular-nums; }
+  .analitico-table th:nth-child(1) { width: 19%; }
+  .analitico-table th:nth-child(2) { width: 9%; }
+  .analitico-table th:nth-child(3) { width: 10%; }
+  .analitico-table th:nth-child(4) { width: 11%; }
+  .analitico-table th:nth-child(5) { width: 10%; }
+  .analitico-table th:nth-child(6) { width: 14%; }
+  .analitico-table th:nth-child(7) { width: 15%; }
+  .analitico-table th:nth-child(8) { width: 12%; }
 
   .standard-table th:nth-child(1) { width: 22%; }
   .standard-table th:nth-child(2) { width: 12%; }

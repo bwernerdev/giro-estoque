@@ -1,5 +1,5 @@
 import { importFile, selectDataRows } from './import.js';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
 import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
@@ -269,7 +269,7 @@ if (typeof document !== 'undefined') {
     el('#filter').setAttribute('aria-label', 'Filtrar ação');
     el('#result-table').className = analitico ? 'analitico-table' : 'standard-table';
     const headings = analitico
-      ? ['ITEM / CÓDIGO', 'QTD. ATUAL', 'MÍN. / MÁX.', 'GIRO', 'CLASSIFICAÇÃO', 'AÇÃO', 'OUTROS DADOS']
+      ? ['DESCRIÇÃO', 'CÓDIGO', 'LOCAL', 'QTD. ATUAL', 'MÍN. / MÁX', 'CLASSIFICAÇÃO', 'AÇÃO', 'OUTROS DADOS']
       : giro
         ? ['ITEM / FILIAL', 'ESTOQUE (R$)', 'CONSUMO (R$)', 'GIRO', 'RECOMENDAÇÃO', 'MOTIVO']
         : ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO'];
@@ -339,7 +339,13 @@ if (typeof document !== 'undefined') {
     const page = paginate(filtered, state.page, PAGE_SIZE);
     state.page = page.page;
     const { pageCount, start, rows: visible } = page;
-    el('#result-rows').innerHTML = visible.length ? visible.map(row => `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}${row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : ''}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${analitico ? `${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}` : giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td>${analitico ? `<td>${escapeHtml(row.classification)}</td>` : ''}<td>${analitico ? row.actions.map(badgeHtml).join(' ') : badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason)}</td></tr>`).join('') : `<tr><td class="empty-row" colspan="${analitico ? 7 : 6}">Nenhum item encontrado.</td></tr>`;
+    el('#result-rows').innerHTML = visible.length ? visible.map(row => {
+      if (analitico) {
+        const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
+        return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${hiddenTag}</td><td>${escapeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${escapeHtml(row.classification)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason">${detailsHtml(row.reason)}</td></tr>`;
+      }
+      return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason)}</td></tr>`;
+    }).join('') : `<tr><td class="empty-row" colspan="${analitico ? 8 : 6}">Nenhum item encontrado.</td></tr>`;
     const itemLabel = filtered.length === 1 ? 'item' : 'itens';
     const filterLabel = query || filter || state.locationFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
     el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';

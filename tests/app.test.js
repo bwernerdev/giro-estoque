@@ -136,3 +136,44 @@ test('o botão de instalar fica visível quando o app ainda não foi instalado',
   const installButton = app.el('#install-app');
   assert.equal(installButton.hidden, false);
 });
+
+test('modo Analítico mostra as oito colunas fixas com código, local e demais dados separados', async t => {
+  const app = await boot(t);
+  await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nPeça A;001;298;5;10;20;200;Acima de 90;Bloqueado por saldo;Bloqueado');
+  assert.equal(app.el('#result-table').className, 'analitico-table');
+  assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
+    ['DESCRIÇÃO', 'CÓDIGO', 'LOCAL', 'QTD. ATUAL', 'MÍN. / MÁX', 'CLASSIFICAÇÃO', 'AÇÃO', 'OUTROS DADOS']);
+  const cells = [...app.el('#result-rows').querySelector('tr').children].map(node => node.textContent);
+  assert.equal(cells.length, 8);
+  assert.equal(cells[0], 'Peça A');
+  assert.equal(app.el('#result-rows').querySelector('tr').children[0].querySelectorAll('small').length, 0);
+  assert.equal(cells[1], '001');
+  assert.equal(cells[2], '298');
+  assert.equal(cells[3], '5');
+  assert.equal(cells[4], '10 / 20');
+  assert.equal(cells[5], 'Acima de 90');
+  assert.match(cells[6], /ZERAR MIN\/MAX/);
+  assert.match(cells[7], /dias desde a última requisição/);
+  app.change('#search', 'inexistente', 'input');
+  await waitFor(() => app.el('#result-rows').textContent.includes('Nenhum item encontrado'));
+  assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '8');
+});
+
+test('modo Analítico usa o número da linha como descrição apenas quando o nome do item não existe', async t => {
+  const app = await boot(t);
+  await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n;002;7;5;10;20;10;Item com Giro;Desbloqueado;Desbloqueado\nPeça B;003;7;5;10;20;200;Item com Giro;Desbloqueado;Desbloqueado');
+  const rows = [...app.el('#result-rows').querySelectorAll('tr')];
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].children[0].textContent, 'Linha 2');
+  assert.equal(rows[1].children[0].textContent, 'Peça B');
+  assert.equal(rows[1].children[0].querySelectorAll('small').length, 0);
+});
+
+test('fora do Analítico a tabela preserva as seis colunas padrão', async t => {
+  const app = await boot(t);
+  await app.csv('Produto;Codigo;Estoque;Vendas\nA;1;5;30');
+  assert.equal(app.el('#result-table').className, 'standard-table');
+  assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
+    ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO']);
+  assert.equal(app.el('#result-rows').querySelector('tr').children.length, 6);
+});
