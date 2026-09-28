@@ -1,38 +1,14 @@
 /* ─── Botões da topbar (modo claro) ─────────────────────────────────────────── */
-.theme-toggle {
-  min-height: var(--control-height-sm);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--control-padding-x);
+.theme-toggle,
+.install-button {
   color: #d8e5ee;
   background: #1c2b3a;
   border: 1px solid #34495a;
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  transition: background .15s ease, border-color .15s ease;
 }
 
-.theme-toggle:hover {
-  background: #2a3e50;
-}
-
-.theme-toggle:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.install-button {
-  color: #183014;
-  background: linear-gradient(180deg, #bfe76a, #9dd73b);
-  border: 1px solid #7caf2e;
-}
-
+.theme-toggle:hover,
 .install-button:hover {
-  background: linear-gradient(180deg, #c9f171, #abd940);
+  background: #2a3e50;
 }
 
 /* ─── Tema escuro — variáveis globais ───────────────────────────────────────── */
@@ -46,6 +22,16 @@ html[data-theme="dark"] {
   --color-border: #3b5169;
   --color-border-control: #4b6179;
   --color-focus: #9fc45e;
+  --button-secondary-bg: #223348;
+  --button-secondary-hover: #2d4259;
+  --button-secondary-text: #d8efbd;
+  --button-border: #405369;
+  --button-border-hover: #627c96;
+  --button-subtle-bg: #202f41;
+  --button-subtle-text: #d2dfeb;
+  --button-selected-bg: #304328;
+  --button-selected-hover: #3c5431;
+  --button-selected-text: #d2efaa;
   --color-hidden-row: #29291f;
   --color-badge-warning-bg: #4e3928;
   --color-badge-success-bg: #1f3d35;
@@ -72,24 +58,16 @@ html[data-theme="dark"] .topbar {
   border-color: var(--color-topbar-border);
 }
 
-html[data-theme="dark"] .theme-toggle {
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .install-button {
   color: #e8eff6;
   background: #243448;
   border-color: #40566b;
 }
 
-html[data-theme="dark"] .theme-toggle:hover {
-  background: #31465d;
-}
-
-html[data-theme="dark"] .install-button {
-  color: #ecf9cf;
-  background: linear-gradient(180deg, #4b6f2a, #31561d);
-  border-color: #6da74a;
-}
-
+html[data-theme="dark"] .theme-toggle:hover,
 html[data-theme="dark"] .install-button:hover {
-  background: linear-gradient(180deg, #567d2d, #3d6a21);
+  background: #31465d;
 }
 
 html[data-theme="dark"] .brand-light {
@@ -159,38 +137,11 @@ html[data-theme="dark"] .file-pill {
   color: #c7e79a;
 }
 
-/* ─── Botões secundários e paginação ────────────────────────────────────────── */
-html[data-theme="dark"] .secondary-button {
-  background: #223348;
-  border-color: #405369;
-  color: #d8efbd;
-}
-
-html[data-theme="dark"] .secondary-button:hover {
-  background: #2d4259;
-}
-
-html[data-theme="dark"] .pagination button {
-  background: #223348;
-  border-color: #405369;
-  color: #d8efbd;
-}
-
 /* ─── Menu de exportação ────────────────────────────────────────────────────── */
 html[data-theme="dark"] .export-options {
   background: #182433;
   border-color: #405369;
   box-shadow: 0 8px 24px #0008;
-}
-
-html[data-theme="dark"] .export-menu summary {
-  background: linear-gradient(180deg, #b4da55, #9dcb3d);
-  border-color: #88ad39;
-  color: #183014;
-}
-
-html[data-theme="dark"] .export-menu summary:hover {
-  background: linear-gradient(180deg, #bde35c, #a5d442);
 }
 
 html[data-theme="dark"] .export-options button {
@@ -310,18 +261,7 @@ html[data-theme="dark"] .active-filters {
   color: #b7c5d2;
 }
 
-html[data-theme="dark"] .active-filters button {
-  background: #304328;
-  color: #d2efaa;
-}
-
 /* ─── Linha de detalhes expansível ─────────────────────────────────────────── */
-html[data-theme="dark"] .row-details summary {
-  background: #223348;
-  border-color: #405369;
-  color: #d2dfeb;
-}
-
 html[data-theme="dark"] .row-details p {
   color: #bac7d3;
 }
@@ -395,19 +335,7 @@ html[data-theme="dark"] .summary-filter.is-active {
   box-shadow: 0 0 0 2px rgba(159, 196, 94, .24), 0 10px 24px rgba(0, 0, 0, .2);
 }
 
-/* ─── Responsivo ────────────────────────────────────────────────────────────── */
-@media (max-width: 620px) {
-  .theme-toggle,
-  .install-button {
-    min-width: 0;
-    padding: 0 10px;
-  }
-}
-
-/* ─── Hover (apenas dispositivos com mouse preciso) ─────────────────────────── */
-@media (hover: hover) and (pointer: fine) {
-  html[data-theme="dark"] .summary-card:hover {
-    border-color: #465b72;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, .2);
-  }
+html[data-theme="dark"] .summary-card:hover {
+  border-color: #465b72;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .2);
 }

@@ -1,6 +1,6 @@
 # Controle de Estoque
 
-Sistema web local para importar `.xlsx` ou `.csv` e analisar materiais.
+Sistema web local para importar `.xlsx` ou `.csv` e analisar materiais. Desenvolvido para desktop, com largura mínima de 1024 px; janelas menores mantêm o layout de desktop com rolagem horizontal.
 
 ## Executar
 
@@ -58,11 +58,11 @@ Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm
 - `src/export-data.js`: preparação dos dados para Excel e CSV.
 - `src/template.js`: estrutura HTML da interface.
 - `src/main.js`: integração da interface, importação e exportação.
-- `src/style.css`, `src/theme.css` e `src/responsive.css`: estilos base, tema escuro e responsividade.
+- `src/style.css`, `src/theme.css` e `src/desktop.css`: estilos base, tema escuro e layout de desktop.
 
 Execute `npm test` para validar regras, filtros, paginação, nova importação, exportação e estrutura acessível da interface.
 
-Execute `npm run test:e2e` para gerar o build e testar no Google Chrome instalado: publicação em subpasta, leitura XLSX/CSV, preservação dos critérios, downloads, paginação, impressão e layout de celular. O servidor de teste usa apenas `127.0.0.1:4186`; capturas de tela, PDF e rastros de falhas ficam em `test-results/` (ignorado pelo Git).
+Execute `npm run test:e2e` para gerar o build e testar no Google Chrome instalado: publicação em subpasta, leitura XLSX/CSV, preservação dos critérios, downloads, paginação, impressão e layout de desktop em 1024, 1366 e 1920 px. O servidor de teste usa apenas `127.0.0.1:4186`; capturas de tela, PDF e rastros de falhas ficam em `test-results/` (ignorado pelo Git).
 
 ## Auditoria de dependências
 

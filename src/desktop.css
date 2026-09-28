@@ -1,4 +1,6 @@
+/* Layout de desktop: largura mínima de 1024px. */
 @media screen {
+  body { min-width: 1024px; }
   .shell.has-data .hero { display: none; }
   .shell.has-data .upload-card { min-height: 76px; margin-top: 24px; padding: 14px 20px; gap: 14px; }
   .shell.has-data .upload-icon { width: 42px; height: 42px; font-size: 23px; }
@@ -42,8 +44,7 @@
   .density-toggle { min-height: var(--control-height); height: var(--control-height); min-width: 138px; white-space: nowrap; align-self: flex-end; }
   .export-menu { display: flex; align-items: flex-end; min-width: 138px; }
   .active-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 17px; border-bottom: 1px solid #edf0f1; background: #f8faf6; color: #526474; font-size: 12px; }
-  .active-filters button { flex: none; min-height: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; border: 0; border-radius: 6px; background: #e6efd8; color: #466420; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s ease; }
-  .active-filters button:hover { background: #d7e6c4; }
+  .active-filters button { flex: none; }
   .badge { display: inline-flex; align-items: center; }
   .badge-icon { width: 16px; height: 16px; display: inline-grid; flex: none; place-items: center; margin-right: 5px; border-radius: 50%; background: rgba(255, 255, 255, .58); font-size: 10px; line-height: 1; }
   #result-table td:nth-child(2),
@@ -68,10 +69,8 @@
   .standard-table th:nth-child(6) { width: 25%; }
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .summary-card:hover { transform: translateY(-2px); border-color: #d2dee3; box-shadow: 0 10px 26px rgba(12, 26, 38, .07); }
-  .summary-filter.is-empty:hover { transform: none; opacity: .92; }
-}
+.summary-card:hover { transform: translateY(-2px); border-color: #d2dee3; box-shadow: 0 10px 26px rgba(12, 26, 38, .07); }
+.summary-filter.is-empty:hover { transform: none; opacity: .92; }
 
 html[data-density="compact"] #result-table th { padding-block: 10px; }
 html[data-density="compact"] #result-table td { padding-block: 10px; }
@@ -96,38 +95,6 @@ html[data-density="compact"] #result-table .badge { padding-block: 5px; }
   .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .summary-card span { letter-spacing: .08em; }
   .summary-card strong { font-size: clamp(18px, 2.2vw, 23px); }
-}
-
-@media screen and (max-width: 980px) {
-  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .config-grid { grid-template-columns: 1fr; }
-}
-
-@media screen and (max-width: 620px) {
-  .topbar { height: auto; min-height: 74px; padding-block: 14px; flex-wrap: wrap; gap: 12px; }
-  .brand { font-size: 14px; }
-  .brand-mark { width: 34px; height: 34px; }
-  .brand > span:last-child { flex-wrap: wrap; }
-  .hero h1 { font-size: clamp(36px, 11vw, 58px); }
-  .upload-card, .shell.has-data .upload-card { flex-wrap: wrap; padding: 18px; }
-  .upload-card > div:nth-child(2) { min-width: 0; flex: 1 1 180px; }
-  .upload-card .primary-button { width: 100%; margin-left: 0; }
-  .section-head { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .config-actions { max-width: 100%; min-width: 0; flex-wrap: wrap; }
-  .config-actions .file-pill { max-width: 100%; }
-  .panel { min-width: 0; padding: 18px; }
-  .mapping-grid, .settings-grid { grid-template-columns: 1fr; }
-  .mapping-grid label { min-width: 0; }
-  .table-footer, .active-filters { flex-wrap: wrap; }
-  .table-tools { position: static; }
-  .density-toggle { flex: 1 1 0; min-width: 0; }
-  .export-menu { flex: 1 1 0; min-width: 0; }
-  .export-menu summary { width: 100%; min-width: 0; }
-  .summary-grid { grid-template-columns: 1fr; }
-  /* grid-column e flex consolidados de regras anteriormente duplicadas */
-  .summary-card.local-total { grid-column: auto; flex-direction: column; align-items: flex-start; }
-  .import-context span:first-child { max-width: 100%; }
-  .results-counter { flex-wrap: wrap; }
 }
 
 @media screen and (min-width: 1700px) {

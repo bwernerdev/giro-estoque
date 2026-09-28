@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2026-09-25-1';
+const CACHE_VERSION = '2026-09-28-desktop-1';
 const CACHE_NAME = `giro-estoque-app-v${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -8,7 +8,7 @@ const APP_SHELL = [
   './assets/images/app-icon.svg',
   './src/style.css',
   './src/theme.css',
-  './src/responsive.css',
+  './src/desktop.css',
   './src/main.js',
 ];
 

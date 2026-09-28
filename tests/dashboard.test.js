@@ -58,7 +58,7 @@ test('renderiza apenas um card de valor total do estoque e mantém a linha infer
 });
 
 test('cards vazios não recebem altura menor que os demais no resumo', () => {
-  const css = readFileSync(new URL('../src/responsive.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/desktop.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css, /\.summary-filter\.is-empty\s*\{[^}]*min-height\s*:\s*88px/i);
   assert.doesNotMatch(css, /\.summary-filter\.is-empty\s*\{[^}]*height\s*:\s*auto/i);
 });

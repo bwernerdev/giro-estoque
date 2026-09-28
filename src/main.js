@@ -64,7 +64,7 @@ if (typeof document !== 'undefined') {
     const standalone = typeof window.matchMedia === 'function'
       ? window.matchMedia('(display-mode: standalone)').matches
       : false;
-    installButton.hidden = !visible || standalone || navigator.standalone === true;
+    installButton.hidden = !visible || standalone;
   }
 
   setInstallButton(true);
@@ -132,7 +132,6 @@ if (typeof document !== 'undefined') {
   try { setTheme(localStorage.getItem('giro-estoque-theme')); } catch { setTheme('light'); }
   function setDensity(compact) {
     document.documentElement.dataset.density = compact ? 'compact' : 'comfortable';
-    el('#density-toggle').textContent = compact ? 'Modo confortável' : 'Modo compacto';
     el('#density-toggle').setAttribute('aria-pressed', String(compact));
   }
   try { setDensity(localStorage.getItem('controle-estoque-density') === 'compact'); } catch { setDensity(false); }
@@ -297,7 +296,7 @@ if (typeof document !== 'undefined') {
   }
   function detailsHtml(reason) {
     if (!reason) return '<span class="no-details">—</span>';
-    return `<details class="row-details"><summary>Ver detalhes</summary><p>${escapeHtml(reason)}</p></details>`;
+    return `<details class="row-details"><summary class="discreet-button">Ver detalhes</summary><p>${escapeHtml(reason)}</p></details>`;
   }
   function visibleResults() {
     return filterResults(state.results, {

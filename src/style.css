@@ -84,6 +84,17 @@
   --color-border-control:#dfe6e9;
   --color-focus:#7ea52d;
   --color-accent:#b9e74c;
+  --color-accent-hover:#c5ef57;
+  --button-secondary-bg:#fff;
+  --button-secondary-hover:#f0f5ec;
+  --button-secondary-text:#35512c;
+  --button-border:#d4dde2;
+  --button-border-hover:#c8d4cb;
+  --button-subtle-bg:#f8fafb;
+  --button-subtle-text:#52697a;
+  --button-selected-bg:#e6efd8;
+  --button-selected-hover:#d7e6c4;
+  --button-selected-text:#35512c;
 
   /* Estados especiais */
   --color-hidden-row:#f3f7fb;
@@ -252,7 +263,7 @@ button {
 /* Main content                                                                  */
 /* ──────────────────────────────────────────────────────────────────────────── */
 main {
-  width:min(1320px,90vw);
+  width:min(1320px,90%);
   margin:0 auto;
   flex:1
 }
@@ -377,9 +388,10 @@ main {
 
 /* ══════════════════════════════════════════════════════════════════════════════
    SISTEMA DE BOTÕES
-   Todos os botões interativos do app usam a mesma altura base (--control-height).
+   Ações principais usam 44px; ações auxiliares e discretas podem usar 36px.
    .primary-button  → ação principal, verde lima
    .secondary-button → ação secundária, borda sutil
+   .discreet-button → ação contextual, superfície neutra
    Exceções documentadas:
      .install-button → topbar, usa --control-height-sm (menor para não dominar)
      .pagination button → rodapé, usa --control-height-sm
@@ -404,7 +416,7 @@ main {
 }
 
 .primary-button:hover {
-  background:#c5ef57;
+  background:var(--color-accent-hover);
   box-shadow:0 8px 20px rgba(115,149,36,.28)
 }
 
@@ -412,16 +424,17 @@ main {
   padding-left:14px
 }
 
-.secondary-button {
+.secondary-button,
+.pagination button {
   display:inline-flex;
   align-items:center;
   justify-content:center;
   min-height:var(--control-height);
   padding:0 var(--control-padding-x);
-  border:1px solid #d4dde2;
+  border:1px solid var(--button-border);
   border-radius:var(--radius-md);
-  background:var(--color-surface);
-  color:#35512c;
+  background:var(--button-secondary-bg);
+  color:var(--button-secondary-text);
   font-size:13px;
   font-weight:700;
   line-height:1.2;
@@ -429,9 +442,47 @@ main {
   transition:background .15s ease,border-color .15s ease
 }
 
-.secondary-button:hover {
-  background:#f0f5ec;
-  border-color:#c8d4cb
+.secondary-button:hover:not(:disabled),
+.pagination button:hover:not(:disabled) {
+  background:var(--button-secondary-hover);
+  border-color:var(--button-border-hover)
+}
+
+.density-toggle[aria-pressed="true"] {
+  background:var(--button-selected-bg);
+  border-color:var(--color-focus);
+  color:var(--button-selected-text)
+}
+
+.density-toggle[aria-pressed="true"]:hover {
+  background:var(--button-selected-hover)
+}
+
+.density-toggle[aria-pressed="true"]::before {
+  content:'✓';
+  margin-right:6px
+}
+
+.discreet-button {
+  min-height:var(--control-height-sm);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 10px;
+  border:1px solid var(--button-border);
+  border-radius:var(--radius-sm);
+  background:var(--button-subtle-bg);
+  color:var(--button-subtle-text);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.2;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease
+}
+
+.discreet-button:hover {
+  background:var(--button-secondary-hover);
+  border-color:var(--button-border-hover)
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -941,33 +992,14 @@ input:focus-visible {
 }
 
 .export-menu summary {
-  min-height:var(--control-height);
   height:var(--control-height);
   min-width:138px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:0 var(--control-padding-x);
-  border:1px solid rgba(117,147,59,.5);
-  border-radius:var(--radius-md);
-  background:linear-gradient(180deg,#b4da55,#9dcb3d);
-  color:#183014;
-  font-size:13px;
-  font-weight:700;
-  line-height:1.2;
   list-style:none;
-  white-space:nowrap;
-  box-sizing:border-box;
-  cursor:pointer;
-  transition:background .15s ease
+  box-sizing:border-box
 }
 
 .export-menu summary::-webkit-details-marker {
   display:none
-}
-
-.export-menu summary:hover {
-  background:linear-gradient(180deg,#bde35c,#a5d442)
 }
 
 .export-options {
@@ -984,7 +1016,7 @@ input:focus-visible {
 
 .export-options button {
   width:100%;
-  min-height:36px;
+  min-height:var(--control-height-sm);
   display:flex;
   align-items:center;
   padding:8px 12px;
@@ -1104,24 +1136,10 @@ td.reason {
 /* Row details (expandível)                                                      */
 /* ──────────────────────────────────────────────────────────────────────────── */
 .row-details summary {
-  min-height:26px;
-  height:26px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
   width:max-content;
   max-width:100%;
-  padding:0 10px;
-  border:1px solid #dce5e8;
-  border-radius:var(--radius-sm);
-  background:#f8fafb;
-  color:#52697a;
-  font-size:11px;
-  font-weight:700;
   list-style:none;
-  cursor:pointer;
-  box-sizing:border-box;
-  transition:background .12s ease
+  box-sizing:border-box
 }
 
 .row-details summary::-webkit-details-marker {
@@ -1256,24 +1274,9 @@ td .badge + .badge {
   min-height:var(--control-height-sm);
   height:var(--control-height-sm);
   min-width:90px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
   padding:0 14px;
-  border:1px solid #d4dde2;
-  border-radius:var(--radius-sm);
-  background:var(--color-surface);
-  color:#35512c;
   font-size:12px;
-  font-weight:700;
-  line-height:1.2;
-  box-sizing:border-box;
-  transition:background .15s ease,border-color .15s ease
-}
-
-.pagination button:hover:not(:disabled) {
-  background:#f0f5ec;
-  border-color:#c8d4cb
+  box-sizing:border-box
 }
 
 .pagination button:disabled {

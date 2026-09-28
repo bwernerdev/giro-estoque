@@ -75,15 +75,21 @@ test('leitura Excel, filtros, paginação e impressão incluem todos os resultad
   await page.screenshot({ path: 'test-results/print.png', fullPage: true });
 });
 
-test('interface e configuração cabem na tela do celular', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('./');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await upload(page);
-  await page.getByRole('button', { name: 'Abrir configuração' }).click();
-  await expect(page.locator('#number-format')).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'test-results/mobile-config.png', fullPage: true });
-  await page.getByRole('button', { name: 'Fechar configuração' }).click();
-  await page.screenshot({ path: 'test-results/mobile-results.png', fullPage: true });
-});
+for (const width of [1024, 1366, 1920]) {
+  test(`interface e configuração cabem no desktop de ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('./');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await upload(page);
+    await page.getByRole('button', { name: 'Abrir configuração' }).click();
+    await expect(page.locator('#number-format')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.locator('#mapping')).toBeVisible();
+    const mapping = await page.locator('#mapping').boundingBox();
+    const criteria = await page.locator('#criteria-panel').boundingBox();
+    expect(criteria.x).toBeGreaterThan(mapping.x);
+    await page.screenshot({ path: `test-results/desktop-${width}-config.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Fechar configuração' }).click();
+    await page.screenshot({ path: `test-results/desktop-${width}-results.png`, fullPage: true });
+  });
+}
