@@ -1,6 +1,6 @@
 # Controle de Estoque
 
-Sistema web local para importar `.xlsx` ou `.csv` e analisar materiais. Desenvolvido para desktop, com largura mínima de 1024 px; janelas menores mantêm o layout de desktop com rolagem horizontal.
+Sistema web local para importar `.xlsx` ou `.csv` e analisar materiais. A interface é otimizada para desktop e ajusta o layout em janelas menores (abaixo de 1024 px, 720 px e 480 px) e em telas largas acima de 1700 px; a tabela de resultados mantém rolagem horizontal quando a largura não é suficiente.
 
 ## Executar
 
@@ -61,10 +61,11 @@ Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm
 - `src/template.js`: estrutura HTML da interface.
 - `src/main.js`: integração da interface, importação e exportação.
 - `src/style.css`, `src/theme.css` e `src/desktop.css`: estilos base, tema escuro e layout de desktop.
+- `src/icons.js`: ícones SVG padronizados usados em botões, badges e na área de importação.
 
 Execute `npm test` para validar regras, filtros, paginação, nova importação, exportação e estrutura acessível da interface.
 
-Execute `npm run test:e2e` para gerar o build e testar no Google Chrome instalado: publicação em subpasta, leitura XLSX/CSV, preservação dos critérios, downloads, paginação, impressão e layout de desktop em 1024, 1366 e 1920 px. O servidor de teste usa apenas `127.0.0.1:4186`; capturas de tela, PDF e rastros de falhas ficam em `test-results/` (ignorado pelo Git).
+Execute `npm run test:e2e` para gerar o build e testar no Google Chrome instalado: publicação em subpasta, leitura XLSX/CSV, preservação dos critérios, downloads, paginação, impressão, layout de desktop em 1024, 1366 e 1920 px e comportamento em 390 e 768 px. O servidor de teste usa apenas `127.0.0.1:4186`; capturas de tela, PDF e rastros de falhas ficam em `test-results/` (ignorado pelo Git).
 
 ## Auditoria de dependências
 

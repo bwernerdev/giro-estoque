@@ -19,8 +19,17 @@ html[data-theme="dark"] {
   --color-text: #e8eff6;
   --color-text-strong: #edf5ff;
   --color-text-muted: #a8b6c6;
+  --color-text-subtle: #b7c5d2;
+  --color-text-faint: #a8b8c8;
   --color-border: #3b5169;
   --color-border-control: #4b6179;
+  --color-divider: #40546a;
+  --color-row-divider: #2b3b50;
+  --color-table-head: #202f41;
+  --color-row-alt: #1c2b3d;
+  --color-row-hover: #223348;
+  --color-context: #141f2d;
+  --color-active-filters: #1c2b3b;
   --color-focus: #9fc45e;
   --button-secondary-bg: #223348;
   --button-secondary-hover: #2d4259;
@@ -47,6 +56,15 @@ html[data-theme="dark"] {
   --scrollbar-track: #111c2a;
   --color-topbar: #080e17;
   --color-topbar-border: #253447;
+  --status-danger: #ee8397;
+  --status-warning: #e0a35c;
+  --status-success: #79b89b;
+  --status-stable: #a5cc5d;
+  --status-info: #7eb4d6;
+  --status-neutral: #7f91a3;
+  --shadow-card: none;
+  --shadow-panel: none;
+  --shadow-floating: 0 8px 24px #0008;
   color: var(--color-text);
   background: var(--color-page);
   color-scheme: dark;
@@ -96,7 +114,6 @@ html[data-theme="dark"] footer {
 /* ─── Superfícies e cards ───────────────────────────────────────────────────── */
 html[data-theme="dark"] .upload-card,
 html[data-theme="dark"] .panel,
-html[data-theme="dark"] .summary-card,
 html[data-theme="dark"] .table-panel {
   background: #182433;
   border-color: #3b5169;
@@ -216,7 +233,8 @@ html[data-theme="dark"] .summary-card.local-total strong {
 }
 
 html[data-theme="dark"] th {
-  background: #202f41;
+  background: var(--color-table-head);
+  border-bottom-color: var(--color-divider);
 }
 
 html[data-theme="dark"] td {
@@ -234,11 +252,11 @@ html[data-theme="dark"] td.reason {
 }
 
 html[data-theme="dark"] #result-table tbody tr:nth-child(even):not(.hidden-item) {
-  background: #1c2b3d;
+  background: var(--color-row-alt);
 }
 
 html[data-theme="dark"] #result-table tbody tr:hover {
-  background: #223348;
+  background: var(--color-row-hover);
 }
 
 /* ─── Contadores e filtros ativos ───────────────────────────────────────────── */
@@ -319,6 +337,14 @@ html[data-theme="dark"] .message {
   color: #b8df82;
 }
 
+html[data-theme="dark"] .summary-card {
+  background: #182433;
+  border-right-color: #3b5169;
+  border-bottom-color: #3b5169;
+  border-left-color: #3b5169;
+  box-shadow: none;
+}
+
 html[data-theme="dark"] .message.warning {
   background: #3c2e1d;
   border-color: #856329;
@@ -349,5 +375,7 @@ html[data-theme="dark"] .summary-filter:hover {
 }
 
 html[data-theme="dark"] .summary-filter:not(.is-active):hover {
-  border-color: #465b72;
+  border-right-color: #465b72;
+  border-bottom-color: #465b72;
+  border-left-color: #465b72;
 }

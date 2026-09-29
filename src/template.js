@@ -1,3 +1,5 @@
+import { svgIcon } from './icons.js';
+
 const brandIconUrl = new URL('../assets/images/favicon.webp', import.meta.url).href;
 
 export function renderApp() {
@@ -6,8 +8,8 @@ export function renderApp() {
       <header class="topbar">
         <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="${brandIconUrl}" alt="" /></span><span>CONTROLE<span class="brand-light"> DE ESTOQUE</span></span></div>
         <div class="topbar-actions">
-          <button id="install-app" class="install-button" type="button">Instalar app</button>
-          <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">☾ Modo escuro</button>
+          <button id="install-app" class="install-button" type="button">${svgIcon('download')}<span>Instalar app</span></button>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">${svgIcon('moon')}<span>Modo escuro</span></button>
         </div>
       </header>
       <main>
@@ -17,18 +19,14 @@ export function renderApp() {
           <p>Consulte quantidades, limites, classificação e ações por item.</p>
         </section>
         <section class="upload-card" id="upload-card">
-          <div class="upload-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
-              <path d="M12 3.5a1 1 0 0 1 1 1v9.59l2.7-2.7a1 1 0 0 1 1.4 1.42l-4.42 4.43a1 1 0 0 1-1.4 0L6.9 13.22a1 1 0 0 1 1.4-1.42l2.7 2.7V4.5a1 1 0 0 1 1-1Zm-7 12a1 1 0 0 1 1 1v1.5h12v-1.5a1 1 0 1 1 2 0v2.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2.5a1 1 0 0 1 1-1Z" fill="currentColor"/>
-            </svg>
-          </div>
+          <div class="upload-icon" aria-hidden="true">${svgIcon('download')}</div>
           <div class="upload-copy">
             <h2>Importar planilha</h2>
             <p>Arraste um arquivo aqui ou selecione no computador.</p>
             <small>Excel .xlsx ou CSV · sem enviar dados para servidor</small>
           </div>
           <div class="upload-actions">
-            <label class="primary-button" for="file-input" role="button" tabindex="0">Selecionar arquivo <span>→</span></label>
+            <label class="primary-button" for="file-input" role="button" tabindex="0"><span>Selecionar arquivo</span>${svgIcon('arrowRight')}</label>
             <input id="file-input" type="file" accept=".xlsx,.csv" hidden>
           </div>
         </section>
@@ -36,7 +34,7 @@ export function renderApp() {
         <section id="workspace" hidden>
           <div class="section-head">
             <div><h2>Preparar análise</h2></div>
-            <div class="config-actions"><button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false">Abrir configuração ▾</button><span id="file-name" class="file-pill"></span></div>
+            <div class="config-actions"><button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false"><span>Abrir configuração</span>${svgIcon('chevronDown')}</button><span id="file-name" class="file-pill"></span></div>
           </div>
           <div id="config-grid" class="config-grid" hidden>
             <div class="panel"><h3>Colunas da planilha</h3><p class="panel-intro">Confirme quais colunas contêm os dados de cada item.</p><div id="mapping" class="mapping-grid"></div></div>
@@ -48,13 +46,13 @@ export function renderApp() {
             <div id="summary" class="summary-grid"></div>
             <div class="table-panel">
               <div class="table-tools">
-                <label class="filter-field search-field"><span>Pesquisa</span><span class="search-label"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Buscar item ou código"></span></label>
+                <label class="filter-field search-field"><span>Pesquisa</span><span class="search-label">${svgIcon('search')}<input id="search" type="search" placeholder="Buscar item ou código"></span></label>
                 <div class="table-filters">
                   <label class="filter-field"><span>Local</span><select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos os locais</option></select></label>
                   <label class="filter-field"><span>Ação</span><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select></label>
                   <label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> Mostrar itens ocultos</label>
-                  <button id="density-toggle" class="secondary-button density-toggle" type="button" aria-pressed="false">Modo compacto</button>
-                  <details id="export-menu" class="export-menu"><summary class="primary-button">Exportar ▾</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
+                  <button id="density-toggle" class="secondary-button density-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Modo compacto</span></button>
+                  <details id="export-menu" class="export-menu"><summary class="primary-button"><span>Exportar</span>${svgIcon('chevronDown')}</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
                 </div>
               </div>
               <div class="results-counter" role="status" aria-live="polite"><strong id="filtered-count">0 de 0 itens</strong><span>conforme os filtros atuais</span></div>

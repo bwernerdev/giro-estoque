@@ -3,6 +3,7 @@ import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detect
 import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
+import { svgIcon } from './icons.js';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
 const state = {
@@ -36,7 +37,7 @@ export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions,
     ...summaryCounts.map(({ action, count }) => {
       const hiddenCard = action === 'Itens ocultos';
       const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
-      return `<button type="button" class="summary-card summary-filter ${slug(action)}${count === 0 ? ' is-empty' : ''}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
+      return `<button type="button" class="summary-card summary-filter ${slug(action)}${count === 0 ? ' is-empty' : ''}" ${attribute} aria-pressed="false"${count === 0 ? ' disabled' : ''}><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
     }),
     localTotalCard,
   ].filter(Boolean).join('');
@@ -106,11 +107,13 @@ if (typeof document !== 'undefined') {
 
   function setTheme(theme) {
     const dark = theme === 'dark';
+    document.documentElement.classList.add('theme-switching');
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     const toggle = el('#theme-toggle');
-    toggle.textContent = dark ? '☀ Modo claro' : '☾ Modo escuro';
+    toggle.innerHTML = `${svgIcon(dark ? 'sun' : 'moon')}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span>`;
     toggle.setAttribute('aria-pressed', String(dark));
     document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#080e17' : '#0b1725');
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('theme-switching')));
   }
   try { setTheme(localStorage.getItem('giro-estoque-theme')); } catch { setTheme('light'); }
   function setDensity(compact) {
@@ -125,7 +128,7 @@ if (typeof document !== 'undefined') {
   function setConfigExpanded(expanded) {
     el('#config-grid').hidden = !expanded;
     el('#config-toggle').setAttribute('aria-expanded', String(expanded));
-    el('#config-toggle').textContent = expanded ? 'Fechar configuração ▴' : 'Abrir configuração ▾';
+    el('#config-toggle').innerHTML = `<span>${expanded ? 'Fechar configuração' : 'Abrir configuração'}</span>${svgIcon(expanded ? 'chevronUp' : 'chevronDown')}`;
   }
 
   const initialMessage = el('#message');
@@ -264,18 +267,18 @@ if (typeof document !== 'undefined') {
 
   function actionIcon(action) {
     const normalized = String(action).toUpperCase();
-    if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return '!';
-    if (normalized.includes('DESBLOQUEAR')) return '↗';
-    if (normalized.includes('ZERAR')) return '0';
-    if (normalized.includes('TRANSFERIR')) return '→';
-    if (normalized.includes('BLOQUEAR')) return '⊘';
-    if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return '+';
-    if (normalized.includes('REDUZIR')) return '−';
-    if (normalized.includes('MANTER')) return '✓';
-    return '•';
+    if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return 'alert';
+    if (normalized.includes('DESBLOQUEAR')) return 'unlock';
+    if (normalized.includes('ZERAR')) return 'zero';
+    if (normalized.includes('TRANSFERIR')) return 'transfer';
+    if (normalized.includes('BLOQUEAR')) return 'block';
+    if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return 'plus';
+    if (normalized.includes('REDUZIR')) return 'minus';
+    if (normalized.includes('MANTER')) return 'check';
+    return 'dot';
   }
   function badgeHtml(action) {
-    return `<span class="badge ${slug(action)}"><span class="badge-icon" aria-hidden="true">${actionIcon(action)}</span>${escapeHtml(action)}</span>`;
+    return `<span class="badge ${slug(action)}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span>${escapeHtml(action)}</span>`;
   }
   function detailsHtml(reason) {
     if (!reason) return '<span class="no-details">—</span>';

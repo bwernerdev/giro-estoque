@@ -45,6 +45,8 @@ test('build funciona em subpasta, mantém critérios e gera Excel/CSV completos'
   await expect(page.locator('#message')).toContainText('1 linha precisa');
   await page.screenshot({ path: 'test-results/desktop-light.png', fullPage: true });
   await page.locator('#theme-toggle').click();
+  await expect(page.locator('#theme-toggle')).toContainText('Modo claro');
+  await page.waitForTimeout(200);
   await page.screenshot({ path: 'test-results/desktop-dark.png', fullPage: true });
   expect(errors).toEqual([]);
   expect(failed).toEqual([]);
@@ -91,5 +93,20 @@ for (const width of [1024, 1366, 1920]) {
     await page.screenshot({ path: `test-results/desktop-${width}-config.png`, fullPage: true });
     await page.getByRole('button', { name: 'Fechar configuração' }).click();
     await page.screenshot({ path: `test-results/desktop-${width}-results.png`, fullPage: true });
+  });
+}
+
+for (const width of [390, 768]) {
+  test(`interface permanece utilizável em ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('./');
+    await upload(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('button', { name: 'Abrir configuração' }).click();
+    await expect(page.locator('#mapping')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('button', { name: 'Fechar configuração' }).click();
+    await expect(page.locator('#export-menu summary')).toBeVisible();
+    await page.screenshot({ path: `test-results/responsive-${width}.png`, fullPage: true });
   });
 }
