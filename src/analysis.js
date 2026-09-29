@@ -206,6 +206,11 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     if (mapping.blockId >= 0 && blockStatus !== 'desbloqueado' && !blockStatus.startsWith('bloqueado')) {
       issues.push(`Id Bloqueio: ${blockId ? 'valor não reconhecido' : 'valor ausente'}`);
     }
+    if (['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)
+      && (blockStatus === 'desbloqueado' || blockStatus.startsWith('bloqueado'))
+      && (reasonStatus === 'desbloqueado') !== (blockStatus === 'desbloqueado')) {
+      issues.push('Ds Motivo Bloqueio e Id Bloqueio: status conflitantes');
+    }
     if (minimum !== null && maximum !== null && minimum > maximum) issues.push('Qnt Min: maior que Qnt Max');
     if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
     const details = [daysSince === null ? '' : `${formatNumber(daysSince)} dias desde a última requisição`, blockReason, blockId ? `Id Bloqueio: ${blockId}` : ''].filter(Boolean);

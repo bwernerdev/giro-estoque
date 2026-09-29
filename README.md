@@ -28,7 +28,7 @@ Antes de aplicar as regras, o sistema valida as colunas obrigatórias e os valor
 
 A tabela do modo Analítico fixa as colunas **DESCRIÇÃO**, **CÓDIGO**, **LOCAL**, **QTD. ATUAL**, **MÍN. / MÁX**, **CLASSIFICAÇÃO**, **AÇÃO** e **OUTROS DADOS**. Em **DESCRIÇÃO** fica o nome do item e, quando a planilha não traz o nome, o número original da linha; **CÓDIGO** recebe `Cd Item` e **LOCAL** recebe `Cd Local Estoque`, usando a descrição disponível quando o código está vazio. **QTD. ATUAL** e **MÍN. / MÁX** são centralizados, assim como **CÓDIGO**, **LOCAL**, **CLASSIFICAÇÃO** e **AÇÃO**, com os cabeçalhos centralizados sobre cada coluna; **DESCRIÇÃO** e **OUTROS DADOS** permanecem alinhados à esquerda, e **AÇÃO** agrupa todas as ações aplicáveis ao item.
 
-Quando `Ds Motivo Bloqueio` estiver vazio e `Id Bloqueio` informar exatamente **Desbloqueado**, o sistema considera o item desbloqueado para aplicar as regras. Valores preenchidos, conflitantes ou não reconhecidos continuam recebendo **Verificar dados**.
+Quando `Ds Motivo Bloqueio` estiver vazio e `Id Bloqueio` informar exatamente **Desbloqueado**, o sistema considera o item desbloqueado para aplicar as regras. Se os dois campos informarem estados conflitantes, o item recebe **Verificar dados** e nenhuma ação operacional é recomendada.
 
 Regras de ação fornecidas pelo usuário:
 

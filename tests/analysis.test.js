@@ -73,7 +73,7 @@ test('aplica as condições de ação e ocultação informadas', () => {
     ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'], ['Sem ação definida'],
     ['Verificar dados'], ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'],
     ['Sem ação definida'], ['Sem ação definida'], ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['TRANSFERIR OBSOLETO'], ['Sem ação definida'], ['BLOQUEAR'],
-    ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['BLOQUEAR E TRANSFERIR OBSOLETO'],
+    ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['Verificar dados'],
     ['ZERAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
     ['DESBLOQUEAR'], ['Verificar dados'],
   ]);
@@ -86,6 +86,16 @@ test('aplica as condições de ação e ocultação informadas', () => {
   assert.equal(results[14].hidden, true);
   assert.equal(results[19].hidden, false);
   assert.equal(results[1].hidden, false);
+});
+
+test('status contraditórios exigem revisão antes de recomendar bloqueio ou transferência', () => {
+  const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  for (const [reason, id] of [['Desbloqueado', 'Bloqueado por saldo'], ['Bloqueado por saldo', 'Desbloqueado']]) {
+    const [result] = analyzeAnalitico([['Peça', 5, 200, reason, id, 0, 0, 'Acima de 90', 20]], mapping);
+    assert.deepEqual(result.actions, ['Verificar dados']);
+    assert.match(result.reason, /status conflitantes/);
+    assert.equal(result.hidden, false);
+  }
 });
 
 test('mantém visíveis as linhas inválidas e informa o campo que precisa de correção', () => {

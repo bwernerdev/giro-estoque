@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2026-09-28-desktop-1';
+const CACHE_VERSION = 'development';
 const CACHE_NAME = `giro-estoque-app-v${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
@@ -10,6 +10,19 @@ const APP_SHELL = [
   './src/theme.css',
   './src/desktop.css',
   './src/main.js',
+  './src/analysis.js',
+  './src/dashboard.js',
+  './src/export-data.js',
+  './src/import.js',
+  './src/template.js',
+  './vendor/exceljs.min.js',
+  './src/fonts/dm-sans-400.woff2',
+  './src/fonts/dm-sans-500.woff2',
+  './src/fonts/dm-sans-600.woff2',
+  './src/fonts/dm-sans-700.woff2',
+  './src/fonts/manrope-500.woff2',
+  './src/fonts/manrope-700.woff2',
+  './src/fonts/manrope-800.woff2',
 ];
 
 self.addEventListener('install', (event) => {
@@ -23,7 +36,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      keys.filter((key) => key.startsWith('giro-estoque-app-v') && key !== CACHE_NAME).map((key) => caches.delete(key))
     )).then(() => self.clients.claim())
   );
 });
@@ -38,7 +51,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
 
   event.respondWith(
     fetch(event.request)
@@ -52,7 +65,8 @@ self.addEventListener('fetch', (event) => {
       .catch(async () => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
-        return caches.match('./index.html');
+        if (event.request.mode === 'navigate') return caches.match('./index.html');
+        return Response.error();
       })
   );
 });
