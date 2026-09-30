@@ -44,8 +44,11 @@
   .standard-table th:nth-child(4) { text-align: right; font-variant-numeric: tabular-nums; }
   /* Analítico: cabeçalho centralizado sobre a coluna e valores curtos centralizados */
   .analitico-table th { text-align: center; }
+  .analitico-table th .sort-button { justify-content: center; }
   .analitico-table th:nth-child(1),
   .analitico-table th:nth-child(8) { text-align: left; }
+  .analitico-table th:nth-child(1) .sort-button,
+  .analitico-table th:nth-child(8) .sort-button { justify-content: flex-start; }
   .analitico-table td:nth-child(2),
   .analitico-table td:nth-child(3),
   .analitico-table td:nth-child(4),
@@ -67,6 +70,9 @@
   .standard-table th:nth-child(4) { width: 10%; }
   .standard-table th:nth-child(5) { width: 19%; }
   .standard-table th:nth-child(6) { width: 25%; }
+  .standard-table th:nth-child(2) .sort-button,
+  .standard-table th:nth-child(3) .sort-button,
+  .standard-table th:nth-child(4) .sort-button { justify-content: flex-end; }
 }
 
 .summary-filter:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(12, 26, 38, .07); }
@@ -74,7 +80,7 @@
 .summary-filter:disabled { cursor: default; }
 .summary-filter:disabled:hover { transform: none; border-right-color: var(--color-border); border-bottom-color: var(--color-border); border-left-color: var(--color-border); box-shadow: none; }
 
-html[data-density="compact"] #result-table th { padding-block: 10px; }
+html[data-density="compact"] #result-table .sort-button { padding-block: 10px; }
 html[data-density="compact"] #result-table td { padding-block: 10px; }
 html[data-density="compact"] #result-table td:first-child small { margin-top: 2px; }
 html[data-density="compact"] #result-table .badge { height: auto; padding-block: 5px; }
@@ -92,7 +98,7 @@ html[data-density="compact"] #result-table .badge { height: auto; padding-block:
 }
 
 @media screen and (min-width: 1024px) and (max-width: 1100px) {
-  #result-table th,
+  #result-table .sort-button,
   #result-table td { padding-inline: 8px; }
   .summary-card span { letter-spacing: .08em; }
   .summary-card strong { font-size: clamp(18px, 2.2vw, 23px); }
@@ -131,6 +137,7 @@ html[data-density="compact"] #result-table .badge { height: auto; padding-block:
   .summary-card { min-height: 104px; }
   .summary-card.local-total { align-items: flex-start; flex-direction: column; }
   .summary-card.local-total strong { white-space: normal; }
+  .insight-strip { align-items: flex-start; flex-direction: column; }
   .table-filters { display: grid; grid-template-columns: 1fr 1fr; }
   .filter-field,
   .density-toggle,

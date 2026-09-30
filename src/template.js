@@ -43,6 +43,8 @@ export function renderApp() {
           <section id="results-section" class="results-section">
             <div class="section-head"><div><span class="section-kicker">RESULTADOS</span><h2>Visão dos itens</h2></div></div>
             <div id="import-context" class="import-context" aria-live="polite"></div>
+            <div id="data-quality" class="insight-strip data-quality" role="status" hidden><div><strong id="data-quality-title"></strong><span id="data-quality-detail"></span></div></div>
+            <div id="hidden-context" class="insight-strip hidden-context" hidden><span id="hidden-context-text"></span><button id="toggle-hidden-context" class="discreet-button" type="button"></button></div>
             <div id="summary" class="summary-grid"></div>
             <div class="table-panel">
               <div class="table-tools">

@@ -42,7 +42,7 @@ test('build funciona em subpasta, mantém critérios e gera Excel/CSV completos'
       expect(sheet.getCell('H2').value).toBe(1234.56);
     }
   }
-  await expect(page.locator('#message')).toContainText('1 linha precisa');
+  await expect(page.locator('#data-quality')).toContainText('1 linha precisa');
   await page.screenshot({ path: 'test-results/desktop-light.png', fullPage: true });
   await page.locator('#theme-toggle').click();
   await expect(page.locator('#theme-toggle')).toContainText('Modo claro');

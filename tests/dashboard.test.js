@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { actionCounts, filterResults, locationOptions, paginate, processInChunks, resetDashboardState } from '../src/dashboard.js';
+import { actionCounts, dataIssueSummary, filterResults, locationOptions, paginate, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
 import { ANALITICO_ACTIONS, buildSummaryMarkup } from '../src/main.js';
@@ -88,8 +88,31 @@ test('oculta cards de ação zerados e os exibe quando há itens para executar',
 
   assert.match(markup, /data-summary-action="BLOQUEAR"/);
   assert.match(markup, /data-summary-action="Sem ação definida"/);
+  assert.match(markup, /33% do painel/);
   assert.doesNotMatch(markup, /data-summary-action="TRANSFERIR OBSOLETO"/);
   assert.doesNotMatch(markup, /data-summary-hidden/);
+});
+
+test('prioriza ações críticas e ordena valores sem mover vazios para o início', () => {
+  const prioritized = prioritizeActionCounts([
+    { action: 'Manter', count: 2 },
+    { action: 'BLOQUEAR', count: 1 },
+    { action: 'Verificar dados', count: 1 },
+  ]);
+  assert.deepEqual(prioritized.map(entry => entry.action), ['Verificar dados', 'BLOQUEAR', 'Manter']);
+  const source = [{ item: 'Dez', stock: 10 }, { item: 'Dois', stock: 2 }, { item: 'Vazio', stock: null }];
+  assert.deepEqual(sortResults(source, { key: 'stock', direction: 'asc' }).map(row => row.item), ['Dois', 'Dez', 'Vazio']);
+  assert.deepEqual(sortResults(source, { key: 'stock', direction: 'desc' }).map(row => row.item), ['Dez', 'Dois', 'Vazio']);
+});
+
+test('resume os campos mais frequentes das linhas que precisam de revisão', () => {
+  const summary = dataIssueSummary([
+    { action: 'Verificar dados', reason: 'Corrigir na planilha: Qtde Atual: valor ausente ou inválido; Nm Item: valor ausente.' },
+    { action: 'Verificar dados', reason: 'Nome, quantidade, valor do estoque ou consumo inválido.' },
+    { action: 'Manter', reason: '' },
+  ]);
+  assert.equal(summary.count, 2);
+  assert.deepEqual(summary.fields.find(entry => entry.field === 'Quantidade'), { field: 'Quantidade', count: 2 });
 });
 
 test('pagina sem descartar itens e limita a página atual', () => {

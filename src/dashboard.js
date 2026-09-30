@@ -47,10 +47,98 @@ export function actionCounts(rows, actions, analitico) {
   return actions.map(action => ({ action, count: counts.get(action) }));
 }
 
+const ACTION_PRIORITY = [
+  'Verificar dados',
+  'BLOQUEAR E TRANSFERIR OBSOLETO',
+  'BLOQUEAR',
+  'TRANSFERIR OBSOLETO',
+  'Confirmar saldo',
+  'Investigar sem consumo',
+  'Comprar',
+  'Planejar reposição',
+  'DESBLOQUEAR',
+  'ZERAR MIN/MAX',
+  'Reduzir compras',
+  'Avaliar transferência',
+  'Avaliar excesso',
+  'Avaliar sem giro',
+  'Manter',
+  'Sem movimento',
+  'Sem ação definida',
+  'Itens ocultos',
+];
+const actionPriority = new Map(ACTION_PRIORITY.map((action, index) => [normalize(action), index]));
+
+export function prioritizeActionCounts(counts) {
+  return counts.map((entry, index) => ({ ...entry, index }))
+    .sort((a, b) => (actionPriority.get(normalize(a.action)) ?? ACTION_PRIORITY.length) - (actionPriority.get(normalize(b.action)) ?? ACTION_PRIORITY.length) || a.index - b.index)
+    .map(({ index: _index, ...entry }) => entry);
+}
+
+export function sortResults(rows, { key = '', direction = 'asc' } = {}) {
+  if (!key) return rows;
+  const factor = direction === 'desc' ? -1 : 1;
+  return rows.map((row, index) => ({ row, index })).sort((a, b) => {
+    const left = a.row?.[key];
+    const right = b.row?.[key];
+    const leftEmpty = left === null || left === undefined || left === '';
+    const rightEmpty = right === null || right === undefined || right === '';
+    if (leftEmpty !== rightEmpty) return leftEmpty ? 1 : -1;
+    if (leftEmpty) return a.index - b.index;
+    const comparison = typeof left === 'number' && typeof right === 'number'
+      ? left - right
+      : String(left).localeCompare(String(right), 'pt-BR', { numeric: true, sensitivity: 'base' });
+    return comparison * factor || a.index - b.index;
+  }).map(entry => entry.row);
+}
+
+export function dataIssueSummary(rows) {
+  const issues = new Map();
+  const canonicalField = label => {
+    const value = normalize(label);
+    if (/^(qtde|qnt|quantidade)/.test(value)) return 'Quantidade';
+    if (value === 'nm item' || value.includes('nome')) return 'Nome do item';
+    if (value.includes('valor do estoque')) return 'Valor do estoque';
+    if (value.includes('estoque')) return 'Estoque';
+    if (value.includes('venda')) return 'Vendas';
+    if (value.includes('consumo')) return 'Consumo';
+    if (value.includes('prazo')) return 'Prazo';
+    return label;
+  };
+  const add = label => {
+    const field = canonicalField(label);
+    issues.set(field, (issues.get(field) ?? 0) + 1);
+  };
+  const reviewRows = rows.filter(row => row.action === 'Verificar dados' || row.actions?.includes('Verificar dados'));
+  reviewRows.forEach(row => {
+    const reason = String(row.reason ?? '');
+    const explicit = [...reason.matchAll(/(?:Corrigir na planilha:\s*|;\s*)([^:;.]+):/gi)].map(match => match[1].trim());
+    if (explicit.length) {
+      explicit.forEach(add);
+      return;
+    }
+    const normalized = normalize(reason);
+    if (normalized.includes('nome')) add('Nome do item');
+    if (normalized.includes('quantidade')) add('Quantidade');
+    if (normalized.includes('valor do estoque')) add('Valor do estoque');
+    else if (normalized.includes('estoque')) add('Estoque');
+    if (normalized.includes('vendas')) add('Vendas');
+    if (normalized.includes('prazo')) add('Prazo');
+    if (normalized.includes('consumo')) add('Consumo');
+    if (normalized.includes('giro informado')) add('Giro informado');
+  });
+  return {
+    count: reviewRows.length,
+    fields: [...issues.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR')).slice(0, 3).map(([field, count]) => ({ field, count })),
+  };
+}
+
 export function resetDashboardState(state) {
   state.page = 1;
   state.locationFilter = '';
   state.hiddenOnly = false;
+  state.sortKey = '';
+  state.sortDirection = 'asc';
   return state;
 }
 

@@ -107,9 +107,12 @@ export function analyze(rows, mapping, settings, firstRow = 2) {
     const sales = parse(get('sales'));
     const lead = String(get('lead') ?? '').trim() === '' ? defaultLead : parse(get('lead'));
     const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, location, localCode, stock, stockValue, sales, lead, coverage: null, reorderPoint: null, action: 'Verificar dados', reason: '' };
-    if (!item || stock === null || sales === null || lead === null || stock < 0 || sales < 0 || lead < 0) {
-      return { ...base, reason: 'Nome, estoque, vendas ou prazo ausente/inválido.' };
-    }
+    const issues = [];
+    if (!item) issues.push('Nome do item: valor ausente');
+    if (stock === null || stock < 0) issues.push(`Estoque: ${stock !== null && stock < 0 ? 'valor negativo' : 'valor ausente ou inválido'}`);
+    if (sales === null || sales < 0) issues.push(`Vendas: ${sales !== null && sales < 0 ? 'valor negativo' : 'valor ausente ou inválido'}`);
+    if (lead === null || lead < 0) issues.push(`Prazo: ${lead !== null && lead < 0 ? 'valor negativo' : 'valor ausente ou inválido'}`);
+    if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
     if (sales === 0) return { ...base, action: stock > 0 ? 'Avaliar sem giro' : 'Sem movimento', reason: stock > 0 ? 'Há estoque, mas nenhuma venda registrada em 30 dias.' : 'Sem estoque e sem vendas registradas.' };
     const daily = sales / 30;
     const coverage = stock / daily;
@@ -141,8 +144,14 @@ export function analyzeGiro(rows, mapping, settings, firstRow = 2) {
     const consumption = parse(get('consumption'));
     const reportedGiro = parse(get('giroDays'));
     const base = { row: index + firstRow, item, sku, branch, location, group, shelfCode, partitionCode, divisionCode, address, stock, stockValue, consumption, coverage: null, reportedGiro, action: 'Verificar dados', reason: '' };
-    const invalidNumber = ['stock', 'stockValue', 'consumption'].some(key => String(get(key) ?? '').trim() !== '' && parse(get(key)) === null);
-    if (!item || invalidNumber || (stock !== null && stock < 0) || (stockValue !== null && stockValue < 0) || (consumption !== null && consumption < 0)) return { ...base, reason: 'Nome, quantidade, valor do estoque ou consumo inválido.' };
+    const issues = [];
+    if (!item) issues.push('Nome do item: valor ausente');
+    for (const [key, label] of [['stock', 'Quantidade'], ['stockValue', 'Valor do estoque'], ['consumption', 'Consumo']]) {
+      const raw = String(get(key) ?? '').trim();
+      const value = parse(get(key));
+      if ((raw && value === null) || (value !== null && value < 0)) issues.push(`${label}: ${value !== null && value < 0 ? 'valor negativo' : 'valor inválido'}`);
+    }
+    if (issues.length) return { ...base, reason: `Corrigir na planilha: ${issues.join('; ')}.` };
     if (stockValue === null && consumption !== null && consumption > 0) return { ...base, action: 'Confirmar saldo', reason: 'Há consumo, mas quantidade e valor do estoque estão em branco; confirmar saldo antes de repor.' };
     if (stockValue === null) return { ...base, reason: 'Valor do estoque em branco.' };
     if (consumption === null || consumption === 0) return { ...base, action: 'Investigar sem consumo', reason: 'Há estoque, mas não há consumo registrado no período.' };

@@ -50,7 +50,7 @@ test('importação mantém itens sem nome, número original da linha e aviso de 
   await app.csv('Relatorio\nProduto;Codigo;Estoque;Vendas\nA;1;5;30\n\n;2;999;10\nTotal;;1004;40\nB;3;10;30');
   assert.equal(app.el('#filtered-count').textContent, '3 de 3 itens');
   assert.match(app.el('#result-rows').textContent, /Linha 5/);
-  assert.match(app.el('#message').textContent, /1 linha precisa/);
+  assert.match(app.el('#data-quality').textContent, /1 linha precisa/);
   const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^\uFEFF/, ''), ';');
   const origin = csv[0].indexOf('Linha na planilha');
   assert.deepEqual(csv.slice(1).map(row => row[origin]), ['3', '5', '7']);
@@ -79,7 +79,7 @@ test('formato numérico explícito muda a leitura do CSV e rejeita dados malform
   assert.match(app.el('#result-rows').textContent, /Avaliar excesso/);
   app.change('#number-format', 'en-US');
   await waitFor(() => app.el('#result-rows').textContent.includes('Comprar'));
-  assert.match(app.el('#message').textContent, /1 linha precisa/);
+  assert.match(app.el('#data-quality').textContent, /1 linha precisa/);
 });
 
 test('Excel e CSV exportam todos os itens filtrados e PDF mantém o contexto', async t => {
@@ -176,4 +176,37 @@ test('fora do Analítico a tabela preserva as seis colunas padrão', async t => 
   assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
     ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO']);
   assert.equal(app.el('#result-rows').querySelector('tr').children.length, 6);
+});
+
+test('mantém filtros úteis, ordena colunas e restaura preferências na próxima importação', async t => {
+  const app = await boot(t);
+  const csv = 'Produto;Codigo;Estoque;Vendas\nBaixo;1;5;30\nMédio;2;50;30\nAlto;3;1000;30';
+  await app.csv(csv);
+
+  const options = [...app.el('#filter').options].map(option => option.textContent);
+  assert.deepEqual(options, ['Todas as recomendações', 'Comprar', 'Avaliar excesso', 'Manter']);
+
+  app.el('[data-sort-key="stock"]').click();
+  assert.deepEqual([...app.el('#result-rows').querySelectorAll('tr td:first-child strong')].map(node => node.textContent), ['Baixo', 'Médio', 'Alto']);
+  app.el('[data-sort-key="stock"]').click();
+  assert.deepEqual([...app.el('#result-rows').querySelectorAll('tr td:first-child strong')].map(node => node.textContent), ['Alto', 'Médio', 'Baixo']);
+
+  app.change('#filter', 'Manter');
+  app.change('#search', 'Médio', 'input');
+  await waitFor(() => JSON.parse(localStorage.getItem('controle-estoque-filters')).query === 'Médio');
+  await app.csv(csv, 'nova.csv');
+  assert.equal(app.el('#filter').value, 'Manter');
+  assert.equal(app.el('#search').value, 'Médio');
+  assert.equal(app.el('#table-head th:nth-child(2)').getAttribute('aria-sort'), 'descending');
+  assert.equal(app.el('#result-rows').querySelectorAll('tr').length, 1);
+});
+
+test('explica itens ocultos e permite incluí-los pelo aviso contextual', async t => {
+  const app = await boot(t);
+  await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nOculto;001;7;5;0;10;10;Item com Giro;Desbloqueado;Desbloqueado\nVisível;002;7;5;0;10;200;Item com Giro;Desbloqueado;Desbloqueado');
+  assert.equal(app.el('#hidden-context').hidden, false);
+  assert.match(app.el('#hidden-context-text').textContent, /1 item ocultado pelas regras/);
+  app.el('#toggle-hidden-context').click();
+  await waitFor(() => app.el('#show-hidden').checked && app.el('#filtered-count').textContent === '2 de 2 itens');
+  assert.match(app.el('#hidden-context-text').textContent, /incluído no painel/);
 });

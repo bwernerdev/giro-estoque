@@ -571,6 +571,49 @@ main {
   color:#a64736
 }
 
+.insight-strip {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:0 0 12px;
+  padding:12px 14px;
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-md);
+  background:var(--color-surface);
+  color:var(--color-text-subtle);
+  font-size:13px
+}
+
+.insight-strip[hidden] {
+  display:none
+}
+
+.data-quality {
+  border-left:4px solid var(--status-danger);
+  background:#fff8f2
+}
+
+.data-quality div,
+.data-quality strong,
+.data-quality span {
+  display:block
+}
+
+.data-quality strong {
+  color:#8b3f32;
+  font-size:14px
+}
+
+.data-quality span {
+  margin-top:3px
+}
+
+.hidden-context {
+  border-left:4px solid var(--status-neutral);
+  background:var(--color-context)
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    SEÇÃO WORKSPACE — cabeçalhos e ações
 ══════════════════════════════════════════════════════════════════════════════ */
@@ -821,6 +864,20 @@ input:focus-visible {
   font:800 clamp(20px,1.5vw,26px)/1.08 Manrope,sans-serif;
   letter-spacing:-.04em;
   overflow-wrap:anywhere
+}
+
+.summary-value {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px
+}
+
+.summary-value small {
+  color:var(--color-text-subtle);
+  font-size:11px;
+  font-weight:700;
+  white-space:nowrap
 }
 
 .summary-card.total {
@@ -1147,7 +1204,7 @@ th {
   position:sticky;
   top:0;
   z-index:2;
-  padding:13px 16px;
+  padding:0;
   border-bottom:1px solid var(--color-divider);
   background:var(--color-table-head);
   color:var(--color-text-subtle);
@@ -1155,6 +1212,45 @@ th {
   letter-spacing:.1em;
   text-transform:uppercase;
   font-weight:700
+}
+
+.sort-button {
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:6px;
+  padding:13px 16px;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  letter-spacing:inherit;
+  text-align:inherit;
+  text-transform:inherit;
+  cursor:pointer
+}
+
+.sort-button::after {
+  content:'↕';
+  color:var(--color-text-faint);
+  font-size:12px;
+  letter-spacing:0
+}
+
+th[aria-sort="ascending"] .sort-button::after {
+  content:'↑';
+  color:var(--color-focus)
+}
+
+th[aria-sort="descending"] .sort-button::after {
+  content:'↓';
+  color:var(--color-focus)
+}
+
+.sort-button:hover {
+  background:var(--color-row-hover);
+  color:var(--color-text-strong)
 }
 
 td {

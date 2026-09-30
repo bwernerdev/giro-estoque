@@ -357,6 +357,21 @@ html[data-theme="dark"] .message.error {
   color: #ffb1a4;
 }
 
+html[data-theme="dark"] .insight-strip {
+  background: #141f2d;
+  border-color: #3b5169;
+  color: #b7c5d2;
+}
+
+html[data-theme="dark"] .data-quality {
+  background: #32252a;
+  border-left-color: #ee8397;
+}
+
+html[data-theme="dark"] .data-quality strong {
+  color: #ffb4c0;
+}
+
 /* ─── Summary filter cards ──────────────────────────────────────────────────── */
 html[data-theme="dark"] .summary-filter.is-active {
   border-color: #9fc45e;

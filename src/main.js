@@ -1,6 +1,6 @@
 import { importFile, selectDataRows } from './import.js';
 import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
-import { actionCounts, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, processInChunks, resetDashboardState } from './dashboard.js';
+import { actionCounts, dataIssueSummary, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
 import { svgIcon } from './icons.js';
@@ -11,6 +11,10 @@ const state = {
   page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null,
   mode: 'auto',
   numberFormat: 'pt-BR',
+  sortKey: '',
+  sortDirection: 'asc',
+  columns: [],
+  pendingActionFilter: '',
   settings: {
     generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' },
     giro: { shortDays: '30', excessDays: '90', longDays: '365' },
@@ -27,7 +31,7 @@ let importRun = 0;
 function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
 export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, locationFilter, locationTotal }) {
-  const summaryCounts = counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length }));
+  const summaryCounts = prioritizeActionCounts(counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length })));
   const localTotalCard = locationFilter || summaryAllResults.length > 0
     ? `<div class="summary-card local-total"><div><span>${locationFilter ? 'VALOR DO ESTOQUE NO LOCAL' : 'VALOR TOTAL DO ESTOQUE'}</span><small>Soma da coluna Vl Saldo${locationFilter ? ` · Local ${escapeHtml(locationFilter)}` : ''}</small></div><strong>${realCurrency(locationTotal)}</strong></div>`
     : '';
@@ -37,7 +41,9 @@ export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions,
     ...summaryCounts.filter(({ count }) => count > 0).map(({ action, count }) => {
       const hiddenCard = action === 'Itens ocultos';
       const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
-      return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
+      const total = hiddenCard ? summaryAllResults.length : summaryResults.length;
+      const percentage = total ? Math.round((count / total) * 100) : 0;
+      return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><div class="summary-value"><strong>${count}</strong><small>${percentage}% ${hiddenCard ? 'do total' : 'do painel'}</small></div></button>`;
     }),
     localTotalCard,
   ].filter(Boolean).join('');
@@ -124,6 +130,82 @@ if (typeof document !== 'undefined') {
   function message(text, type = '') {
     el('#message').textContent = text;
     el('#message').className = text ? `message${type ? ` ${type}` : ''}` : '';
+  }
+  const FILTER_STORAGE_KEY = 'controle-estoque-filters';
+  function readFilterPreferences() {
+    try {
+      const value = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || '{}');
+      return value && typeof value === 'object' ? value : {};
+    } catch { return {}; }
+  }
+  function persistFilters() {
+    try {
+      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({
+        query: el('#search').value.trim(),
+        action: el('#filter').value,
+        location: state.locationFilter,
+        showHidden: el('#show-hidden').checked,
+        hiddenOnly: state.hiddenOnly,
+        sortKey: state.sortKey,
+        sortDirection: state.sortDirection,
+      }));
+    } catch { /* Os filtros permanecem válidos até fechar a página. */ }
+  }
+  function resultColumns(analitico, giro) {
+    if (analitico) return [
+      { label: 'DESCRIÇÃO', key: 'item' },
+      { label: 'CÓDIGO', key: 'sku' },
+      { label: 'LOCAL', key: 'localCode' },
+      { label: 'QTD. ATUAL', key: 'stock' },
+      { label: 'MÍN. / MÁX', key: 'minimum' },
+      { label: 'CLASSIFICAÇÃO', key: 'classification' },
+      { label: 'AÇÃO', key: 'action' },
+      { label: 'OUTROS DADOS', key: 'daysSince', sortLabel: 'dias desde a última movimentação' },
+    ];
+    if (giro) return [
+      { label: 'ITEM / FILIAL', key: 'item' },
+      { label: 'ESTOQUE (R$)', key: 'stockValue' },
+      { label: 'CONSUMO (R$)', key: 'consumption' },
+      { label: 'GIRO', key: 'coverage' },
+      { label: 'RECOMENDAÇÃO', key: 'action' },
+      { label: 'MOTIVO', key: 'reason' },
+    ];
+    return [
+      { label: 'ITEM', key: 'item' },
+      { label: 'ESTOQUE', key: 'stock' },
+      { label: 'VENDAS / 30D', key: 'sales' },
+      { label: 'COBERTURA', key: 'coverage' },
+      { label: 'RECOMENDAÇÃO', key: 'action' },
+      { label: 'MOTIVO', key: 'reason' },
+    ];
+  }
+  function renderTableHead() {
+    el('#table-head').innerHTML = `<tr>${state.columns.map(column => {
+      const selected = state.sortKey === column.key;
+      const ariaSort = selected ? (state.sortDirection === 'asc' ? 'ascending' : 'descending') : 'none';
+      const direction = selected ? (state.sortDirection === 'asc' ? 'decrescente' : 'crescente') : 'crescente';
+      return `<th scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-button" data-sort-key="${column.key}" aria-label="Ordenar por ${escapeHtml(column.sortLabel || column.label)}, ordem ${direction}">${escapeHtml(column.label)}</button></th>`;
+    }).join('')}</tr>`;
+  }
+  function renderDataQuality(rows) {
+    const quality = dataIssueSummary(rows);
+    const panel = el('#data-quality');
+    panel.hidden = quality.count === 0;
+    if (!quality.count) return;
+    el('#data-quality-title').textContent = `${quality.count} ${quality.count === 1 ? 'linha precisa' : 'linhas precisam'} de revisão`;
+    el('#data-quality-detail').textContent = quality.fields.length
+      ? `Campos mais frequentes: ${quality.fields.map(({ field, count }) => `${field} (${count})`).join(' · ')}.`
+      : 'Abra “Outros dados” ou “Motivo” para localizar o problema.';
+  }
+  function renderHiddenContext(hiddenCount) {
+    const panel = el('#hidden-context');
+    panel.hidden = !isAnaliticoMode() || hiddenCount === 0;
+    if (panel.hidden) return;
+    const included = el('#show-hidden').checked;
+    const subject = hiddenCount === 1 ? 'item ocultado' : 'itens ocultados';
+    const inclusion = hiddenCount === 1 ? 'está incluído' : 'estão incluídos';
+    el('#hidden-context-text').textContent = `${hiddenCount.toLocaleString('pt-BR')} ${subject} pelas regras${included ? ` ${inclusion} no painel.` : '.'}`;
+    el('#toggle-hidden-context').textContent = included ? 'Ocultar novamente' : 'Exibir também';
   }
   function setConfigExpanded(expanded) {
     el('#config-grid').hidden = !expanded;
@@ -237,11 +319,14 @@ if (typeof document !== 'undefined') {
     const summaryResults = state.results.filter(row => matchesLocation(row, state.locationFilter));
     const summaryAllResults = state.allResults.filter(row => matchesLocation(row, state.locationFilter));
     const actions = analitico ? ANALITICO_ACTIONS : giro ? GIRO_ACTIONS : GENERIC_ACTIONS;
-    const counts = analitico
+    const counts = prioritizeActionCounts(analitico
       ? [...actionCounts(summaryResults, actions, true), { action: 'Itens ocultos', count: summaryAllResults.filter(row => row.hidden).length }]
-      : actionCounts(summaryResults, actions, false);
+      : actionCounts(summaryResults, actions, false));
+    const availableActions = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action }) => action);
+    const hiddenCount = summaryAllResults.filter(row => row.hidden).length;
     const locationTotal = summarizeLocationTotal(state.allResults, state.locationFilter);
-    const previousFilter = el('#filter').value;
+    const previousFilter = state.pendingActionFilter || el('#filter').value;
+    state.pendingActionFilter = '';
     el('#summary').innerHTML = buildSummaryMarkup({
       summaryResults,
       summaryAllResults,
@@ -250,19 +335,21 @@ if (typeof document !== 'undefined') {
       locationFilter: state.locationFilter,
       locationTotal,
     });
-    el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + actions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
-    if (actions.includes(previousFilter)) el('#filter').value = previousFilter;
+    el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + availableActions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
+    el('#filter').value = availableActions.includes(previousFilter) ? previousFilter : '';
     el('#filter').setAttribute('aria-label', 'Filtrar ação');
     el('#result-table').className = analitico ? 'analitico-table' : 'standard-table';
-    const headings = analitico
-      ? ['DESCRIÇÃO', 'CÓDIGO', 'LOCAL', 'QTD. ATUAL', 'MÍN. / MÁX', 'CLASSIFICAÇÃO', 'AÇÃO', 'OUTROS DADOS']
-      : giro
-        ? ['ITEM / FILIAL', 'ESTOQUE (R$)', 'CONSUMO (R$)', 'GIRO', 'RECOMENDAÇÃO', 'MOTIVO']
-        : ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO'];
-    el('#table-head').innerHTML = `<tr>${headings.map(heading => `<th scope="col">${heading}</th>`).join('')}</tr>`;
-    const reviewCount = state.results.filter(row => row.action === 'Verificar dados').length;
-    message(reviewCount ? `${reviewCount} ${reviewCount === 1 ? 'linha precisa' : 'linhas precisam'} de revisão. Consulte “${analitico ? 'Outros dados' : 'Motivo'}” para corrigir a planilha.` : '', reviewCount ? 'warning' : '');
+    state.columns = resultColumns(analitico, giro);
+    if (!state.columns.some(column => column.key === state.sortKey)) {
+      state.sortKey = '';
+      state.sortDirection = 'asc';
+    }
+    renderTableHead();
+    renderDataQuality(summaryResults);
+    renderHiddenContext(hiddenCount);
+    message('');
     renderResults();
+    persistFilters();
   }
 
   function actionIcon(action) {
@@ -285,13 +372,13 @@ if (typeof document !== 'undefined') {
     return `<details class="row-details"><summary class="discreet-button">Ver detalhes</summary><p>${escapeHtml(reason)}</p></details>`;
   }
   function visibleResults() {
-    return filterResults(state.results, {
+    return sortResults(filterResults(state.results, {
       query: el('#search').value,
       action: el('#filter').value,
       location: state.locationFilter,
       analitico: isAnaliticoMode(),
       hiddenOnly: state.hiddenOnly,
-    });
+    }), { key: state.sortKey, direction: state.sortDirection });
   }
   function updateSummarySelection() {
     const selectedAction = el('#filter').value;
@@ -313,6 +400,8 @@ if (typeof document !== 'undefined') {
     if (query) parts.push(`Busca: “${query}”`);
     if (state.hiddenOnly) parts.push('Somente itens ocultos');
     else if (el('#show-hidden').checked && isAnaliticoMode()) parts.push('Itens ocultos incluídos');
+    const sortedColumn = state.columns.find(column => column.key === state.sortKey);
+    if (sortedColumn) parts.push(`Ordem: ${sortedColumn.sortLabel || sortedColumn.label} (${state.sortDirection === 'asc' ? 'crescente' : 'decrescente'})`);
     el('#active-filters').hidden = parts.length === 0;
     el('#active-filters-text').textContent = parts.length ? `${parts.join(' · ')} · ${filteredCount} ${filteredCount === 1 ? 'item' : 'itens'}` : '';
   }
@@ -442,10 +531,17 @@ if (typeof document !== 'undefined') {
       state.sheets = sheets;
       state.sheet = state.sheets.findIndex(sheet => sheet.rows.length > sheet.headerRow + 1);
       state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []);
-      el('#show-hidden').checked = false;
-      el('#search').value = '';
+      const savedFilters = readFilterPreferences();
+      const restoreHidden = currentMode() === 'analitico' && Boolean(savedFilters.showHidden);
+      el('#show-hidden').checked = restoreHidden;
+      el('#search').value = typeof savedFilters.query === 'string' ? savedFilters.query : '';
       el('#filter').value = '';
       resetDashboardState(state);
+      state.locationFilter = typeof savedFilters.location === 'string' ? savedFilters.location : '';
+      state.hiddenOnly = Boolean(savedFilters.hiddenOnly && restoreHidden);
+      state.sortKey = typeof savedFilters.sortKey === 'string' ? savedFilters.sortKey : '';
+      state.sortDirection = savedFilters.sortDirection === 'desc' ? 'desc' : 'asc';
+      state.pendingActionFilter = typeof savedFilters.action === 'string' ? savedFilters.action : '';
       state.fileName = file.name;
       state.importedAt = new Date();
       setConfigExpanded(false);
@@ -471,9 +567,9 @@ if (typeof document !== 'undefined') {
   el('#search').addEventListener('input', () => {
     state.page = 1;
     cancelAnimationFrame(searchRenderFrame);
-    searchRenderFrame = requestAnimationFrame(renderResults);
+    searchRenderFrame = requestAnimationFrame(() => { renderResults(); persistFilters(); });
   });
-  el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; renderResults(); });
+  el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; renderResults(); persistFilters(); });
   el('#location-filter').addEventListener('change', () => {
     state.locationFilter = el('#location-filter').value;
     state.page = 1;
@@ -502,6 +598,12 @@ if (typeof document !== 'undefined') {
     if (!el('#show-hidden').checked) state.hiddenOnly = false;
     refresh({ reanalyze: false });
   });
+  el('#toggle-hidden-context').addEventListener('click', () => {
+    state.page = 1;
+    state.hiddenOnly = false;
+    el('#show-hidden').checked = !el('#show-hidden').checked;
+    refresh({ reanalyze: false });
+  });
   el('#summary').addEventListener('click', event => {
     const card = event.target.closest('.summary-filter');
     if (!card) return;
@@ -516,11 +618,25 @@ if (typeof document !== 'undefined') {
     state.hiddenOnly = false;
     el('#filter').value = card.dataset.summaryAction ?? '';
     renderResults();
+    persistFilters();
+  });
+  el('#table-head').addEventListener('click', event => {
+    const button = event.target.closest('[data-sort-key]');
+    if (!button) return;
+    const key = button.dataset.sortKey;
+    state.sortDirection = state.sortKey === key && state.sortDirection === 'asc' ? 'desc' : 'asc';
+    state.sortKey = key;
+    state.page = 1;
+    renderTableHead();
+    renderResults();
+    persistFilters();
   });
   el('#clear-filters').addEventListener('click', () => {
     state.page = 1;
     state.locationFilter = '';
     state.hiddenOnly = false;
+    state.sortKey = '';
+    state.sortDirection = 'asc';
     el('#search').value = '';
     el('#filter').value = '';
     el('#show-hidden').checked = false;
