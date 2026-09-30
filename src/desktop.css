@@ -26,7 +26,6 @@
   .upload-card.loading { opacity: .72; pointer-events: none; }
   .upload-card.loading .primary-button::after { content: '…'; }
   .summary-filter { width: 100%; appearance: none; font: inherit; text-align: left; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
-  .summary-filter.is-empty { height: 100%; align-self: stretch; background: var(--color-surface-muted); box-shadow: none; }
   .summary-filter.is-active { border-color: var(--color-focus); background: linear-gradient(145deg, #fbfef5, var(--color-surface)); box-shadow: 0 0 0 2px rgba(125, 167, 47, .2), 0 10px 26px rgba(12, 26, 38, .07); }
   #result-table tbody tr { transition: background-color .14s ease; }
   #result-table tbody tr:nth-child(even):not(.hidden-item) { background: var(--color-row-alt); }

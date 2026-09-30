@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { actionCounts, filterResults, locationOptions, paginate, processInChunks, resetDashboardState } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
@@ -54,7 +53,7 @@ test('renderiza apenas um card de valor total do estoque e mantém a linha infer
   assert.match(markup, /VALOR TOTAL DO ESTOQUE/);
   assert.doesNotMatch(markup, /VALOR TOTAL DO ESTOQUE[\s\S]*VALOR TOTAL DO ESTOQUE/);
   assert.match(markup, /ITENS NO PAINEL/);
-  assert.equal((markup.match(/summary-card/g) || []).length, 9);
+  assert.equal((markup.match(/summary-card/g) || []).length, 2);
 });
 
 test('expõe no resumo e no filtro todas as ações produzidas pelo modo analítico', () => {
@@ -72,12 +71,25 @@ test('expõe no resumo e no filtro todas as ações produzidas pelo modo analít
   assert.match(markup, /data-summary-action="Sem ação definida"/);
 });
 
-test('cards vazios não recebem altura menor que os demais no resumo', () => {
-  const css = readFileSync(new URL('../src/desktop.css', import.meta.url), 'utf8');
-  const markup = buildSummaryMarkup({ summaryResults: [], summaryAllResults: [], actions: ['Comprar'], locationFilter: '', locationTotal: 0 });
-  assert.doesNotMatch(css, /\.summary-filter\.is-empty\s*\{[^}]*min-height\s*:\s*88px/i);
-  assert.doesNotMatch(css, /\.summary-filter\.is-empty\s*\{[^}]*height\s*:\s*auto/i);
-  assert.match(markup, /class="summary-card summary-filter comprar is-empty"[^>]*disabled/);
+test('oculta cards de ação zerados e os exibe quando há itens para executar', () => {
+  const markup = buildSummaryMarkup({
+    summaryResults: rows,
+    summaryAllResults: rows,
+    actions: ['BLOQUEAR', 'TRANSFERIR OBSOLETO', 'Sem ação definida'],
+    counts: [
+      { action: 'BLOQUEAR', count: 1 },
+      { action: 'TRANSFERIR OBSOLETO', count: 0 },
+      { action: 'Sem ação definida', count: 1 },
+      { action: 'Itens ocultos', count: 0 },
+    ],
+    locationFilter: '',
+    locationTotal: 0,
+  });
+
+  assert.match(markup, /data-summary-action="BLOQUEAR"/);
+  assert.match(markup, /data-summary-action="Sem ação definida"/);
+  assert.doesNotMatch(markup, /data-summary-action="TRANSFERIR OBSOLETO"/);
+  assert.doesNotMatch(markup, /data-summary-hidden/);
 });
 
 test('pagina sem descartar itens e limita a página atual', () => {

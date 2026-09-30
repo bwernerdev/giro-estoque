@@ -34,10 +34,10 @@ export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions,
 
   return [
     `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></button>`,
-    ...summaryCounts.map(({ action, count }) => {
+    ...summaryCounts.filter(({ count }) => count > 0).map(({ action, count }) => {
       const hiddenCard = action === 'Itens ocultos';
       const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
-      return `<button type="button" class="summary-card summary-filter ${slug(action)}${count === 0 ? ' is-empty' : ''}" ${attribute} aria-pressed="false"${count === 0 ? ' disabled' : ''}><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
+      return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><strong>${count}</strong></button>`;
     }),
     localTotalCard,
   ].filter(Boolean).join('');

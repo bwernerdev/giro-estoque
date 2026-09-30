@@ -358,10 +358,6 @@ html[data-theme="dark"] .message.error {
 }
 
 /* ─── Summary filter cards ──────────────────────────────────────────────────── */
-html[data-theme="dark"] .summary-filter.is-empty {
-  background: #141f2d;
-}
-
 html[data-theme="dark"] .summary-filter.is-active {
   border-color: #9fc45e;
   background: linear-gradient(145deg, #20312e, #182433);
