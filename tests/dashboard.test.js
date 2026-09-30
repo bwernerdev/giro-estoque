@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import { actionCounts, filterResults, locationOptions, paginate, processInChunks, resetDashboardState } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
-import { buildSummaryMarkup } from '../src/main.js';
+import { ANALITICO_ACTIONS, buildSummaryMarkup } from '../src/main.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -42,7 +42,7 @@ test('filtra por busca, ação e local sem perder correspondências', () => {
 });
 
 test('renderiza apenas um card de valor total do estoque e mantém a linha inferior como resumo', () => {
-  const actions = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Verificar dados'];
+  const actions = ANALITICO_ACTIONS;
   const markup = buildSummaryMarkup({
     summaryResults: [{ item: 'A' }, { item: 'B' }],
     summaryAllResults: [{ item: 'A' }, { item: 'B' }, { item: 'C', hidden: true }],
@@ -54,7 +54,22 @@ test('renderiza apenas um card de valor total do estoque e mantém a linha infer
   assert.match(markup, /VALOR TOTAL DO ESTOQUE/);
   assert.doesNotMatch(markup, /VALOR TOTAL DO ESTOQUE[\s\S]*VALOR TOTAL DO ESTOQUE/);
   assert.match(markup, /ITENS NO PAINEL/);
-  assert.equal((markup.match(/summary-card/g) || []).length, 8);
+  assert.equal((markup.match(/summary-card/g) || []).length, 9);
+});
+
+test('expõe no resumo e no filtro todas as ações produzidas pelo modo analítico', () => {
+  const generatedActions = new Set(rows.flatMap(row => row.actions));
+  assert.ok([...generatedActions].every(action => ANALITICO_ACTIONS.includes(action)));
+  assert.ok(ANALITICO_ACTIONS.includes('Sem ação definida'));
+
+  const markup = buildSummaryMarkup({
+    summaryResults: rows,
+    summaryAllResults: rows,
+    actions: ANALITICO_ACTIONS,
+    locationFilter: '',
+    locationTotal: 0,
+  });
+  assert.match(markup, /data-summary-action="Sem ação definida"/);
 });
 
 test('cards vazios não recebem altura menor que os demais no resumo', () => {

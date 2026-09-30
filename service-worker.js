@@ -14,6 +14,7 @@ const APP_SHELL = [
   './src/dashboard.js',
   './src/export-data.js',
   './src/import.js',
+  './src/icons.js',
   './src/template.js',
   './vendor/exceljs.min.js',
   './src/fonts/dm-sans-400.woff2',

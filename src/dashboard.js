@@ -1,4 +1,4 @@
-import { normalize, normalizeLocalKey, stockLocation } from './analysis.js?v=20260929-1';
+import { normalize, normalizeLocalKey, stockLocation } from './analysis.js';
 
 export const PAGE_SIZE = 50;
 const searchTextCache = new WeakMap();

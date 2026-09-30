@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, parseNumber, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
 import { locationOptions } from '../src/dashboard.js';
 import { selectDataRows, parseCsv } from '../src/import.js';
@@ -70,5 +71,19 @@ test('exportações preservam recomendações, motivos, classificação e origem
     assert.equal(record['Linha na planilha'], 8);
     assert.equal(record['Valor do saldo'], '');
     if (mode === 'analitico') assert.equal(record.Classificação, 'Sem Saldo');
+  }
+});
+
+test('fontes usadas diretamente pelo navegador formam um cache offline coerente', () => {
+  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const worker = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
+  const dashboard = readFileSync(new URL('../src/dashboard.js', import.meta.url), 'utf8');
+  const importer = readFileSync(new URL('../src/import.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(index, /src\/(?:style|theme|desktop|main)\.[a-z]+\?v=/);
+  assert.doesNotMatch(dashboard, /analysis\.js\?v=/);
+  assert.doesNotMatch(importer, /analysis\.js\?v=/);
+  for (const asset of ['./src/main.js', './src/analysis.js', './src/icons.js']) {
+    assert.match(worker, new RegExp(asset.replaceAll('.', '\\.')));
   }
 });

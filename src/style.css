@@ -111,10 +111,8 @@
   --color-hidden-badge-text:#435b73;
 
   /* Badges */
-  --color-badge-warning-bg:#fff0df;
   --color-badge-success-bg:#e5f3eb;
   --color-badge-success-text:#2d6a53;
-  --color-badge-success-border:#6aa68a;
   --color-badge-alert-bg:#fbe9ec;
   --color-badge-alert-text:#a6495c;
   --color-badge-warning-soft:#fff0df;
@@ -800,7 +798,8 @@ input:focus-visible {
   border:1px solid var(--color-border);
   border-radius:var(--radius-xl);
   background:var(--color-surface);
-  box-shadow:var(--shadow-card)
+  box-shadow:var(--shadow-card);
+  overflow:hidden
 }
 
 .summary-card span {
@@ -826,14 +825,6 @@ input:focus-visible {
 
 .summary-card.total {
   border-top:3px solid var(--color-topbar)
-}
-
-.summary-card.total span {
-  color:var(--color-text-subtle)
-}
-
-.summary-card.total strong {
-  color:var(--color-text-strong)
 }
 
 .summary-card.local-total {

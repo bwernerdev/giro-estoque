@@ -1,4 +1,4 @@
-import { normalize } from './analysis.js?v=20260929-1';
+import { normalize } from './analysis.js';
 
 // Only explicit total labels are discarded; ambiguous rows remain available for review.
 export function selectDataRows(rows, mapping, startIndex = 1) {
