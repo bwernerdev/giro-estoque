@@ -154,7 +154,7 @@ test('modo Analítico mostra as nove colunas fixas com código, local e demais d
   assert.equal(cells[5], '5');
   assert.equal(cells[6], '10 / 20');
   assert.match(cells[7], /ZERAR MIN\/MAX/);
-  assert.match(cells[8], /dias desde a última requisição/);
+  assert.equal(cells[8], 'Ver detalhes');
   app.change('#search', 'inexistente', 'input');
   await waitFor(() => app.el('#result-rows').textContent.includes('Nenhum item encontrado'));
   assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '9');

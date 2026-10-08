@@ -10,15 +10,22 @@
   .shell.has-data .upload-actions { margin-left: 0; }
   .shell.has-data .section-head { margin-top: 28px; }
 
-  .table-filters { flex: 0 0 auto; min-width: max-content; flex-wrap: nowrap; }
-  .table-filters select { width: min(100%, 210px); min-width: 130px; }
-  #location-filter { min-width: 140px; }
+  .table-tools-header { display: flex; align-items: center; gap: 16px; width: 100%; min-width: 0; }
+  .table-tools-header .search-control { flex: 1 1 0; min-width: 128px; width: auto; }
+  .table-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.55fr); flex: 1 1 100%; width: 100%; min-width: 0; align-items: end; }
+  .table-filters .filter-field { min-width: 0; width: 100%; }
+  .table-filters select { width: 100%; min-width: 0; padding-inline: 16px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: normal; }
+  .filter-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; margin-left: auto; max-width: 100%; }
+  .filter-actions .hidden-toggle { font-size: 12px; }
+  .filter-actions .density-toggle { min-width: max-content; padding-inline: 16px; font-size: 12px; border-radius: 999px; }
+  .filter-actions .export-menu { min-width: max-content; }
+  .filter-actions .export-menu summary { width: 100%; min-width: max-content; padding-inline: 18px; font-size: 12px; border-radius: 999px; white-space: nowrap; }
   .upload-card.loading { opacity: .72; pointer-events: none; }
   .upload-card.loading .primary-button::after { content: '…'; }
   .summary-filter { width: 100%; appearance: none; font: inherit; text-align: left; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
   .summary-filter.is-active { border-color: var(--color-focus); background: linear-gradient(145deg, #fbfef5, var(--color-surface)); box-shadow: 0 0 0 2px rgba(125, 167, 47, .2), 0 10px 26px rgba(12, 26, 38, .07); }
 
-  .table-tools { position: sticky; top: 0; z-index: 4; background: var(--color-surface); border-bottom: 1px solid var(--color-border); border-radius: 12px 12px 0 0; }
+  .table-tools { position: sticky; top: 0; z-index: 4; background: var(--color-surface); border-bottom: 1px solid var(--color-border); border-radius: 12px 12px 0 0; flex-wrap: wrap; }
   .export-menu { display: flex; align-items: flex-end; min-width: 138px; }
   .active-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 17px; border-bottom: 1px solid var(--color-row-divider); background: var(--color-active-filters); color: var(--color-text-subtle); font-size: 12px; }
   .active-filters button { flex: none; }
@@ -37,7 +44,6 @@
 @media screen and (max-width: 1180px) {
   .table-tools { flex-wrap: wrap; }
   .search-field { flex: 1 1 100%; max-width: none; }
-  .table-filters { width: 100%; min-width: 0; flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
   .filter-field { flex: 1 1 180px; }
   .table-filters select { width: 100%; }
 }
@@ -58,7 +64,13 @@
   .mapping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+@media screen and (max-width: 900px) {
+  .table-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media screen and (max-width: 720px) {
+  .table-tools-header { flex-direction: column; align-items: stretch; }
+  .table-tools-header .search-control { flex: none; width: 100%; }
   .topbar { min-height: 72px; height: auto; gap: 12px; padding-block: 12px; }
   .brand { font-size: 15px; }
   .brand-mark { width: 34px; height: 34px; }
@@ -82,7 +94,11 @@
   .summary-card.local-total { align-items: flex-start; flex-direction: column; }
   .summary-card.local-total strong { white-space: normal; }
   .insight-strip { align-items: flex-start; flex-direction: column; }
-  .table-filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .filter-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; margin-left: 0; }
+  .filter-actions .hidden-toggle { grid-column: 1 / -1; white-space: normal; }
+  .filter-actions .density-toggle,
+  .filter-actions .export-menu,
+  .filter-actions .export-menu summary { min-width: 0; width: 100%; }
   .filter-field,
   .density-toggle,
   .export-menu { min-width: 0; width: 100%; }
@@ -91,13 +107,13 @@
 }
 
 @media screen and (max-width: 480px) {
+  .table-filters { grid-template-columns: 1fr; }
   .brand-light { display: none; }
   .install-button span,
   .theme-toggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
   .install-button,
   .theme-toggle { width: 42px; padding: 0; }
   .summary-grid { grid-template-columns: 1fr; }
-  .table-filters { grid-template-columns: 1fr; }
   .results-counter { align-items: flex-start; flex-direction: column; }
   .panel { padding: 18px; }
 }

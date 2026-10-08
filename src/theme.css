@@ -278,9 +278,6 @@ html[data-theme="dark"] .active-filters {
 }
 
 /* ─── Linha de detalhes expansível ─────────────────────────────────────────── */
-html[data-theme="dark"] .row-details p {
-  color: #bac7d3;
-}
 
 /* ─── Itens ocultos ─────────────────────────────────────────────────────────── */
 html[data-theme="dark"] .hidden-item {

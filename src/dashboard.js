@@ -4,10 +4,9 @@ export const PAGE_SIZE = 50;
 const searchTextCache = new WeakMap();
 
 function searchableText(row) {
-  if (!row || typeof row !== 'object') return '';
+  if (!row || typeof row !== 'object') return [];
   if (!searchTextCache.has(row)) {
-    const value = `${row.item ?? ''} ${row.sku ?? ''} ${row.branch ?? ''} ${row.location ?? ''} ${row.localCode ?? ''} ${row.shelfCode ?? ''} ${row.partitionCode ?? ''}`;
-    searchTextCache.set(row, normalize(value));
+    searchTextCache.set(row, [normalize(row.item ?? ''), normalize(row.sku ?? '')]);
   }
   return searchTextCache.get(row);
 }
@@ -21,11 +20,17 @@ export function locationOptions(rows) {
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
 }
 
-export function filterResults(rows, { query = '', action = '', location = '', analitico = false, hiddenOnly = false } = {}) {
+export function matchesPosition(row, { location = '', shelf = '', partition = '' } = {}) {
+  return matchesLocation(row, location)
+    && (!shelf || normalize(row.shelfCode ?? '') === normalize(shelf))
+    && (!partition || normalize(row.partitionCode ?? '') === normalize(partition));
+}
+
+export function filterResults(rows, { query = '', action = '', location = '', shelf = '', partition = '', analitico = false, hiddenOnly = false } = {}) {
   const normalizedQuery = normalize(query);
   return rows.filter(row => {
     const actionMatch = !action || (analitico ? row.actions.includes(action) : row.action === action);
-    return matchesLocation(row, location) && actionMatch && (!hiddenOnly || row.hidden) && (!normalizedQuery || searchableText(row).includes(normalizedQuery));
+    return matchesPosition(row, { location, shelf, partition }) && actionMatch && (!hiddenOnly || row.hidden) && (!normalizedQuery || searchableText(row).some(value => value.includes(normalizedQuery)));
   });
 }
 

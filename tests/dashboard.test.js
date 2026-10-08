@@ -15,7 +15,7 @@ const rows = [
 test('estrutura da interface mantém controles e nomes acessíveis', () => {
   const dom = new JSDOM(renderApp());
   const document = dom.window.document;
-  assert.equal(document.querySelector('#search').placeholder, 'Buscar item, código, prateleira ou repartição');
+  assert.equal(document.querySelector('#search').placeholder, 'Buscar código ou descrição do item');
   assert.match(document.querySelector('.brand-mark img').src, /favicon\.webp/);
   assert.equal(document.querySelector('.primary-button').getAttribute('tabindex'), '0');
   assert.equal(document.querySelector('#result-table caption').textContent, 'Resultados da análise de estoque');
@@ -40,6 +40,16 @@ test('filtra por busca, ação e local sem perder correspondências', () => {
   assert.deepEqual(actionCounts(rows, ['BLOQUEAR', 'ZERAR MIN/MAX'], true).map(item => item.count), [1, 1]);
 });
 
+test('pesquisa somente trechos do código ou da descrição, ignorando caixa e acentos', () => {
+  const items = [{ item: 'Peça hidráulica', sku: '001234', branch: 'FILIAL', location: 'DEPOSITO', localCode: '298', shelfCode: 'ESTANTE', partitionCode: 'SETOR' }];
+  for (const query of ['hidraul', 'PEÇA', '0123']) {
+    assert.deepEqual(filterResults(items, { query }), items);
+  }
+  for (const query of ['FILIAL', 'DEPOSITO', '298', 'ESTANTE', 'SETOR', 'hidráulica 001']) {
+    assert.deepEqual(filterResults(items, { query }), []);
+  }
+});
+
 test('renderiza apenas um card de valor total do estoque e mantém a linha inferior como resumo', () => {
   const actions = ANALITICO_ACTIONS;
   const markup = buildSummaryMarkup({
@@ -54,6 +64,16 @@ test('renderiza apenas um card de valor total do estoque e mantém a linha infer
   assert.doesNotMatch(markup, /VALOR TOTAL DO ESTOQUE[\s\S]*VALOR TOTAL DO ESTOQUE/);
   assert.match(markup, /ITENS NO PAINEL/);
   assert.equal((markup.match(/summary-card/g) || []).length, 2);
+});
+
+test('combina filtros exatos de local, prateleira e repartição, incluindo código zero', () => {
+  const positions = [
+    { item: 'A', localCode: '4', shelfCode: '0', partitionCode: 'I', actions: ['BLOQUEAR'] },
+    { item: 'B', localCode: '4', shelfCode: '10', partitionCode: 'I', actions: ['BLOQUEAR'] },
+    { item: 'C', localCode: '7', shelfCode: '0', partitionCode: 'I', actions: ['BLOQUEAR'] },
+    { item: 'D', localCode: '4', shelfCode: '0', partitionCode: 'II', actions: ['BLOQUEAR'] },
+  ];
+  assert.deepEqual(filterResults(positions, { location: '4', shelf: '0', partition: 'i', action: 'BLOQUEAR', analitico: true }).map(row => row.item), ['A']);
 });
 
 test('expõe no resumo e no filtro todas as ações produzidas pelo modo analítico', () => {

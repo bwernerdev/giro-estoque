@@ -1,6 +1,6 @@
 import { importFile, selectDataRows } from './import.js';
 import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
-import { actionCounts, dataIssueSummary, filterResults, locationOptions, matchesLocation, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
+import { actionCounts, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
 import { svgIcon } from './icons.js';
@@ -9,6 +9,7 @@ const app = typeof document !== 'undefined' ? document.querySelector('#app') : n
 const state = {
   sheets: [], sheet: 0, mapping: {}, allResults: [], results: [],
   page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null,
+  shelfFilter: '', partitionFilter: '', pageSize: PAGE_SIZE,
   mode: 'auto',
   numberFormat: 'pt-BR',
   sortKey: '',
@@ -30,10 +31,10 @@ let importRun = 0;
 
 function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
-export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, locationFilter, locationTotal }) {
+export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
   const summaryCounts = prioritizeActionCounts(counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length })));
   const localTotalCard = locationFilter || summaryAllResults.length > 0
-    ? `<div class="summary-card local-total"><div><span>${locationFilter ? 'VALOR DO ESTOQUE NO LOCAL' : 'VALOR TOTAL DO ESTOQUE'}</span><small>Soma da coluna Vl Saldo${locationFilter ? ` · Local ${escapeHtml(locationFilter)}` : ''}</small></div><strong>${realCurrency(locationTotal)}</strong></div>`
+    ? `<div class="summary-card local-total"><div><span>${shelfFilter || partitionFilter ? 'VALOR DO ESTOQUE NA LOCALIZAÇÃO' : locationFilter ? 'VALOR DO ESTOQUE NO LOCAL' : 'VALOR TOTAL DO ESTOQUE'}</span><small>Soma da coluna Vl Saldo${locationFilter ? ` · Local ${escapeHtml(locationFilter)}` : ''}${shelfFilter ? ` · Prateleira ${escapeHtml(shelfFilter)}` : ''}${partitionFilter ? ` · Repartição ${escapeHtml(partitionFilter)}` : ''}</small></div><strong>${realCurrency(locationTotal)}</strong></div>`
     : '';
 
   return [
@@ -144,12 +145,20 @@ if (typeof document !== 'undefined') {
         query: el('#search').value.trim(),
         action: el('#filter').value,
         location: state.locationFilter,
+        shelf: state.shelfFilter,
+        partition: state.partitionFilter,
+        pageSize: state.pageSize,
         showHidden: el('#show-hidden').checked,
         hiddenOnly: state.hiddenOnly,
         sortKey: state.sortKey,
         sortDirection: state.sortDirection,
       }));
     } catch { /* Os filtros permanecem válidos até fechar a página. */ }
+  }
+  function setSearchExpanded(expanded) {
+    el('#search-control').classList.toggle('is-expanded', expanded);
+    el('#search-toggle').setAttribute('aria-expanded', String(expanded));
+    el('#search-expansion').inert = !expanded;
   }
   function resultColumns(analitico, giro) {
     if (analitico) return [
@@ -281,7 +290,23 @@ if (typeof document !== 'undefined') {
     }));
   }
 
+  function updatePositionFilters() {
+    const localRows = state.allResults.filter(row => matchesLocation(row, state.locationFilter));
+    const update = (selector, key, stateKey, rows, label) => {
+      const values = [...new Set(rows.map(row => String(row[key] ?? '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+      if (!values.includes(state[stateKey])) state[stateKey] = '';
+      const select = el(selector);
+      select.innerHTML = `<option value="">${label}</option>` + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+      select.value = state[stateKey];
+      select.disabled = values.length === 0;
+    };
+    update('#shelf-filter', 'shelfCode', 'shelfFilter', localRows, 'Todas as prateleiras');
+    update('#partition-filter', 'partitionCode', 'partitionFilter', localRows.filter(row => matchesPosition(row, { shelf: state.shelfFilter })), 'Todas as repartições');
+  }
+
   async function refresh({ reanalyze = true } = {}) {
+    if (reanalyze) closeItemPanel();
     const run = reanalyze ? ++refreshRun : refreshRun;
     const analitico = isAnaliticoMode();
     const giro = !analitico && isGiroMode();
@@ -320,16 +345,18 @@ if (typeof document !== 'undefined') {
       : '';
     el('#location-filter').innerHTML = '<option value="">Todos os locais</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
     el('#location-filter').value = state.locationFilter;
+    updatePositionFilters();
 
-    const summaryResults = state.results.filter(row => matchesLocation(row, state.locationFilter));
-    const summaryAllResults = state.allResults.filter(row => matchesLocation(row, state.locationFilter));
+    const position = { location: state.locationFilter, shelf: state.shelfFilter, partition: state.partitionFilter };
+    const summaryResults = state.results.filter(row => matchesPosition(row, position));
+    const summaryAllResults = state.allResults.filter(row => matchesPosition(row, position));
     const actions = analitico ? ANALITICO_ACTIONS : giro ? GIRO_ACTIONS : GENERIC_ACTIONS;
     const counts = prioritizeActionCounts(analitico
       ? [...actionCounts(summaryResults, actions, true), { action: 'Itens ocultos', count: summaryAllResults.filter(row => row.hidden).length }]
       : actionCounts(summaryResults, actions, false));
     const availableActions = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action }) => action);
     const hiddenCount = summaryAllResults.filter(row => row.hidden).length;
-    const locationTotal = summarizeLocationTotal(state.allResults, state.locationFilter);
+    const locationTotal = summarizeLocationTotal(summaryAllResults, state.locationFilter);
     const previousFilter = state.pendingActionFilter || el('#filter').value;
     state.pendingActionFilter = '';
     el('#summary').innerHTML = buildSummaryMarkup({
@@ -339,6 +366,8 @@ if (typeof document !== 'undefined') {
       counts,
       locationFilter: state.locationFilter,
       locationTotal,
+      shelfFilter: state.shelfFilter,
+      partitionFilter: state.partitionFilter,
     });
     el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + availableActions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
     el('#filter').value = availableActions.includes(previousFilter) ? previousFilter : '';
@@ -411,8 +440,7 @@ if (typeof document !== 'undefined') {
   }
   const descriptionObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleDescriptionControls) : null;
   document.fonts?.ready.then(scheduleDescriptionControls);
-  function detailsHtml(reason, row) {
-    if (!reason) return '<span class="no-details">—</span>';
+  function detailFields(reason, row) {
     const entries = [];
     if (isAnaliticoMode()) {
       const elapsed = row.daysSince === null || row.daysSince === undefined ? '' : `${formatNumber(row.daysSince)} dias desde a última requisição`;
@@ -425,14 +453,70 @@ if (typeof document !== 'undefined') {
     } else {
       entries.push(['Motivo da ação', reason]);
     }
-    const content = entries.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
-    return `<details class="row-details" ${expansionAttributes(row, 'reason')}><summary class="discreet-button"><span class="details-show">Ver detalhes</span><span class="details-hide">Ocultar detalhes</span></summary><dl class="detail-fields">${content}</dl></details>`;
+    return `<dl class="detail-fields">${entries.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+  }
+  function detailsHtml(reason, row) {
+    if (!reason) return '<span class="no-details">—</span>';
+    return `<button type="button" class="discreet-button details-button" data-detail-row="${row.row}" aria-haspopup="dialog">Ver detalhes</button>`;
+  }
+  function codeHtml(code) {
+    const value = String(code ?? '');
+    if (!value) return '';
+    return `<span class="item-code"><span>${escapeHtml(value)}</span><button type="button" class="copy-code" data-copy-code="${escapeHtml(value)}" aria-label="Copiar código ${escapeHtml(value)}" title="Copiar código">${svgIcon('copy')}</button></span>`;
+  }
+  let panelTrigger = null;
+  function closeItemPanel() {
+    const panel = el('#item-panel');
+    if (panel.open) panel.close();
+  }
+  function openItemPanel(row, trigger) {
+    panelTrigger = trigger;
+    const identity = [stockLocation(row) && `Local ${stockLocation(row)}`, row.shelfCode && `Prateleira ${row.shelfCode}`, row.partitionCode && `Repartição ${row.partitionCode}`].filter(Boolean).join(' · ');
+    el('#item-panel-content').innerHTML = `<strong class="panel-item-name">${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${row.sku ? `<div class="panel-item-code"><span>Código</span>${codeHtml(row.sku)}</div>` : ''}${identity ? `<p class="panel-item-location">${escapeHtml(identity)}</p>` : ''}${detailFields(row.reason, row)}`;
+    el('#item-panel').showModal();
+    el('#item-panel-close').focus();
+  }
+  async function copyCode(button) {
+    const code = button.dataset.copyCode;
+    button.disabled = true;
+    try {
+      if (window.navigator.clipboard?.writeText) await window.navigator.clipboard.writeText(code);
+      else {
+        const input = document.createElement('textarea');
+        input.value = code;
+        input.className = 'clipboard-fallback';
+        (el('#item-panel').open ? el('#item-panel') : document.body).append(input);
+        try {
+          input.select();
+          if (!document.execCommand?.('copy')) throw new Error('Clipboard unavailable');
+        } finally { input.remove(); button.focus(); }
+      }
+      button.innerHTML = svgIcon('check');
+      button.classList.add('is-copied');
+      button.title = 'Copiado';
+      button.setAttribute('aria-label', `Código ${code} copiado`);
+      el('#copy-feedback').textContent = `Código ${code} copiado.`;
+      setTimeout(() => {
+        if (!button.isConnected) return;
+        button.innerHTML = svgIcon('copy');
+        button.classList.remove('is-copied');
+        button.title = 'Copiar código';
+        button.setAttribute('aria-label', `Copiar código ${code}`);
+        button.disabled = false;
+      }, 1800);
+    } catch {
+      button.disabled = false;
+      el('#copy-feedback').textContent = 'Não foi possível copiar. Selecione o código e copie manualmente.';
+      button.title = 'Não foi possível copiar';
+    }
   }
   function visibleResults() {
     return sortResults(filterResults(state.results, {
       query: el('#search').value,
       action: el('#filter').value,
       location: state.locationFilter,
+      shelf: state.shelfFilter,
+      partition: state.partitionFilter,
       analitico: isAnaliticoMode(),
       hiddenOnly: state.hiddenOnly,
     }), { key: state.sortKey, direction: state.sortDirection });
@@ -453,6 +537,8 @@ if (typeof document !== 'undefined') {
     const parts = [];
     const query = el('#search').value.trim();
     if (state.locationFilter) parts.push(`Local ${state.locationFilter}`);
+    if (state.shelfFilter) parts.push(`Prateleira ${state.shelfFilter}`);
+    if (state.partitionFilter) parts.push(`Repartição ${state.partitionFilter}`);
     if (el('#filter').value) parts.push(el('#filter').value);
     if (query) parts.push(`Busca: “${query}”`);
     if (state.hiddenOnly) parts.push('Somente itens ocultos');
@@ -465,19 +551,21 @@ if (typeof document !== 'undefined') {
   function renderResults() {
     rememberExpansions();
     const query = el('#search').value.trim().toLowerCase();
+    if (query) setSearchExpanded(true);
+    else if (!el('#search-control').contains(document.activeElement)) setSearchExpanded(false);
     const filter = el('#filter').value;
     const analitico = isAnaliticoMode();
     const giro = !analitico && isGiroMode();
     const filtered = visibleResults();
-    const page = paginate(filtered, state.page, PAGE_SIZE);
+    const page = paginate(filtered, state.page, state.pageSize);
     state.page = page.page;
     const { pageCount, start, rows: visible } = page;
     el('#result-rows').innerHTML = visible.length ? visible.map(row => {
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        return `<tr class="${row.hidden ? 'hidden-item' : ''}${row.actions.some(urgentAction) ? ' urgent-row' : ''}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${escapeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
+        return `<tr class="${row.hidden ? 'hidden-item' : ''}${row.actions.some(urgentAction) ? ' urgent-row' : ''}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
       }
-      return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
+      return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
     }).join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
     el('#result-rows').querySelectorAll('tr').forEach(tr => {
       if (tr.querySelector('.empty-row')) return;
@@ -487,7 +575,7 @@ if (typeof document !== 'undefined') {
     descriptionObserver?.disconnect();
     el('#result-rows').querySelectorAll('.item-description strong').forEach(text => descriptionObserver?.observe(text));
     const itemLabel = filtered.length === 1 ? 'item' : 'itens';
-    const filterLabel = query || filter || state.locationFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
+    const filterLabel = query || filter || state.locationFilter || state.shelfFilter || state.partitionFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
     el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
     el('#filtered-count').textContent = `${filtered.length.toLocaleString('pt-BR')} de ${state.allResults.length.toLocaleString('pt-BR')} ${state.allResults.length === 1 ? 'item' : 'itens'}`;
     el('#pagination').hidden = pageCount <= 1;
@@ -579,7 +667,9 @@ if (typeof document !== 'undefined') {
     const filter = el('#filter').value || 'Todas as ações';
     const search = el('#search').value.trim();
     const local = state.locationFilter ? ` · Local: ${escapeHtml(state.locationFilter)}` : '';
-    el('#print-report').innerHTML = `<h1>Controle de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    const shelf = state.shelfFilter ? ` · Prateleira: ${escapeHtml(state.shelfFilter)}` : '';
+    const partition = state.partitionFilter ? ` · Repartição: ${escapeHtml(state.partitionFilter)}` : '';
+    el('#print-report').innerHTML = `<h1>Controle de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${shelf}${partition}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     window.print();
   }
 
@@ -605,6 +695,10 @@ if (typeof document !== 'undefined') {
       el('#filter').value = '';
       resetDashboardState(state);
       state.locationFilter = typeof savedFilters.location === 'string' ? savedFilters.location : '';
+      state.shelfFilter = typeof savedFilters.shelf === 'string' ? savedFilters.shelf : '';
+      state.partitionFilter = typeof savedFilters.partition === 'string' ? savedFilters.partition : '';
+      state.pageSize = [25, 50, 100].includes(Number(savedFilters.pageSize)) ? Number(savedFilters.pageSize) : PAGE_SIZE;
+      el('#page-size').value = String(state.pageSize);
       state.hiddenOnly = Boolean(savedFilters.hiddenOnly && restoreHidden);
       state.sortKey = typeof savedFilters.sortKey === 'string' ? savedFilters.sortKey : '';
       state.sortDirection = savedFilters.sortDirection === 'desc' ? 'desc' : 'asc';
@@ -636,6 +730,25 @@ if (typeof document !== 'undefined') {
     cancelAnimationFrame(searchRenderFrame);
     searchRenderFrame = requestAnimationFrame(() => { renderResults(); persistFilters(); });
   });
+  el('#search-toggle').addEventListener('click', () => {
+    const expanded = el('#search-toggle').getAttribute('aria-expanded') === 'true';
+    if (expanded && !el('#search').value.trim()) setSearchExpanded(false);
+    else {
+      setSearchExpanded(true);
+      el('#search').focus({ preventScroll: true });
+    }
+  });
+  el('#search-control').addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!el('#search-control').contains(document.activeElement) && !el('#search').value.trim()) setSearchExpanded(false);
+    }, 0);
+  });
+  el('#search').addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || el('#search').value.trim()) return;
+    event.preventDefault();
+    setSearchExpanded(false);
+    el('#search-toggle').focus();
+  });
   el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; renderResults(); persistFilters(); });
   el('#location-filter').addEventListener('change', () => {
     state.locationFilter = el('#location-filter').value;
@@ -664,6 +777,42 @@ if (typeof document !== 'undefined') {
     state.page = 1;
     if (!el('#show-hidden').checked) state.hiddenOnly = false;
     refresh({ reanalyze: false });
+  });
+  for (const [selector, key] of [['#shelf-filter', 'shelfFilter'], ['#partition-filter', 'partitionFilter']]) {
+    el(selector).addEventListener('change', event => {
+      state[key] = event.target.value;
+      state.page = 1;
+      refresh({ reanalyze: false });
+    });
+  }
+  el('#page-size').addEventListener('change', event => {
+    state.pageSize = [25, 50, 100].includes(Number(event.target.value)) ? Number(event.target.value) : PAGE_SIZE;
+    state.page = 1;
+    renderResults();
+    persistFilters();
+  });
+  el('#result-rows').addEventListener('click', event => {
+    const copy = event.target.closest('[data-copy-code]');
+    if (copy) { copyCode(copy); return; }
+    const trigger = event.target.closest('[data-detail-row]');
+    if (!trigger) return;
+    const row = state.results.find(item => String(item.row) === trigger.dataset.detailRow);
+    if (row) openItemPanel(row, trigger);
+  });
+  el('#item-panel-content').addEventListener('click', event => {
+    const copy = event.target.closest('[data-copy-code]');
+    if (copy) copyCode(copy);
+  });
+  el('#item-panel-close').addEventListener('click', closeItemPanel);
+  el('#item-panel').addEventListener('click', event => {
+    if (event.target !== el('#item-panel')) return;
+    const bounds = event.target.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeItemPanel();
+  });
+  el('#item-panel').addEventListener('close', () => {
+    if (panelTrigger?.isConnected) panelTrigger.focus();
+    else el('#search').focus();
+    panelTrigger = null;
   });
   el('#toggle-hidden-context').addEventListener('click', () => {
     state.page = 1;
@@ -701,6 +850,8 @@ if (typeof document !== 'undefined') {
   el('#clear-filters').addEventListener('click', () => {
     state.page = 1;
     state.locationFilter = '';
+    state.shelfFilter = '';
+    state.partitionFilter = '';
     state.hiddenOnly = false;
     state.sortKey = '';
     state.sortDirection = 'asc';
