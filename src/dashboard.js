@@ -6,7 +6,7 @@ const searchTextCache = new WeakMap();
 function searchableText(row) {
   if (!row || typeof row !== 'object') return '';
   if (!searchTextCache.has(row)) {
-    const value = `${row.item ?? ''} ${row.sku ?? ''} ${row.branch ?? ''} ${row.location ?? ''} ${row.localCode ?? ''}`;
+    const value = `${row.item ?? ''} ${row.sku ?? ''} ${row.branch ?? ''} ${row.location ?? ''} ${row.localCode ?? ''} ${row.shelfCode ?? ''} ${row.partitionCode ?? ''}`;
     searchTextCache.set(row, normalize(value));
   }
   return searchTextCache.get(row);

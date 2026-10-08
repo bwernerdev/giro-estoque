@@ -15,7 +15,7 @@ const rows = [
 test('estrutura da interface mantém controles e nomes acessíveis', () => {
   const dom = new JSDOM(renderApp());
   const document = dom.window.document;
-  assert.equal(document.querySelector('#search').placeholder, 'Buscar item ou código');
+  assert.equal(document.querySelector('#search').placeholder, 'Buscar item, código, prateleira ou repartição');
   assert.match(document.querySelector('.brand-mark img').src, /favicon\.webp/);
   assert.equal(document.querySelector('.primary-button').getAttribute('tabindex'), '0');
   assert.equal(document.querySelector('#result-table caption').textContent, 'Resultados da análise de estoque');

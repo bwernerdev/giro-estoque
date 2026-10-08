@@ -156,9 +156,10 @@ if (typeof document !== 'undefined') {
       { label: 'DESCRIÇÃO', key: 'item' },
       { label: 'CÓDIGO', key: 'sku' },
       { label: 'LOCAL', key: 'localCode' },
+      { label: 'PRATELEIRA', key: 'shelfCode' },
+      { label: 'REPARTIÇÃO', key: 'partitionCode' },
       { label: 'QTD. ATUAL', key: 'stock' },
       { label: 'MÍN. / MÁX', key: 'minimum' },
-      { label: 'CLASSIFICAÇÃO', key: 'classification' },
       { label: 'AÇÃO', key: 'action' },
       { label: 'OUTROS DADOS', key: 'daysSince', sortLabel: 'dias desde a última movimentação' },
     ];
@@ -179,12 +180,16 @@ if (typeof document !== 'undefined') {
       { label: 'MOTIVO', key: 'reason' },
     ];
   }
+  function columnClass(key) {
+    const names = { item: 'descricao', sku: 'codigo', localCode: 'local', shelfCode: 'prateleira', partitionCode: 'reparticao', stock: 'estoque', stockValue: 'estoque', sales: 'consumo', consumption: 'consumo', coverage: 'cobertura', minimum: 'limites', action: 'acao', daysSince: 'detalhes', reason: 'detalhes' };
+    return `col-${names[key]}`;
+  }
   function renderTableHead() {
     el('#table-head').innerHTML = `<tr>${state.columns.map(column => {
       const selected = state.sortKey === column.key;
       const ariaSort = selected ? (state.sortDirection === 'asc' ? 'ascending' : 'descending') : 'none';
       const direction = selected ? (state.sortDirection === 'asc' ? 'decrescente' : 'crescente') : 'crescente';
-      return `<th scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-button" data-sort-key="${column.key}" aria-label="Ordenar por ${escapeHtml(column.sortLabel || column.label)}, ordem ${direction}">${escapeHtml(column.label)}</button></th>`;
+      return `<th class="${columnClass(column.key)}" scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-button" data-sort-key="${column.key}" aria-label="Ordenar por ${escapeHtml(column.sortLabel || column.label)}, ordem ${direction}">${escapeHtml(column.label)}</button></th>`;
     }).join('')}</tr>`;
   }
   function renderDataQuality(rows) {
@@ -364,12 +369,64 @@ if (typeof document !== 'undefined') {
     if (normalized.includes('MANTER')) return 'check';
     return 'dot';
   }
-  function badgeHtml(action) {
-    return `<span class="badge ${slug(action)}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span>${escapeHtml(action)}</span>`;
+  function urgentAction(action) {
+    return ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'VERIFICAR DADOS'].includes(String(action).toUpperCase());
   }
-  function detailsHtml(reason) {
+  function badgeHtml(action) {
+    return `<span class="badge ${slug(action)}${urgentAction(action) ? ' urgent-action' : ''}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span><span class="badge-label">${escapeHtml(action)}</span></span>`;
+  }
+  const expandedRows = new Set();
+  let expansionVersion = 0;
+  let descriptionFrame = 0;
+  function expansionAttributes(row, type) {
+    const key = `${expansionVersion}:${state.sheet}:${currentMode()}:${row.row}:${type}`;
+    return `data-expansion-key="${key}"${expandedRows.has(key) ? ' open' : ''}`;
+  }
+  function rememberExpansions() {
+    el('#result-rows').querySelectorAll('[data-expansion-key]').forEach(details => {
+      const key = details.dataset.expansionKey;
+      if (!key.startsWith(`${expansionVersion}:`)) return;
+      if (details.open) expandedRows.add(key);
+      else expandedRows.delete(key);
+    });
+  }
+  function descriptionHtml(row) {
+    const attributes = expansionAttributes(row, 'description');
+    const expanded = attributes.endsWith(' open');
+    return `<details class="item-description${expanded ? ' is-expandable' : ''}" ${attributes}><summary><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong></summary></details>`;
+  }
+  function updateDescriptionControls() {
+    const measurements = [...el('#result-rows').querySelectorAll('.item-description:not([open])')].map(details => {
+      const text = details.querySelector('strong');
+      return { details, expandable: text.scrollHeight > text.clientHeight + 1 };
+    });
+    measurements.forEach(({ details, expandable }) => details.classList.toggle('is-expandable', expandable));
+  }
+  function scheduleDescriptionControls() {
+    if (descriptionFrame) return;
+    descriptionFrame = requestAnimationFrame(() => {
+      descriptionFrame = 0;
+      updateDescriptionControls();
+    });
+  }
+  const descriptionObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleDescriptionControls) : null;
+  document.fonts?.ready.then(scheduleDescriptionControls);
+  function detailsHtml(reason, row) {
     if (!reason) return '<span class="no-details">—</span>';
-    return `<details class="row-details"><summary class="discreet-button">Ver detalhes</summary><p>${escapeHtml(reason)}</p></details>`;
+    const entries = [];
+    if (isAnaliticoMode()) {
+      const elapsed = row.daysSince === null || row.daysSince === undefined ? '' : `${formatNumber(row.daysSince)} dias desde a última requisição`;
+      if (row.lastRequest) entries.push(['Última requisição', row.lastRequest]);
+      if (elapsed) entries.push(['Tempo sem requisição', elapsed]);
+      if (row.blockId) entries.push(['Status de bloqueio', row.blockId]);
+      const notes = reason.split(' · ').filter(part => part !== elapsed && part !== row.blockReason && part !== `Id Bloqueio: ${row.blockId}`).join(' · ');
+      if (row.action) entries.push(['Ação recomendada', row.action]);
+      if (notes) entries.push([reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Observações', notes]);
+    } else {
+      entries.push(['Motivo da ação', reason]);
+    }
+    const content = entries.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+    return `<details class="row-details" ${expansionAttributes(row, 'reason')}><summary class="discreet-button"><span class="details-show">Ver detalhes</span><span class="details-hide">Ocultar detalhes</span></summary><dl class="detail-fields">${content}</dl></details>`;
   }
   function visibleResults() {
     return sortResults(filterResults(state.results, {
@@ -406,6 +463,7 @@ if (typeof document !== 'undefined') {
     el('#active-filters-text').textContent = parts.length ? `${parts.join(' · ')} · ${filteredCount} ${filteredCount === 1 ? 'item' : 'itens'}` : '';
   }
   function renderResults() {
+    rememberExpansions();
     const query = el('#search').value.trim().toLowerCase();
     const filter = el('#filter').value;
     const analitico = isAnaliticoMode();
@@ -417,10 +475,17 @@ if (typeof document !== 'undefined') {
     el('#result-rows').innerHTML = visible.length ? visible.map(row => {
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${hiddenTag}</td><td>${escapeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${escapeHtml(row.classification)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason">${detailsHtml(row.reason)}</td></tr>`;
+        return `<tr class="${row.hidden ? 'hidden-item' : ''}${row.actions.some(urgentAction) ? ' urgent-row' : ''}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${escapeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
       }
-      return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason)}</td></tr>`;
-    }).join('') : `<tr><td class="empty-row" colspan="${analitico ? 8 : 6}">Nenhum item encontrado.</td></tr>`;
+      return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong><small>${escapeHtml([row.sku, row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
+    }).join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
+    el('#result-rows').querySelectorAll('tr').forEach(tr => {
+      if (tr.querySelector('.empty-row')) return;
+      [...tr.children].forEach((cell, index) => cell.classList.add(columnClass(state.columns[index].key)));
+    });
+    scheduleDescriptionControls();
+    descriptionObserver?.disconnect();
+    el('#result-rows').querySelectorAll('.item-description strong').forEach(text => descriptionObserver?.observe(text));
     const itemLabel = filtered.length === 1 ? 'item' : 'itens';
     const filterLabel = query || filter || state.locationFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
     el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
@@ -529,6 +594,8 @@ if (typeof document !== 'undefined') {
       if (run !== importRun) return;
       if (!sheets.length || !sheets.some(sheet => sheet.rows.length > sheet.headerRow + 1)) throw new Error('Não encontrei linhas de dados na planilha.');
       state.sheets = sheets;
+      expansionVersion++;
+      expandedRows.clear();
       state.sheet = state.sheets.findIndex(sheet => sheet.rows.length > sheet.headerRow + 1);
       state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []);
       const savedFilters = readFilterPreferences();

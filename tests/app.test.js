@@ -137,26 +137,27 @@ test('o botão de instalar fica visível quando o app ainda não foi instalado',
   assert.equal(installButton.hidden, false);
 });
 
-test('modo Analítico mostra as oito colunas fixas com código, local e demais dados separados', async t => {
+test('modo Analítico mostra as nove colunas fixas com código, local e demais dados separados', async t => {
   const app = await boot(t);
   await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nPeça A;001;298;5;10;20;200;Acima de 90;Bloqueado por saldo;Bloqueado');
   assert.equal(app.el('#result-table').className, 'analitico-table');
   assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
-    ['DESCRIÇÃO', 'CÓDIGO', 'LOCAL', 'QTD. ATUAL', 'MÍN. / MÁX', 'CLASSIFICAÇÃO', 'AÇÃO', 'OUTROS DADOS']);
+    ['DESCRIÇÃO', 'CÓDIGO', 'LOCAL', 'PRATELEIRA', 'REPARTIÇÃO', 'QTD. ATUAL', 'MÍN. / MÁX', 'AÇÃO', 'OUTROS DADOS']);
   const cells = [...app.el('#result-rows').querySelector('tr').children].map(node => node.textContent);
-  assert.equal(cells.length, 8);
+  assert.equal(cells.length, 9);
   assert.equal(cells[0], 'Peça A');
   assert.equal(app.el('#result-rows').querySelector('tr').children[0].querySelectorAll('small').length, 0);
   assert.equal(cells[1], '001');
   assert.equal(cells[2], '298');
-  assert.equal(cells[3], '5');
-  assert.equal(cells[4], '10 / 20');
-  assert.equal(cells[5], 'Acima de 90');
-  assert.match(cells[6], /ZERAR MIN\/MAX/);
-  assert.match(cells[7], /dias desde a última requisição/);
+  assert.equal(cells[3], '—');
+  assert.equal(cells[4], '—');
+  assert.equal(cells[5], '5');
+  assert.equal(cells[6], '10 / 20');
+  assert.match(cells[7], /ZERAR MIN\/MAX/);
+  assert.match(cells[8], /dias desde a última requisição/);
   app.change('#search', 'inexistente', 'input');
   await waitFor(() => app.el('#result-rows').textContent.includes('Nenhum item encontrado'));
-  assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '8');
+  assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '9');
 });
 
 test('modo Analítico usa o número da linha como descrição apenas quando o nome do item não existe', async t => {

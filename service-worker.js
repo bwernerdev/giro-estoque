@@ -9,6 +9,7 @@ const APP_SHELL = [
   './src/style.css',
   './src/theme.css',
   './src/desktop.css',
+  './src/table.css',
   './src/main.js',
   './src/analysis.js',
   './src/dashboard.js',
