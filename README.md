@@ -8,7 +8,7 @@ Abra `http://127.0.0.1:5500/giro-estoque/` com a extensão **Go Live** servindo 
 
 Para produção, execute `npm ci` e `npm run build`, depois publique o conteúdo de `dist/`. Os caminhos são relativos: a distribuição funciona tanto na raiz quanto em uma subpasta como `/giro-estoque/`. Acesse pelo endereço da pasta com a barra final. No PowerShell com scripts desabilitados, use `npm.cmd` em lugar de `npm`.
 
-Após importar uma planilha, a apresentação e a área de importação ficam compactas para mostrar os resultados mais cedo. **Preparar análise** fica recolhido. Use **Abrir configuração** para revisar a aba e o mapeamento de colunas; se faltar uma coluna necessária, a área abre automaticamente. É possível selecionar novamente o mesmo arquivo para atualizar a análise.
+Após importar uma planilha, a apresentação e o cartão de importação somem para mostrar os resultados mais cedo; uma única barra mostra arquivo, aba e hora, com **Trocar arquivo** (ou arraste outro arquivo para a janela) e **Abrir configuração**. Na configuração, os campos obrigatórios aparecem primeiro e os demais ficam em **Campos opcionais**; se faltar uma coluna necessária, a área abre automaticamente. É possível selecionar novamente o mesmo arquivo para atualizar a análise.
 
 Em **Tipo de análise**, a opção automática prioriza Analítico quando há suas colunas específicas e estoque/vendas quando ambas as colunas existem. Uma coluna adicional de valor de estoque não muda uma análise de vendas para giro monetário. Também é possível selecionar o tipo manualmente. Os critérios são preservados por tipo de análise durante a sessão, inclusive ao remapear colunas ou trocar de aba.
 
@@ -16,7 +16,7 @@ O **Formato dos números em texto** começa em **Brasileiro: 1.234,56**. Nesse f
 
 Use o botão **Modo escuro** no cabeçalho para alternar o tema. A escolha fica salva no navegador.
 
-Os cartões do resumo também funcionam como filtros da tabela. O cartão selecionado fica destacado, e a faixa acima da tabela mostra os filtros ativos e permite limpá-los de uma vez. A barra de busca e filtros permanece visível durante a rolagem. Use **Modo compacto** para reduzir a altura das linhas e visualizar mais itens; essa preferência também fica salva no navegador.
+Os cartões do resumo também funcionam como filtros da tabela. O cartão selecionado fica destacado, e a faixa acima da tabela mostra os filtros ativos e permite limpá-los de uma vez. Em telas a partir de 1024 px a página rola inteira: a barra de busca e filtros, o cabeçalho da tabela e o rodapé com a paginação ficam fixos durante a rolagem, e a pesquisa fica sempre visível (o atalho **/** foca o campo). A partir de 1360 px, pesquisa, filtros e ações ocupam uma única linha. Clique em uma linha para abrir o painel de detalhes; use **↑/↓** (ou os botões do painel) para navegar entre os itens e **Esc** para fechar. O **valor total do estoque** fica na barra do painel, ao lado de **Trocar arquivo**. Na tabela do modo Analítico, a última coluna (**Dias**) mostra os dias desde a última movimentação e a seta que abre os detalhes. Planilhas grandes mostram uma barra fina de andamento no topo da janela. O botão **Instalar app** só aparece quando o navegador oferece a instalação. O **Modo compacto** reduz a altura das linhas; ele vem ativado por padrão a partir de 1366 px e, depois de alterado, a preferência fica salva no navegador. **Zebrado** alterna linhas alternadas na tabela (também fica salvo). Sem escolha salva, o tema claro ou escuro segue a preferência do sistema; o botão do cabeçalho passa a valer como escolha manual.
 
 A análise acontece no navegador; a planilha não é enviada a um servidor. A biblioteca ExcelJS e as fontes visuais estão incluídas no projeto para que o Go Live funcione sem depender da internet. Planilhas grandes são analisadas em blocos e exibem o andamento da leitura.
 
@@ -41,7 +41,7 @@ Regras de ação fornecidas pelo usuário:
 
 Um item bloqueado nos locais **1** ou **298** pode receber **ZERAR MIN/MAX** quando atender às condições dessa regra. Se não houver outra ação aplicável, fica **Sem ação definida** e oculto por padrão.
 
-Itens com **Sem ação definida** ficam ocultos por padrão, assim como os itens com `Qtde Atual = 0`, `Qnt Min = 0`, `Qnt Max = 0` e `Ds Motivo Bloqueio = Desbloqueado`. Marque **Mostrar itens ocultos**, ao lado do filtro de ações, para ver os itens ocultos identificados na tabela.
+Itens com **Sem ação definida** ficam ocultos por padrão, assim como os itens com `Qtde Atual = 0`, `Qnt Min = 0`, `Qnt Max = 0` e `Ds Motivo Bloqueio = Desbloqueado`. Marque **Mostrar itens ocultos**, na linha do contador (a quantidade aparece entre parênteses), ou clique no cartão **Itens ocultos** para vê-los na tabela.
 
 O menu **Exportar**, ao lado dos filtros, oferece Excel (.xlsx), CSV e PDF. A tabela mostra até **50 itens por página**. As exportações incluem todos os itens que correspondem ao filtro de ação, à busca e à opção **Mostrar itens ocultos**, inclusive os de outras páginas. Para PDF, o navegador abre a impressão; selecione **Salvar como PDF** como destino.
 
@@ -60,7 +60,7 @@ Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm
 - `src/export-data.js`: preparação dos dados para Excel e CSV.
 - `src/template.js`: estrutura HTML da interface.
 - `src/main.js`: integração da interface, importação e exportação.
-- `src/style.css`, `src/theme.css` e `src/desktop.css`: estilos base, tema escuro e layout de desktop.
+- `src/styles/`: CSS em camadas, carregado por `index.css` (`tokens`, `base`, `components`, `layout`, `table`, `print`). Cores, tamanhos e sombras ficam em `tokens.css`; o tema escuro só redefine esses tokens.
 - `src/icons.js`: ícones SVG padronizados usados em botões, badges e na área de importação.
 
 Execute `npm test` para validar regras, filtros, paginação, nova importação, exportação e estrutura acessível da interface.
