@@ -18,8 +18,8 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 - `tokens.css`: cores, tipografia, espaçamento (4 px), raios, sombras, alturas. O tema escuro só redefine tokens aqui; componentes não têm regras por tema.
 - `base.css`: reset, foco, utilitários (`.sr-only`), barra de rolagem.
 - `components.css`: botões, campos, badges, avisos, cartão, menu de exportação, painel lateral. Tom semântico por ação (`--tone-*`) vale para badge e cartão do resumo.
-- `layout.css`: topbar, antes da importação, barra do painel, configuração, resumo, barra de ferramentas, rodapé e todos os pontos de quebra (480, 720, 1024, 1360, 1700 px).
-- `table.css`: tabela de resultados (densidade em `--cell-y`).
+- `layout.css`: topbar clara, antes da importação, barra lateral, abas de ação, configuração, barra de ferramentas, painel de detalhes fixo, rodapé e os pontos de quebra (480, 720, 1024, 1280 e 1700 px).
+- `table.css`: tabela de resultados (densidade em `--cell-y`/`--cell-x`; larguras largas por container query no painel da tabela, porque a barra lateral e o painel de detalhes consomem largura da janela).
 - `print.css`: relatório de impressão/PDF.
 
 ## Subpasta

@@ -67,14 +67,19 @@
   --accent-text: #4a7413;
   --focus: #4a7413;
 
-  /* Barra superior */
-  --topbar-bg: #0b1725;
-  --topbar-line: #223244;
-  --topbar-text: #fff;
-  --topbar-muted: #9db0bb;
-  --topbar-btn-bg: #1b2a3a;
-  --topbar-btn-line: #34495a;
-  --topbar-btn-hover: #27394c;
+  /* Barra superior (clara; no escuro herda as superfícies do tema) */
+  --topbar-bg: #fff;
+  --topbar-line: var(--line);
+  --topbar-text: var(--text-strong);
+  --topbar-muted: var(--text-muted);
+  --topbar-btn-bg: var(--surface);
+  --topbar-btn-line: var(--control-border);
+  --topbar-btn-hover: var(--surface-hover);
+
+  /* Medidas de layout */
+  --topbar-h: 64px;
+  --sidebar-w: 232px;
+  --dock-w: 360px;
 
   /* Tons semânticos */
   --danger-fg: #a3374d;
@@ -106,6 +111,7 @@
 
   /* Densidade da tabela (o modo compacto redefine) */
   --cell-y: 14px;
+  --cell-x: 12px;
 }
 
 html[data-density="compact"] {
@@ -135,11 +141,7 @@ html[data-theme="dark"] {
   --accent-text: #b7df6c;
   --focus: #a5cf63;
 
-  --topbar-bg: #080e17;
-  --topbar-line: #253447;
-  --topbar-btn-bg: #243448;
-  --topbar-btn-line: #40566b;
-  --topbar-btn-hover: #31465d;
+  --topbar-bg: #0a121c;
 
   --danger-fg: #ffb4c0;
   --danger-bg: #4a2b34;

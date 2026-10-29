@@ -16,6 +16,10 @@ const state = {
   sortDirection: 'asc',
   columns: [],
   pageRows: [],
+  grouped: false,
+  collapsedGroups: new Set(),
+  actionOrder: [],
+  actionRank: new Map(),
   pendingActionFilter: '',
   settings: {
     generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' },
@@ -123,7 +127,7 @@ if (typeof document !== 'undefined') {
     const toggle = el('#theme-toggle');
     toggle.innerHTML = `${svgIcon(dark ? 'sun' : 'moon')}<span>${dark ? 'Modo claro' : 'Modo escuro'}</span>`;
     toggle.setAttribute('aria-pressed', String(dark));
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#080e17' : '#0b1725');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0a121c' : '#ffffff');
     requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('theme-switching')));
   }
   try { setTheme(localStorage.getItem('giro-estoque-theme') ?? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); } catch { setTheme('light'); }
@@ -136,6 +140,19 @@ if (typeof document !== 'undefined') {
     const savedDensity = localStorage.getItem('controle-estoque-density');
     setDensity(savedDensity ? savedDensity === 'compact' : window.innerWidth >= WIDE_DESKTOP);
   } catch { setDensity(window.innerWidth >= WIDE_DESKTOP); }
+  try { state.grouped = localStorage.getItem('controle-estoque-group') === 'on'; } catch { state.grouped = false; }
+  el('#group-toggle').setAttribute('aria-pressed', String(state.grouped));
+  function setSidebar(visible) {
+    document.documentElement.dataset.sidebar = visible ? 'shown' : 'hidden';
+    el('#sidebar-toggle').setAttribute('aria-expanded', String(visible));
+    el('#sidebar-toggle span').textContent = visible ? 'Ocultar barra lateral' : 'Mostrar barra lateral';
+  }
+  try { setSidebar(localStorage.getItem('controle-estoque-sidebar') !== 'hidden'); } catch { setSidebar(true); }
+  el('#sidebar-toggle').addEventListener('click', () => {
+    const visible = document.documentElement.dataset.sidebar === 'hidden';
+    setSidebar(visible);
+    try { localStorage.setItem('controle-estoque-sidebar', visible ? 'shown' : 'hidden'); } catch { /* A escolha vale até fechar a página. */ }
+  });
   function setStripedRows(striped) {
     document.documentElement.dataset.rows = striped ? 'striped' : 'plain';
     el('#stripe-toggle').setAttribute('aria-pressed', String(striped));
@@ -236,6 +253,13 @@ if (typeof document !== 'undefined') {
       ? `Campos mais frequentes: ${quality.fields.map(({ field, count }) => `${field} (${count})`).join(' · ')}.`
       : 'Abra “Outros dados” ou “Motivo” para localizar o problema.';
   }
+  function renderActionBar(counts) {
+    const bar = el('#action-bar');
+    const segments = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0);
+    bar.hidden = segments.length === 0;
+    bar.innerHTML = segments.map(({ action, count }) => `<span class="seg ${slug(action)}" style="flex:${count}" title="${escapeHtml(action)}: ${count}"></span>`).join('');
+    bar.setAttribute('aria-label', `Distribuição das ações: ${segments.map(({ action, count }) => `${action} ${count}`).join(', ')}`);
+  }
   function renderHiddenToggle(hiddenCount) {
     el('#hidden-toggle-text').textContent = `Mostrar itens ocultos (${hiddenCount.toLocaleString('pt-BR')})`;
   }
@@ -252,8 +276,10 @@ if (typeof document !== 'undefined') {
   }
   function currentSheet() { return state.sheets[state.sheet]; }
   function renderImportContext() {
-    if (!state.fileName || !currentSheet()) { el('#import-context').textContent = ''; return; }
+    if (!state.fileName || !currentSheet()) { el('#import-context').textContent = ''; el('#topbar-file').hidden = true; return; }
     const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
+    el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>`;
+    el('#topbar-file').hidden = false;
     el('#import-context').innerHTML = `<span><strong>Arquivo:</strong> ${escapeHtml(state.fileName)}</span><span><strong>Aba:</strong> ${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span><strong>Importado às:</strong> ${escapeHtml(importedAt)}</span>` : ''}`;
   }
   function dataRows() { return selectDataRows(currentSheet().rows, state.mapping, currentSheet().headerRow + 1); }
@@ -382,6 +408,9 @@ if (typeof document !== 'undefined') {
       ? [...actionCounts(summaryResults, actions, true), { action: 'Itens ocultos', count: summaryAllResults.filter(row => row.hidden).length }]
       : actionCounts(summaryResults, actions, false));
     const availableActions = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action }) => action);
+    state.actionOrder = availableActions;
+    state.actionRank = new Map(availableActions.map((action, index) => [action, index]));
+    renderActionBar(counts);
     const hiddenCount = summaryAllResults.filter(row => row.hidden).length;
     const locationTotal = summarizeLocationTotal(summaryAllResults, state.locationFilter);
     const previousFilter = state.pendingActionFilter || el('#filter').value;
@@ -495,26 +524,46 @@ if (typeof document !== 'undefined') {
     return `<span class="item-code"><span>${escapeHtml(value)}</span><button type="button" class="copy-code" data-copy-code="${escapeHtml(value)}" aria-label="Copiar código ${escapeHtml(value)}" title="Copiar código">${svgIcon('copy')}</button></span>`;
   }
   let panelTrigger = null;
+  let panelRow = null;
+  const DOCK_MIN_WIDTH = 1700;
+  const dockQuery = typeof window.matchMedia === 'function' ? window.matchMedia(`(min-width: ${DOCK_MIN_WIDTH}px)`) : null;
+  const docked = () => Boolean(dockQuery?.matches);
+  const DOCK_EMPTY = '<p class="dock-empty">Clique em uma linha da tabela para ver os detalhes. Use as setas ↑ e ↓ para navegar entre os itens.</p>';
+  function panelParts() {
+    return docked()
+      ? { content: el('#detail-dock-content'), prev: el('#dock-prev'), next: el('#dock-next'), close: el('#dock-close') }
+      : { content: el('#item-panel-content'), prev: el('#item-panel-prev'), next: el('#item-panel-next'), close: el('#item-panel-close') };
+  }
+  function clearDock() {
+    panelRow = null;
+    panelTrigger = null;
+    el('#result-rows').querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
+    el('#detail-dock-content').innerHTML = DOCK_EMPTY;
+    for (const selector of ['#dock-prev', '#dock-next', '#dock-close']) el(selector).disabled = true;
+  }
   function closeItemPanel() {
     const panel = el('#item-panel');
     if (panel.open) panel.close();
+    if (panelRow) clearDock();
   }
-  let panelRow = null;
   function fillItemPanel(row) {
     panelRow = row;
     el('#result-rows').querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
     el(`#result-rows tr[data-row="${row.row}"]`)?.classList.add('is-selected');
     const identity = [stockLocation(row) && `Local ${stockLocation(row)}`, row.shelfCode && `Prateleira ${row.shelfCode}`, row.partitionCode && `Repartição ${row.partitionCode}`].filter(Boolean).join(' · ');
-    el('#item-panel-content').innerHTML = `<strong class="panel-item-name">${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${row.sku ? `<div class="panel-item-code"><span>Código</span>${codeHtml(row.sku)}</div>` : ''}${identity ? `<p class="panel-item-location">${escapeHtml(identity)}</p>` : ''}${detailFields(row.reason, row)}`;
+    const parts = panelParts();
+    parts.content.innerHTML = `<strong class="panel-item-name">${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${row.sku ? `<div class="panel-item-code"><span>Código</span>${codeHtml(row.sku)}</div>` : ''}${identity ? `<p class="panel-item-location">${escapeHtml(identity)}</p>` : ''}${detailFields(row.reason, row)}`;
     const neighbours = detailRows();
     const index = neighbours.indexOf(row);
-    el('#item-panel-prev').disabled = index <= 0;
-    el('#item-panel-next').disabled = index < 0 || index >= neighbours.length - 1;
+    parts.prev.disabled = index <= 0;
+    parts.next.disabled = index < 0 || index >= neighbours.length - 1;
+    parts.close.disabled = false;
   }
   function detailRows() { return state.pageRows.filter(row => row.reason); }
   function openItemPanel(row, trigger) {
     panelTrigger = trigger;
     fillItemPanel(row);
+    if (docked()) return;
     if (!el('#item-panel').open) el('#item-panel').showModal();
     el('#item-panel-close').focus();
   }
@@ -560,8 +609,19 @@ if (typeof document !== 'undefined') {
       button.title = 'Não foi possível copiar';
     }
   }
+  function primaryAction(row) {
+    const options = row.actions?.length ? row.actions : [row.action];
+    return [...options].sort((a, b) => (state.actionRank.get(a) ?? 99) - (state.actionRank.get(b) ?? 99))[0];
+  }
+  function rowClass(row, ...extra) {
+    return [slug(primaryAction(row)), row.hidden && 'hidden-item', ...extra, row.reason && 'has-details'].filter(Boolean).join(' ');
+  }
+  function groupRowHtml(action, count) {
+    const collapsed = state.collapsedGroups.has(action);
+    return `<tr class="group-row"><td colspan="${state.columns.length}"><div class="group-head"><button type="button" class="group-toggle" data-group-toggle="${escapeHtml(action)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Expandir' : 'Recolher'} grupo ${escapeHtml(action)}">${svgIcon(collapsed ? 'chevronRight' : 'chevronDown')}</button>${badgeHtml(action)}<span class="group-count">${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}</span><button type="button" class="discreet-button group-export" data-group-export="${escapeHtml(action)}">Exportar grupo</button></div></td></tr>`;
+  }
   function visibleResults() {
-    return sortResults(filterResults(state.results, {
+    const sorted = sortResults(filterResults(state.results, {
       query: el('#search').value,
       action: el('#filter').value,
       location: state.locationFilter,
@@ -570,6 +630,8 @@ if (typeof document !== 'undefined') {
       analitico: isAnaliticoMode(),
       hiddenOnly: state.hiddenOnly,
     }), { key: state.sortKey, direction: state.sortDirection });
+    if (!state.grouped) return sorted;
+    return sorted.sort((a, b) => (state.actionRank.get(primaryAction(a)) ?? 99) - (state.actionRank.get(primaryAction(b)) ?? 99));
   }
   function updateSummarySelection() {
     const selectedAction = el('#filter').value;
@@ -611,15 +673,27 @@ if (typeof document !== 'undefined') {
     state.page = page.page;
     const { pageCount, start, rows: visible } = page;
     state.pageRows = visible;
-    el('#result-rows').innerHTML = visible.length ? visible.map(row => {
+    const groupCounts = new Map();
+    if (state.grouped) filtered.forEach(row => groupCounts.set(primaryAction(row), (groupCounts.get(primaryAction(row)) ?? 0) + 1));
+    const rowsHtml = [];
+    let currentGroup = null;
+    for (const row of visible) {
+      const group = primaryAction(row);
+      if (state.grouped && group !== currentGroup) {
+        currentGroup = group;
+        rowsHtml.push(groupRowHtml(group, groupCounts.get(group)));
+      }
+      if (state.grouped && state.collapsedGroups.has(group)) continue;
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        return `<tr data-row="${row.row}" class="${row.hidden ? 'hidden-item' : ''}${row.actions.some(urgentAction) ? ' urgent-row' : ''}${row.reason ? ' has-details' : ''}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`;
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
+      } else {
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
       }
-      return `<tr data-row="${row.row}" class="${row.hidden ? 'hidden-item' : ''}${row.reason ? ' has-details' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
-    }).join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
+    }
+    el('#result-rows').innerHTML = visible.length ? rowsHtml.join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
     el('#result-rows').querySelectorAll('tr').forEach(tr => {
-      if (tr.querySelector('.empty-row')) return;
+      if (tr.querySelector('.empty-row') || tr.classList.contains('group-row')) return;
       [...tr.children].forEach((cell, index) => cell.classList.add(columnClass(state.columns[index].key)));
     });
     scheduleDescriptionControls();
@@ -637,14 +711,14 @@ if (typeof document !== 'undefined') {
     renderActiveFilters(filtered.length);
   }
 
-  function exportData() {
+  function exportData(source = visibleResults(), actionValue = el('#filter').value) {
     const mode = isAnaliticoMode() ? 'analitico' : isGiroMode() ? 'giro' : 'generic';
-    return buildExportData(visibleResults(), mode, {
-      includeDaysSince: shouldIncludeDaysSince(mode, el('#filter').value),
+    return buildExportData(source, mode, {
+      includeDaysSince: shouldIncludeDaysSince(mode, actionValue),
     });
   }
-  function exportName(extension) {
-    const action = slug(el('#filter').value || 'todas-as-acoes');
+  function exportName(extension, actionValue = el('#filter').value) {
+    const action = slug(actionValue || 'todas-as-acoes');
     const local = state.locationFilter ? `-local-${slug(state.locationFilter)}` : '';
     return `controle-estoque-${action}${local}.${extension}`;
   }
@@ -658,9 +732,9 @@ if (typeof document !== 'undefined') {
     const content = buildCsv(exportData());
     saveBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), exportName('csv'));
   }
-  async function exportXlsx() {
+  async function exportXlsx(source = visibleResults(), actionValue = el('#filter').value) {
     if (!globalThis.ExcelJS) throw new Error('A biblioteca de Excel não foi carregada. Recarregue a página.');
-    const { headers, rows } = exportData();
+    const { headers, rows } = exportData(source, actionValue);
     const workbook = new globalThis.ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Itens filtrados');
     sheet.columns = headers.map((header, index) => ({
@@ -702,7 +776,7 @@ if (typeof document !== 'undefined') {
     sheet.views = [{ state: 'frozen', ySplit: 1 }];
     sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(rows.length + 1, 2), column: headers.length } };
     const buffer = await workbook.xlsx.writeBuffer();
-    saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx'));
+    saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx', actionValue));
   }
   function exportPdf() {
     const analitico = isAnaliticoMode();
@@ -738,6 +812,7 @@ if (typeof document !== 'undefined') {
       state.sheets = sheets;
       expansionVersion++;
       expandedRows.clear();
+      state.collapsedGroups.clear();
       state.sheet = state.sheets.findIndex(sheet => sheet.rows.length > sheet.headerRow + 1);
       state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []);
       const savedFilters = readFilterPreferences();
@@ -879,6 +954,18 @@ if (typeof document !== 'undefined') {
   el('#result-rows').addEventListener('click', event => {
     const copy = event.target.closest('[data-copy-code]');
     if (copy) { copyCode(copy); return; }
+    const groupRow = event.target.closest('tr.group-row');
+    if (groupRow) {
+      const group = groupRow.querySelector('[data-group-toggle]').dataset.groupToggle;
+      if (event.target.closest('[data-group-export]')) {
+        exportXlsx(visibleResults().filter(row => primaryAction(row) === group), group).catch(error => message(error.message || 'Não foi possível exportar o grupo.', 'error'));
+        return;
+      }
+      if (state.collapsedGroups.has(group)) state.collapsedGroups.delete(group);
+      else state.collapsedGroups.add(group);
+      renderResults();
+      return;
+    }
     if (event.target.closest('summary, a, input, select')) return;
     const line = event.target.closest('tr[data-row]');
     const trigger = event.target.closest('[data-detail-row]') ?? line?.querySelector('[data-detail-row]');
@@ -886,9 +973,29 @@ if (typeof document !== 'undefined') {
     const row = state.results.find(item => String(item.row) === trigger.dataset.detailRow);
     if (row) openItemPanel(row, trigger);
   });
-  el('#item-panel-content').addEventListener('click', event => {
-    const copy = event.target.closest('[data-copy-code]');
-    if (copy) copyCode(copy);
+  for (const selector of ['#item-panel-content', '#detail-dock-content']) {
+    el(selector).addEventListener('click', event => {
+      const copy = event.target.closest('[data-copy-code]');
+      if (copy) copyCode(copy);
+    });
+  }
+  el('#dock-prev').addEventListener('click', () => stepItemPanel(-1));
+  el('#dock-next').addEventListener('click', () => stepItemPanel(1));
+  el('#dock-close').addEventListener('click', clearDock);
+  document.addEventListener('keydown', event => {
+    if (!docked() || !panelRow || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target.closest?.('input, select, textarea, summary, [contenteditable]')) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      stepItemPanel(event.key === 'ArrowDown' ? 1 : -1);
+    } else if (event.key === 'Escape') clearDock();
+  });
+  el('#group-toggle').addEventListener('click', () => {
+    state.grouped = !state.grouped;
+    state.page = 1;
+    el('#group-toggle').setAttribute('aria-pressed', String(state.grouped));
+    try { localStorage.setItem('controle-estoque-group', state.grouped ? 'on' : 'off'); } catch { /* A escolha vale até fechar a página. */ }
+    renderResults();
   });
   el('#item-panel-close').addEventListener('click', closeItemPanel);
   el('#item-panel-prev').addEventListener('click', () => stepItemPanel(-1));

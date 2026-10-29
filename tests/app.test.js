@@ -233,3 +233,24 @@ test('o total do estoque fica na barra do painel e a barra de andamento some ao 
   assert.match(app.el('#total-value').textContent, /Valor total do estoque/);
   assert.equal(app.el('#summary .local-total'), null);
 });
+
+test('agrupa por ação, recolhe grupos, mostra a barra proporcional e o arquivo na topbar', async t => {
+  const app = await boot(t);
+  await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nA;001;7;5;0;10;200;Item com Giro;Desbloqueado;Desbloqueado\nB;002;7;0;0;0;50;Item com Giro;Bloqueado por saldo;Bloqueado\nC;003;7;5;0;10;200;Item com Giro;Desbloqueado;Desbloqueado', 'estoque.csv');
+  assert.match(app.el('#topbar-file').textContent, /estoque\.csv/);
+  assert.equal(app.el('#topbar-file').hidden, false);
+  assert.ok(app.el('#action-bar').querySelectorAll('.seg').length >= 2);
+  assert.match(app.el('#action-bar').getAttribute('aria-label'), /Distribuição das ações/);
+
+  assert.equal(app.el('#result-rows').querySelectorAll('tr.group-row').length, 0);
+  app.el('#group-toggle').click();
+  assert.equal(app.el('#group-toggle').getAttribute('aria-pressed'), 'true');
+  const groups = [...app.el('#result-rows').querySelectorAll('tr.group-row')];
+  assert.ok(groups.length >= 2, 'um cabeçalho por ação');
+  assert.match(groups[0].textContent, /\d+ itens?/);
+  const rowsBefore = app.el('#result-rows').querySelectorAll('tr[data-row]').length;
+  assert.equal(rowsBefore, 3);
+  groups[0].querySelector('[data-group-toggle]').click();
+  assert.ok(app.el('#result-rows').querySelectorAll('tr[data-row]').length < rowsBefore);
+  assert.ok(app.el('#result-rows').querySelector('tr[data-row]').className.length > 0, 'a linha leva a classe da ação');
+});

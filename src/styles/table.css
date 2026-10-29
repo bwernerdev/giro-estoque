@@ -57,7 +57,7 @@ th {
   justify-content: flex-start;
   gap: 6px;
   width: 100%;
-  padding: var(--s3) var(--s4);
+  padding: var(--s3) var(--cell-x);
   border: 0;
   background: transparent;
   color: inherit;
@@ -91,7 +91,7 @@ th[aria-sort="descending"] .sort-button::after {
 
 /* ── Células ────────────────────────────────────────────────────────────────── */
 td {
-  padding: var(--cell-y) var(--s4);
+  padding: var(--cell-y) var(--cell-x);
   border-top: 1px solid var(--line-soft);
   color: var(--text);
   font-size: var(--fs-sm);
@@ -159,13 +159,15 @@ th.col-detalhes {
 .standard-table th.col-cobertura { width: 12%; }
 .standard-table th.col-acao { width: 20%; }
 
-@media (min-width: 1360px) {
-  .analitico-table th.col-codigo { width: 9%; }
-  .analitico-table th.col-local { width: 5%; }
-  .analitico-table th.col-prateleira { width: 9%; }
-  .analitico-table th.col-reparticao { width: 10%; }
-  .analitico-table th.col-estoque { width: 7%; }
-  .analitico-table th.col-limites { width: 9%; }
+/* Com espaço de sobra no painel da tabela (não na janela: a barra lateral e o painel de
+   detalhes consomem largura), as colunas curtas ficam compactas e a ação cabe em uma linha. */
+@container tablepanel (min-width: 1000px) {
+  .analitico-table th.col-codigo { width: 10%; }
+  .analitico-table th.col-local { width: 7%; }
+  .analitico-table th.col-prateleira { width: 8%; }
+  .analitico-table th.col-reparticao { width: 9%; }
+  .analitico-table th.col-estoque { width: 6%; }
+  .analitico-table th.col-limites { width: 8%; }
   .analitico-table th.col-acao { width: 20%; }
 
   .analitico-table .item-code {
@@ -191,7 +193,9 @@ td.col-detalhes {
 }
 
 /* ── Linhas ─────────────────────────────────────────────────────────────────── */
+/* Cada linha recebe um tom suave da sua ação (o tom vem da classe da ação, ver components.css). */
 #result-table tbody tr {
+  background: color-mix(in srgb, var(--tone-bg, transparent) 35%, transparent);
   transition: background var(--dur) ease;
 }
 
@@ -222,6 +226,51 @@ html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-ite
 
 #result-table .urgent-row > td:first-child {
   box-shadow: inset 3px 0 0 var(--danger-line);
+}
+
+/* Cabeçalho de grupo ("Agrupar por ação"). */
+#result-table tbody tr.group-row,
+#result-table tbody tr.group-row:hover {
+  background: var(--surface-2);
+  cursor: default;
+}
+
+.group-row td {
+  padding: var(--s2) var(--s3);
+  border-top: 1px solid var(--line);
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.group-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.group-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.group-count {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.group-export {
+  margin-left: auto;
 }
 
 .empty-row {

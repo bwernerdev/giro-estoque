@@ -1,10 +1,11 @@
-/* Estrutura da página, barra do painel, resumo, barra de ferramentas e responsividade.
-   Pontos de quebra: 480, 720, 1024, 1360 e 1700 px. */
+/* Estrutura da página: topbar, tela inicial, barra lateral, abas de ação, barra de
+   ferramentas, painel de detalhes e responsividade.
+   Pontos de quebra: 480, 720, 1024, 1280 e 1700 px. */
 
 /* ── Estrutura ──────────────────────────────────────────────────────────────── */
 .shell {
-  --content-max: 1320px;
-  --content-share: 90%;
+  --content-max: 880px;
+  --content-share: 94%;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -17,10 +18,11 @@ main {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  height: 72px;
+  gap: var(--s4);
+  height: var(--topbar-h);
   padding-inline: calc((100% - min(var(--content-max), var(--content-share))) / 2);
   border-bottom: 1px solid var(--topbar-line);
   background: var(--topbar-bg);
@@ -29,13 +31,41 @@ main {
 
 .topbar-actions {
   display: flex;
+  grid-column: 3;
+  align-items: center;
+  justify-self: end;
+  gap: var(--s2);
+}
+
+.topbar-file {
+  display: inline-flex;
   align-items: center;
   gap: var(--s2);
+  max-width: 100%;
+  padding: 6px var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--topbar-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.topbar-file strong {
+  overflow: hidden;
+  color: var(--topbar-text);
+  text-overflow: ellipsis;
+}
+
+.topbar-file span::before {
+  content: '·';
+  margin-right: var(--s2);
 }
 
 .brand {
   display: flex;
   align-items: center;
+  justify-self: start;
   gap: var(--s2);
   font: 800 17px var(--font-display);
   letter-spacing: .05em;
@@ -185,7 +215,7 @@ main {
   margin-left: auto;
 }
 
-/* Depois da importação o arquivo é trocado pela barra do painel ou arrastado para a janela. */
+/* Depois da importação o arquivo é trocado pela barra lateral ou arrastado para a janela. */
 .shell.has-data .hero,
 .shell.has-data .upload-card {
   display: none;
@@ -204,79 +234,6 @@ main {
   color: var(--text-strong);
   font: 800 var(--fs-xl) var(--font-display);
   pointer-events: none;
-}
-
-/* ── Barra do painel ────────────────────────────────────────────────────────── */
-.workspace-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s4);
-  margin: var(--s5) 0 var(--s3);
-  padding: var(--s2) var(--s2) var(--s2) var(--s4);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
-}
-
-.import-context {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s1) var(--s4);
-  min-width: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
-.import-context span {
-  display: inline-flex;
-  gap: var(--s1);
-  min-width: 0;
-}
-
-.import-context span:first-child {
-  max-width: 48%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.import-context strong {
-  color: var(--text-strong);
-  font-weight: 700;
-}
-
-.config-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--s2);
-}
-
-.total-value {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 0 var(--s4);
-  border-left: 1px solid var(--line-soft);
-}
-
-.total-label {
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.total-value strong {
-  color: var(--text-strong);
-  font: 800 var(--fs-xl) / 1.15 var(--font-display);
-  letter-spacing: -.02em;
-  white-space: nowrap;
 }
 
 /* Andamento da leitura: fio fino no topo da janela. */
@@ -311,6 +268,174 @@ main {
     width: 100%;
     animation: none;
   }
+}
+
+/* ── Espaço de trabalho: barra lateral, conteúdo e painel de detalhes ───────── */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s4);
+  margin-top: var(--s5);
+}
+
+.workspace-main {
+  min-width: 0;
+}
+
+.sidebar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4) var(--s5);
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.side-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.side-title {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.side-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.sidebar .config-toggle,
+.view-toggle {
+  width: 100%;
+  height: var(--h-control-sm);
+  justify-content: flex-start;
+}
+
+#config-toggle {
+  justify-content: space-between;
+}
+
+.import-context {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.import-context span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-context strong {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.total-value {
+  gap: 2px;
+}
+
+.total-label {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.total-value strong {
+  color: var(--text-strong);
+  font: 800 var(--fs-2xl) / 1.1 var(--font-display);
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+
+/* Filtros de posição. O select de ação continua disponível só para leitores de tela
+   e teclado; as abas de ação são o controle visual. */
+.table-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s1);
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.filter-field > span:first-child {
+  padding-left: 2px;
+  line-height: 1.2;
+}
+
+.table-filters select {
+  width: 100%;
+  min-width: 0;
+}
+
+.filter-action {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.hidden-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hidden-toggle:has(input:focus-visible) {
+  border-radius: 4px;
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+/* Painel de detalhes fixo (telas muito largas) */
+.detail-dock {
+  display: none;
+  flex-direction: column;
+  max-height: calc(100vh - 2 * var(--s4));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.dock-empty {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
 }
 
 /* ── Configuração ───────────────────────────────────────────────────────────── */
@@ -384,48 +509,52 @@ main {
   line-height: 1.6;
 }
 
-/* ── Resumo ─────────────────────────────────────────────────────────────────── */
+/* ── Abas de ação e barra proporcional ──────────────────────────────────────────
+   O resumo continua sendo gerado como botões .summary-card; aqui viram abas.     */
 .results-section {
   padding-bottom: var(--s7);
 }
 
+.action-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  margin-bottom: var(--s3);
+  overflow: hidden;
+  border-radius: var(--r-pill);
+}
+
+.action-bar .seg {
+  min-width: 6px;
+  background: var(--tone-line, var(--neutral-line));
+}
+
 .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s3);
-  margin-bottom: var(--s4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--s3);
 }
 
 .summary-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--s2);
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
   min-width: 0;
-  min-height: 84px;
-  padding: var(--s3) var(--s4);
+  height: var(--h-control);
+  padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: var(--surface);
-  box-shadow: var(--shadow-1);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
   text-align: left;
   appearance: none;
 }
 
-.summary-card span {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: .02em;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.summary-card span::before {
+.summary-card::before {
   content: '';
   flex: none;
   width: 8px;
@@ -434,42 +563,47 @@ main {
   background: var(--tone-line, var(--neutral-line));
 }
 
-.summary-card.total span::before {
+.summary-card.total::before {
   background: var(--text-strong);
 }
 
-.summary-card strong {
-  color: var(--tone-fg, var(--text-strong));
-  font: 800 26px / 1.1 var(--font-display);
-  letter-spacing: -.03em;
+.summary-card span {
+  display: block;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.summary-card span::first-letter {
+  text-transform: uppercase;
 }
 
 .summary-value {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--s3);
+  display: contents;
 }
 
 .summary-value small {
-  color: var(--text-muted);
+  display: none;
+}
+
+.summary-card strong {
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  background: var(--tone-bg, var(--neutral-bg));
+  color: var(--tone-fg, var(--neutral-fg));
   font-size: var(--fs-xs);
-  font-weight: 600;
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .summary-filter {
   cursor: pointer;
-  transition: border-color var(--dur) ease, box-shadow var(--dur) ease, background var(--dur) ease;
+  transition: border-color var(--dur) ease, background var(--dur) ease;
 }
 
 .summary-filter:hover:not(:disabled) {
-  border-color: var(--line-strong);
-  box-shadow: var(--shadow-2);
-}
-
-.summary-filter:disabled {
-  cursor: default;
+  border-color: var(--control-border);
+  background: var(--surface-hover);
 }
 
 .summary-filter.is-active {
@@ -480,6 +614,7 @@ main {
 
 /* ── Painel da tabela: ferramentas ──────────────────────────────────────────── */
 .table-panel {
+  container: tablepanel / inline-size;
   margin-top: var(--s1);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -489,10 +624,7 @@ main {
 
 .table-tools {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--s3);
+  align-items: center;
   padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--line);
   border-radius: var(--r-md) var(--r-md) 0 0;
@@ -505,6 +637,25 @@ main {
   gap: var(--s4);
   width: 100%;
   min-width: 0;
+}
+
+.sidebar-toggle {
+  flex: none;
+  gap: var(--s2);
+  white-space: nowrap;
+}
+
+.filter-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s2);
+  margin-left: auto;
+}
+
+.filter-actions .export-menu summary {
+  min-width: max-content;
+  white-space: nowrap;
 }
 
 /* Pesquisa: no desktop fica sempre aberta; abaixo de 1024 px recolhe até ser tocada. */
@@ -645,61 +796,10 @@ main {
   font-weight: 500;
 }
 
-/* Filtros */
-.table-filters {
-  display: grid;
-  flex: 1 1 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: var(--s3);
-  width: 100%;
-  min-width: 0;
-}
-
-.filter-field {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: var(--s1);
-  min-width: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-}
-
-.filter-field > span:first-child {
-  padding-left: 2px;
-  line-height: 1.2;
-}
-
-.table-filters select {
-  width: 100%;
-  min-width: 0;
-}
-
-.filter-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--s2);
-  max-width: 100%;
-  margin-left: auto;
-}
-
-.filter-actions .density-toggle,
-.filter-actions .export-menu summary {
-  min-width: max-content;
-  white-space: nowrap;
-}
-
-/* Contador, opções e filtros ativos */
+/* Contador e filtros ativos */
 .results-bar {
-  position: relative;
-  z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
   padding: 0 var(--s4);
 }
 
@@ -717,29 +817,6 @@ main {
 .results-counter strong {
   color: var(--text-strong);
   font-size: var(--fs-sm);
-}
-
-.results-options {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-}
-
-.hidden-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.hidden-toggle:has(input:focus-visible) {
-  border-radius: 4px;
-  outline: 2px solid var(--ring);
-  outline-offset: 3px;
 }
 
 .active-filters {
@@ -790,25 +867,141 @@ main {
   gap: var(--s3);
 }
 
-/* ── Abaixo de 1024 px ──────────────────────────────────────────────────────── */
-@media (max-width: 1023px) {
+/* ── 1024 px ou mais: a página rola inteira ─────────────────────────────────────
+   Barra de ferramentas, cabeçalho da tabela e rodapé ficam fixos; a pesquisa fica
+   sempre visível.                                                                */
+@media (min-width: 1024px) {
   .shell {
-    --content-max: 880px;
-    --content-share: 94%;
+    --content-max: 1760px;
+    --content-share: 96%;
   }
 
-  .summary-grid {
+  .sidebar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .table-tools {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+  }
+
+  .search-toggle {
+    cursor: text;
+  }
+
+  .table-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    border-radius: 0 0 var(--r-md) var(--r-md);
+    background: var(--surface);
+  }
+
+  /* Antes de importar: texto à esquerda e área de soltar o arquivo à direita. */
+  .shell:not(.has-data) main {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s7);
+    align-content: center;
+    align-items: center;
+    padding-bottom: var(--s7);
+  }
+
+  .shell:not(.has-data) #message,
+  .shell:not(.has-data) #workspace {
+    grid-column: 1 / -1;
+  }
+
+  .shell:not(.has-data) .hero {
+    padding: 0;
+  }
+
+  .shell:not(.has-data) .upload-card {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--s5);
+    min-height: 300px;
+    padding: var(--s6);
+  }
+
+  .shell:not(.has-data) .upload-actions {
+    margin-left: 0;
+  }
+}
+
+/* ── 1280 px ou mais: barra lateral fixa ────────────────────────────────────── */
+@media (min-width: 1280px) {
+  .workspace {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: sticky;
+    top: var(--s4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s4);
+    max-height: calc(100vh - 2 * var(--s4));
+    overflow-y: auto;
+  }
+
+  .side-section + .side-section {
+    padding-top: var(--s4);
+    border-top: 1px solid var(--line-soft);
+  }
+}
+
+/* ── 1700 px ou mais: detalhes sempre à vista ao lado da tabela ─────────────── */
+@media (min-width: 1700px) {
+  .workspace {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--dock-w);
+  }
+
+  .detail-dock {
+    position: sticky;
+    top: var(--s4);
+    display: flex;
+  }
+}
+
+/* ── Barra lateral oculta pelo usuário ──────────────────────────────────────── */
+html[data-sidebar="hidden"] .sidebar {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  html[data-sidebar="hidden"] .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1700px) {
+  html[data-sidebar="hidden"] .workspace {
+    grid-template-columns: minmax(0, 1fr) var(--dock-w);
+  }
+}
+
+/* ── Abaixo de 1024 px ──────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .shell:not(.has-data) .hero {
+    padding-top: 48px;
   }
 }
 
 /* ── Abaixo de 720 px ───────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
   .topbar {
+    display: flex;
+    justify-content: space-between;
     height: auto;
-    min-height: 64px;
-    gap: var(--s3);
+    min-height: var(--topbar-h);
     padding-block: var(--s3);
+  }
+
+  .topbar-file {
+    display: none;
   }
 
   .brand {
@@ -851,35 +1044,28 @@ main {
     width: 100%;
   }
 
-  .workspace-bar {
-    flex-wrap: wrap;
-    padding: var(--s3);
+  .sidebar {
+    grid-template-columns: 1fr;
   }
 
-  .config-actions {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    width: 100%;
+  .table-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s2);
   }
 
-  .import-context span:first-child {
-    max-width: 100%;
+  .side-section:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .side-section:last-child .side-title,
+  .side-section:last-child .hidden-toggle {
+    grid-column: 1 / -1;
   }
 
   .settings-grid {
     grid-template-columns: 1fr;
-  }
-
-  .summary-card {
-    min-height: 76px;
-  }
-
-  .total-value {
-    align-items: flex-start;
-    width: 100%;
-    padding: var(--s2) 0 0;
-    border-top: 1px solid var(--line-soft);
-    border-left: 0;
   }
 
   .insight-strip {
@@ -897,22 +1083,11 @@ main {
     width: 100%;
   }
 
-  .filter-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .filter-actions .density-toggle,
+  .filter-actions,
   .filter-actions .export-menu,
   .filter-actions .export-menu summary {
     width: 100%;
     min-width: 0;
-  }
-
-  .results-bar {
-    flex-wrap: wrap;
   }
 
   .table-footer {
@@ -923,10 +1098,6 @@ main {
 
 /* ── Abaixo de 480 px ───────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .table-filters {
-    grid-template-columns: 1fr;
-  }
-
   .brand-light {
     display: none;
   }
@@ -944,10 +1115,6 @@ main {
     clip: rect(0, 0, 0, 0);
   }
 
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
   .results-counter {
     flex-direction: column;
     align-items: flex-start;
@@ -955,111 +1122,5 @@ main {
 
   .panel {
     padding: var(--s4);
-  }
-}
-
-/* ── Desktop (1024 px ou mais) ──────────────────────────────────────────────────
-   A página rola inteira: barra de ferramentas, cabeçalho da tabela e rodapé
-   ficam fixos, e a pesquisa fica sempre visível.                                */
-@media (min-width: 1024px) {
-  /* Antes de importar: texto à esquerda e área de soltar o arquivo à direita, centrados na tela. */
-  .shell:not(.has-data) main {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--s7);
-    align-content: center;
-    align-items: center;
-    padding-bottom: var(--s7);
-  }
-
-  .shell:not(.has-data) #message,
-  .shell:not(.has-data) #workspace {
-    grid-column: 1 / -1;
-  }
-
-  .shell:not(.has-data) .hero {
-    padding: 0;
-  }
-
-  .shell:not(.has-data) .upload-card {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: var(--s5);
-    min-height: 300px;
-    padding: var(--s6);
-  }
-
-  .shell:not(.has-data) .upload-actions {
-    margin-left: 0;
-  }
-
-  /* Colunas se adaptam ao número de cartões: a linha fecha cheia e uma sobra não estica. */
-  .summary-grid {
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  }
-
-  .table-tools {
-    position: sticky;
-    top: 0;
-    z-index: 4;
-  }
-
-  .table-filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.55fr);
-  }
-
-  .search-toggle {
-    cursor: text;
-  }
-
-  .table-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 3;
-    border-radius: 0 0 var(--r-md) var(--r-md);
-    background: var(--surface);
-  }
-}
-
-/* ── Telas largas: pesquisa, filtros e ações na mesma linha ─────────────────── */
-@media (min-width: 1360px) {
-  .table-tools {
-    display: grid;
-    grid-template-columns: minmax(240px, .9fr) minmax(0, 3.2fr) auto;
-    column-gap: var(--s3);
-    align-items: end;
-  }
-
-  .table-tools-header {
-    display: contents;
-  }
-
-  .table-tools-header .search-control {
-    grid-column: 1;
-    grid-row: 1;
-    width: 100%;
-  }
-
-  .table-filters {
-    grid-column: 2;
-    grid-row: 1;
-    grid-template-columns: minmax(96px, .65fr) minmax(104px, .75fr) minmax(104px, .75fr) minmax(0, 2.4fr);
-    flex: none;
-    width: auto;
-    gap: var(--s3);
-  }
-
-  .filter-actions {
-    grid-column: 3;
-    grid-row: 1;
-    margin-left: 0;
-  }
-}
-
-@media (min-width: 1700px) {
-  .shell {
-    --content-max: 1800px;
-    --content-share: 92%;
   }
 }

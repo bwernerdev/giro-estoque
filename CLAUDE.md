@@ -29,5 +29,6 @@ App web local (Vite, JS puro, sem framework) que importa `.xlsx`/`.csv` de estoq
 - Alterou regra ou texto de interface: atualize o teste correspondente e o `README.md` da raiz.
 - Caminhos relativos (`./`) para funcionar em subpasta.
 - CSS em `src/styles/` (camadas: tokens, base, components, layout, table, print). Só tokens para cor/tamanho/raio/sombra; o tema escuro redefine tokens, sem regras por componente. Verde da marca = ação principal e foco; "selecionado" usa `--ring`; estados usam `--danger/warning/success/info/neutral`.
-- Desktop-first: layout de ≥1024 px (página rola inteira, cabeçalho/rodapé da tabela fixos, pesquisa sempre visível) e linha única da barra de ferramentas a partir de 1360 px, em `layout.css`.
+- Desktop-first, em `layout.css`: ≥1024 px a página rola inteira (cabeçalho e rodapé da tabela fixos, pesquisa sempre visível); ≥1280 px barra lateral (arquivo, total, filtros, exibição); ≥1700 px painel de detalhes fixo à direita (`#detail-dock`; abaixo disso, `dialog#item-panel`).
+- O resumo (`#summary`, botões `.summary-card`) é só CSS de abas; o select `#filter` fica fora da tela (leitor de tela/teclado) e continua sincronizado.
 - Planilha modelo de importação: `Downloads/ESTOQUE.xlsx` (aba Analítico, ~600 linhas).

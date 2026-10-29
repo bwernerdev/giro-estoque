@@ -9,6 +9,7 @@ const paths = {
   chevronRight: '<path d="m9 6 6 6-6 6"/>',
   chevronUp: '<path d="m7 15 5-5 5 5"/>',
   search: '<circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/>',
+  sidebar: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
   alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>',
   unlock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M9 10V7a4 4 0 0 1 7-2"/>',

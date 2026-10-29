@@ -18,27 +18,22 @@ for (const width of [768, 1024, 1366, 1920]) {
     await page.goto('./');
     await upload(page);
     await page.locator('#filter').selectOption('BLOQUEAR E TRANSFERIR OBSOLETO');
-    const compact = await page.locator('#density-toggle').boundingBox();
     const exportButton = await page.locator('#export-menu summary').boundingBox();
-    expect(Math.abs(compact.y - exportButton.y)).toBeLessThan(1);
-    const local = await page.locator('#location-filter').boundingBox();
     const searchToggle = await page.locator('#search-toggle').boundingBox();
     expect(Math.abs(searchToggle.y - exportButton.y)).toBeLessThan(1);
-    if (width >= 1360) {
-      // Pesquisa, filtros e ações dividem a mesma linha e a mesma base.
-      expect(Math.abs((local.y + local.height) - (exportButton.y + exportButton.height))).toBeLessThan(1);
+    const sidebar = await page.locator('#sidebar').boundingBox();
+    const tablePanel = await page.locator('.table-panel').boundingBox();
+    if (width >= 1280) {
+      // Barra lateral à esquerda da tabela, com os filtros empilhados.
+      expect(sidebar.x + sidebar.width).toBeLessThanOrEqual(tablePanel.x + 1);
+      const local = await page.locator('#location-filter').boundingBox();
+      const shelf = await page.locator('#shelf-filter').boundingBox();
+      expect(Math.abs(local.x - shelf.x)).toBeLessThan(1);
+      expect(shelf.y).toBeGreaterThan(local.y);
     } else {
-      expect(local.y).toBeGreaterThan(exportButton.y + exportButton.height);
+      expect(sidebar.y + sidebar.height).toBeLessThanOrEqual(tablePanel.y + 1);
     }
-    if (width >= 1024) {
-      for (const selector of ['#shelf-filter', '#partition-filter', '#filter']) {
-        const control = await page.locator(selector).boundingBox();
-        expect(Math.abs(control.y - local.y)).toBeLessThan(1);
-      }
-    }
-    const filters = await page.locator('.table-filters').boundingBox();
-    expect(Math.abs(local.x - filters.x)).toBeLessThan(1);
-    expect(await page.locator('.table-filters select').evaluateAll(selects => selects.every(select => {
+    expect(await page.locator('.table-filters select:not(#filter)').evaluateAll(selects => selects.every(select => {
       const style = getComputedStyle(select);
       const context = document.createElement('canvas').getContext('2d');
       context.font = style.font;
@@ -70,7 +65,11 @@ for (const width of [768, 1024, 1366, 1920]) {
             const detailsFit = [...document.querySelectorAll('.details-button')].every(control => inside(control.getBoundingClientRect(), control.closest('td').getBoundingClientRect()));
             return scroll.scrollWidth <= scroll.clientWidth + 1 && wholeHeaders && badgesFit && detailsFit;
           })).toBe(true);
-          if (open) {
+          if (open && width >= 1700) {
+            await expect(page.locator('#detail-dock .panel-item-name')).toBeVisible();
+            expect(await page.locator('#detail-dock').evaluate(dock => dock.scrollWidth <= dock.clientWidth)).toBe(true);
+            await page.locator('#dock-close').click();
+          } else if (open) {
             await expect(page.locator('#item-panel')).toBeVisible();
             expect(await page.locator('#item-panel').evaluate(panel => panel.scrollWidth <= panel.clientWidth)).toBe(true);
             await page.locator('#item-panel-close').click();
@@ -248,21 +247,22 @@ test('desktop: densidade compacta por padrão em 1366 px e linha com duas linhas
   expect(lines.code.y).toBeGreaterThan(lines.strong.y);
 });
 
-test('desktop: resumo ocupa a linha inteira e o cabeçalho do painel é único', async ({ page }) => {
+test('desktop: ações viram abas em uma linha, com barra proporcional e total na lateral', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas;Valor do estoque\nA;001;50;30;10\nB;002;5;30;20') });
   await expect(page.locator('#result-rows tr')).toHaveCount(2);
-  const gap = await page.locator('#summary').evaluate(grid => {
-    const bounds = grid.getBoundingClientRect();
-    const first = grid.children[0].getBoundingClientRect();
-    const last = [...grid.children].filter(card => Math.abs(card.getBoundingClientRect().y - first.y) < 4).at(-1).getBoundingClientRect();
-    return Math.abs(bounds.right - last.right);
-  });
-  expect(gap).toBeLessThan(2);
+  const tabs = await page.locator('#summary .summary-card').evaluateAll(cards => cards.map(card => Math.round(card.getBoundingClientRect().y)));
+  expect(tabs.length).toBeGreaterThan(1);
+  expect(new Set(tabs).size).toBe(1);
+  await expect(page.locator('#action-bar .seg').first()).toBeVisible();
+  await expect(page.locator('#action-bar')).toHaveAttribute('aria-label', /Distribuição das ações/);
+  await expect(page.locator('#sidebar #total-value')).toContainText('Valor total do estoque');
+  await expect(page.locator('#topbar-file')).toContainText('g.csv');
   await expect(page.getByText('Preparar análise')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Trocar arquivo' })).toBeVisible();
   await expect(page.locator('#upload-card')).not.toBeVisible();
+  await expect(page.locator('#detail-dock')).toBeHidden();
 });
 
 test('desktop: cabeçalho da tabela e rodapé permanecem fixos durante a rolagem', async ({ page }) => {
@@ -293,4 +293,72 @@ test('desktop: clicar na linha abre o painel e as setas navegam entre itens', as
   await page.keyboard.press('Escape');
   await expect(page.locator('#item-panel')).not.toBeVisible();
   await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(0);
+});
+
+test('1920 px: os detalhes ficam fixos ao lado da tabela e as setas navegam', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  await expect(page.locator('#detail-dock')).toBeVisible();
+  await expect(page.locator('#detail-dock .dock-empty')).toBeVisible();
+  await page.locator('#result-rows tr').nth(1).locator('td.col-local').click();
+  await expect(page.locator('#item-panel')).not.toBeVisible();
+  await expect(page.locator('#detail-dock .panel-item-name')).toHaveText('Item 01');
+  await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(1);
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#detail-dock .panel-item-name')).toHaveText('Item 02');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#detail-dock .dock-empty')).toBeVisible();
+  await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(0);
+  const table = await page.locator('.table-panel').boundingBox();
+  const dock = await page.locator('#detail-dock').boundingBox();
+  expect(table.x + table.width).toBeLessThanOrEqual(dock.x + 1);
+});
+
+test('agrupa por ação com cabeçalhos recolhíveis, exporta o grupo e lembra a escolha', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  await page.locator('#group-toggle').click();
+  await expect(page.locator('#group-toggle')).toHaveAttribute('aria-pressed', 'true');
+  const header = page.locator('#result-rows tr.group-row');
+  await expect(header).toHaveCount(1);
+  await expect(header).toContainText('61 itens');
+  await expect(page.locator('#result-rows tr')).toHaveCount(51);
+  await header.locator('[data-group-toggle]').click();
+  await expect(page.locator('#result-rows tr')).toHaveCount(1);
+  await header.locator('[data-group-toggle]').click();
+  await expect(page.locator('#result-rows tr')).toHaveCount(51);
+  const download = page.waitForEvent('download');
+  await header.locator('[data-group-export]').click();
+  expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);
+  await page.reload();
+  await page.locator('#file-input').setInputFiles({ name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await expect(page.locator('#result-rows tr.group-row')).toHaveCount(1);
+  await expect(page.locator('#group-toggle')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('cada linha recebe um tom suave da sua ação', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  const background = await page.locator('#result-rows tr').first().evaluate(row => getComputedStyle(row).backgroundColor);
+  expect(background).not.toBe('rgba(0, 0, 0, 0)');
+});
+
+test('a barra lateral pode ser ocultada e a escolha é lembrada', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  await expect(page.locator('#sidebar')).toBeVisible();
+  const before = (await page.locator('.table-panel').boundingBox()).width;
+  await page.locator('#sidebar-toggle').click();
+  await expect(page.locator('#sidebar')).toBeHidden();
+  await expect(page.locator('#sidebar-toggle')).toContainText('Mostrar barra lateral');
+  expect((await page.locator('.table-panel').boundingBox()).width).toBeGreaterThan(before + 150);
+  await page.reload();
+  await upload(page);
+  await expect(page.locator('#sidebar')).toBeHidden();
+  await page.locator('#sidebar-toggle').click();
+  await expect(page.locator('#sidebar')).toBeVisible();
 });
