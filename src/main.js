@@ -2,7 +2,7 @@ import { importFile, selectDataRows } from './import.js';
 import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
 import { actionCounts, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
-import { buildSnapshot, compareToSnapshot, readSnapshot, saveSnapshot } from './compare.js';
+import { buildSnapshot, compareToSnapshot, nextStore, pickBase, positionText, readStore, saveStore } from './compare.js';
 import { renderApp } from './template.js';
 import { svgIcon } from './icons.js';
 
@@ -19,7 +19,9 @@ const state = {
   pageRows: [],
   grouped: false,
   changesOnly: false,
-  previous: null,
+  store: null,
+  snapshot: null,
+  baseOverride: null,
   comparison: null,
   collapsedGroups: new Set(),
   actionOrder: [],
@@ -391,7 +393,8 @@ if (typeof document !== 'undefined') {
       if (run !== refreshRun) return;
       setProgress(null);
       state.allResults = analyzed;
-      state.comparison = compareToSnapshot(state.allResults, state.previous, currentMode());
+      state.snapshot = buildSnapshot(state.allResults, { mode: currentMode(), fileName: state.fileName, savedAt: state.importedAt ?? new Date() });
+      state.comparison = compareToSnapshot(state.allResults, state.baseOverride ?? pickBase(state.store, state.snapshot), currentMode());
       if (!state.comparison?.total) state.changesOnly = false;
     }
     state.results = analitico && !el('#show-hidden').checked ? state.allResults.filter(row => !row.hidden) : state.allResults;
@@ -625,9 +628,10 @@ if (typeof document !== 'undefined') {
   }
   function changeTag(row) {
     if (!row.change) return '';
-    return row.change.kind === 'novo'
-      ? ' <span class="change-tag">Novo</span>'
-      : ` <span class="change-tag" title="Ação na importação anterior">Antes: ${escapeHtml(row.change.from)}</span>`;
+    const { kind, from } = row.change;
+    if (kind === 'novo') return ' <span class="change-tag">Novo</span>';
+    if (kind === 'moveu') return ` <span class="change-tag" title="Posição na importação anterior">Movido de ${escapeHtml(from)}</span>`;
+    return ` <span class="change-tag" title="Ação na importação anterior">Antes: ${escapeHtml(from)}</span>`;
   }
   function renderChanges() {
     const c = state.comparison;
@@ -636,13 +640,30 @@ if (typeof document !== 'undefined') {
     if (!c) return;
     const when = c.savedAt ? new Date(c.savedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     const plural = (n, one, many) => `${n.toLocaleString('pt-BR')} ${n === 1 ? one : many}`;
-    el('#changes-title').textContent = c.total || c.removed
-      ? `${plural(c.changed, 'item mudou', 'itens mudaram')} de ação · ${plural(c.added, 'novo', 'novos')} · ${plural(c.removed, 'saiu', 'saíram')}`
-      : 'Nenhuma mudança desde a importação anterior';
-    el('#changes-detail').textContent = `Comparado com ${c.fileName || 'a importação anterior'}${when ? `, importada em ${when}` : ''}.`;
+    const source = `${c.fileName || 'a importação anterior'}${when ? `, importada em ${when}` : ''}`;
+    const list = el('#removed-list');
+    list.hidden = true;
+    el('#changes-toggle').hidden = true;
+    if (c.mismatch) {
+      el('#changes-title').textContent = 'Sem comparação: a importação anterior era de outro tipo de planilha';
+      el('#changes-detail').textContent = `Base guardada: ${source}.`;
+      return;
+    }
+    const parts = [`${plural(c.changed, 'item mudou', 'itens mudaram')} de ação`, plural(c.added, 'novo', 'novos')];
+    if (c.moved) parts.push(plural(c.moved, 'movido', 'movidos'));
+    parts.push(plural(c.removed, 'saiu', 'saíram'));
+    el('#changes-title').textContent = c.total || c.removed ? parts.join(' · ') : 'Nenhuma mudança desde a importação anterior';
+    el('#changes-detail').textContent = `Comparado com ${source}.`;
     el('#changes-toggle').hidden = c.total === 0;
     el('#changes-toggle').setAttribute('aria-pressed', String(state.changesOnly));
     el('#changes-toggle').textContent = state.changesOnly ? 'Ver todos os itens' : 'Ver só mudanças';
+    list.hidden = c.removed === 0;
+    if (c.removed) {
+      const shown = c.removedItems.slice(0, 200);
+      el('#removed-summary').textContent = `Ver os que saíram (${c.removed.toLocaleString('pt-BR')})`;
+      el('#removed-rows').innerHTML = shown.map(item => `<tr><td>${escapeHtml(item.name || '—')}</td><td>${escapeHtml(item.sku || '—')}</td><td>${escapeHtml(item.position || '—')}</td><td>${escapeHtml(item.action)}</td></tr>`).join('')
+        + (c.removed > shown.length ? `<tr><td colspan="4">… e mais ${(c.removed - shown.length).toLocaleString('pt-BR')}. Todos vão na aba Mudanças do Excel.</td></tr>` : '');
+    }
   }
   function groupRowHtml(action, count) {
     const collapsed = state.collapsedGroups.has(action);
@@ -762,7 +783,7 @@ if (typeof document !== 'undefined') {
     const content = buildCsv(exportData());
     saveBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), exportName('csv'));
   }
-  async function exportXlsx(source = visibleResults(), actionValue = el('#filter').value) {
+  async function exportXlsx(source = visibleResults(), actionValue = el('#filter').value, { withChanges = true } = {}) {
     if (!globalThis.ExcelJS) throw new Error('A biblioteca de Excel não foi carregada. Recarregue a página.');
     const { headers, rows } = exportData(source, actionValue);
     const workbook = new globalThis.ExcelJS.Workbook();
@@ -805,6 +826,19 @@ if (typeof document !== 'undefined') {
     });
     sheet.views = [{ state: 'frozen', ySplit: 1 }];
     sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(rows.length + 1, 2), column: headers.length } };
+    const c = state.comparison;
+    if (withChanges && c && !c.mismatch && (c.total || c.removed)) {
+      const changes = workbook.addWorksheet('Mudanças');
+      changes.columns = [{ width: 12 }, { width: 42 }, { width: 18 }, { width: 38 }, { width: 38 }];
+      changes.addRow(['Situação', 'Item', 'Código', 'Antes', 'Agora']).font = { bold: true };
+      const label = { mudou: 'Mudou', novo: 'Novo', moveu: 'Movido' };
+      for (const row of state.allResults.filter(item => item.change)) {
+        const { kind, from } = row.change;
+        changes.addRow([label[kind], row.item ?? '', row.sku ?? '', kind === 'novo' ? '—' : from, kind === 'moveu' ? positionText(row) : row.action]);
+      }
+      for (const item of c.removedItems) changes.addRow(['Saiu', item.name, item.sku, item.action, '—']);
+      changes.views = [{ state: 'frozen', ySplit: 1 }];
+    }
     const buffer = await workbook.xlsx.writeBuffer();
     saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx', actionValue));
   }
@@ -862,13 +896,14 @@ if (typeof document !== 'undefined') {
       state.pendingActionFilter = typeof savedFilters.action === 'string' ? savedFilters.action : '';
       state.fileName = file.name;
       state.importedAt = new Date();
-      state.previous = readSnapshot();
+      state.store = readStore();
+      state.baseOverride = null;
       state.changesOnly = false;
       setConfigExpanded(false);
       el('#workspace').hidden = false;
       el('.shell').classList.add('has-data');
       renderImportContext(); renderMapping(); renderSettings(); await refresh();
-      if (run === importRun && state.allResults.length) saveSnapshot(buildSnapshot(state.allResults, { mode: currentMode(), fileName: state.fileName, savedAt: state.importedAt }));
+      if (run === importRun && state.snapshot && state.allResults.length && !saveStore(nextStore(state.store, state.snapshot))) message('A base de comparação ficou grande demais para guardar no navegador; a próxima importação não será comparada.', 'warning');
     } catch (error) { if (run === importRun) message(error.message || 'Não foi possível abrir o arquivo.', 'error'); }
     finally { if (run === importRun) { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); setProgress(null); } }
   }
@@ -991,7 +1026,7 @@ if (typeof document !== 'undefined') {
     if (groupRow) {
       const group = groupRow.querySelector('[data-group-toggle]').dataset.groupToggle;
       if (event.target.closest('[data-group-export]')) {
-        exportXlsx(visibleResults().filter(row => primaryAction(row) === group), group).catch(error => message(error.message || 'Não foi possível exportar o grupo.', 'error'));
+        exportXlsx(visibleResults().filter(row => primaryAction(row) === group), group, { withChanges: false }).catch(error => message(error.message || 'Não foi possível exportar o grupo.', 'error'));
         return;
       }
       if (state.collapsedGroups.has(group)) state.collapsedGroups.delete(group);
@@ -1077,6 +1112,26 @@ if (typeof document !== 'undefined') {
     renderTableHead();
     renderResults();
     persistFilters();
+  });
+  el('#save-base').addEventListener('click', () => {
+    if (!state.snapshot) return;
+    saveBlob(new Blob([JSON.stringify(state.snapshot)], { type: 'application/json' }), `base-comparacao-${slug(state.fileName.replace(/\.[^.]+$/, '')) || 'estoque'}.json`);
+  });
+  el('#load-base').addEventListener('click', () => el('#base-input').click());
+  el('#base-input').addEventListener('change', async event => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const base = JSON.parse(await file.text());
+      if (base?.version !== 2 || !base.items || !base.actions) throw new Error('inválido');
+      state.baseOverride = base;
+      state.changesOnly = false;
+      state.page = 1;
+      state.comparison = compareToSnapshot(state.allResults, base, currentMode());
+      message('');
+      refresh({ reanalyze: false });
+    } catch { message('Esse arquivo não é uma base de comparação válida.', 'error'); }
   });
   el('#changes-toggle').addEventListener('click', () => {
     state.changesOnly = !state.changesOnly;

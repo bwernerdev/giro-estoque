@@ -381,3 +381,25 @@ test('compara com a importação anterior e mostra o que mudou', async ({ page }
   await page.locator('#clear-filters').click();
   await expect(page.locator('#result-rows tr')).toHaveCount(3);
 });
+
+test('mostra os que saíram, movidos, aba Mudanças e salva a base', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  const head = 'Produto;Codigo;Estoque;Vendas;Valor do estoque\n';
+  const send = csv => page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from(head + csv) });
+  await send('A;001;50;30;10\nB;002;5;30;20\nC;003;5;30;20');
+  await send('A;001;50;30;10\nB;002;500;1;20');
+  await expect(page.locator('#changes-title')).toContainText('1 saiu');
+  await page.locator('#removed-summary').click();
+  await expect(page.locator('#removed-rows')).toContainText('003');
+  // Reimportar a mesma planilha mantém a comparação com a anterior diferente.
+  await send('A;001;50;30;10\nB;002;500;1;20');
+  await expect(page.locator('#changes-title')).toContainText('1 saiu');
+  const base = page.waitForEvent('download');
+  await page.locator('#save-base').click();
+  expect((await base).suggestedFilename()).toMatch(/^base-comparacao-.*\.json$/);
+  const sheet = page.waitForEvent('download');
+  await page.locator('#export-menu summary').click();
+  await page.locator('[data-export="xlsx"]').click();
+  expect((await sheet).suggestedFilename()).toMatch(/\.xlsx$/);
+});

@@ -42,6 +42,9 @@ export function renderApp() {
                 <div class="side-buttons">
                   <button id="replace-file" class="secondary-button config-toggle" type="button">${svgIcon('download')}<span>Trocar arquivo</span></button>
                   <button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false"><span>Abrir configuração</span>${svgIcon('chevronDown')}</button>
+                  <button id="save-base" class="secondary-button config-toggle" type="button" title="Baixa um arquivo com as ações atuais, para comparar em outro computador">Salvar base de comparação</button>
+                  <button id="load-base" class="secondary-button config-toggle" type="button" title="Compara esta planilha com uma base salva antes">Carregar base de comparação</button>
+                  <input id="base-input" type="file" accept=".json,application/json" hidden>
                 </div>
               </section>
               <div id="total-value" class="total-value side-section" hidden></div>
@@ -69,7 +72,7 @@ export function renderApp() {
               </div>
               <section id="results-section" class="results-section">
                 <div id="data-quality" class="insight-strip data-quality" role="status" hidden><div><strong id="data-quality-title"></strong><span id="data-quality-detail"></span></div></div>
-                <div id="changes" class="insight-strip changes" role="status" hidden><div><strong id="changes-title"></strong><span id="changes-detail"></span></div><button id="changes-toggle" class="discreet-button" type="button" aria-pressed="false">Ver só mudanças</button></div>
+                <div id="changes" class="insight-strip changes" role="status" hidden><div><strong id="changes-title"></strong><span id="changes-detail"></span></div><button id="changes-toggle" class="discreet-button" type="button" aria-pressed="false">Ver só mudanças</button><details id="removed-list" class="removed-list" hidden><summary id="removed-summary"></summary><table><thead><tr><th>Item</th><th>Código</th><th>Posição</th><th>Última ação</th></tr></thead><tbody id="removed-rows"></tbody></table></details></div>
                 <div id="action-bar" class="action-bar" role="img" hidden></div>
                 <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
                 <div class="table-panel">

@@ -338,8 +338,36 @@ input[type="checkbox"] {
   margin-top: 2px;
 }
 
+.changes {
+  flex-wrap: wrap;
+}
+
 .changes .discreet-button {
   flex: none;
+}
+
+.removed-list {
+  flex-basis: 100%;
+  font-size: var(--fs-xs);
+}
+
+.removed-list summary {
+  cursor: pointer;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.removed-list table {
+  width: 100%;
+  margin-top: var(--s2);
+  border-collapse: collapse;
+}
+
+.removed-list th,
+.removed-list td {
+  padding: var(--s1) var(--s2);
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
 }
 
 .change-tag {
