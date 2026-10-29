@@ -6,6 +6,7 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 | Arquivo | Linhas | Papel |
 |---|---|---|
 | `analysis.js` | ~260 | **Regras de negócio.** `fields`, `suggestMapping`, `findHeaderRow`, `detectAnalysisMode`, `parseNumber` (pt-BR/en-US), `analyze` (genérico), `analyzeGiro` (BBOG6656), `analyzeAnalitico` (ações BLOQUEAR, TRANSFERIR OBSOLETO, DESBLOQUEAR, ZERAR MIN/MAX), `summarizeLocationTotal`. Locais obsoletos: 1 e 298 |
+| `compare.js` | ~50 | Compara a importação atual com a anterior (snapshot em `localStorage`): `buildSnapshot`, `compareToSnapshot` (marca `row.change`), `readSnapshot`/`saveSnapshot` |
 | `dashboard.js` | ~160 | Filtros (`filterResults`), busca sem acento, `paginate` (`PAGE_SIZE = 50`), `actionCounts`/`prioritizeActionCounts`, `sortResults`, `dataIssueSummary`, `processInChunks` (leitura em blocos) |
 | `export-data.js` | ~80 | `buildExportData`, `buildCsv`, `csvField` (neutraliza fórmulas), `currencyNumber`, `shouldIncludeDaysSince` |
 | `import.js` | ~70 | `importFile` (xlsx via ExcelJS e csv), `parseCsv`, `selectDataRows` |

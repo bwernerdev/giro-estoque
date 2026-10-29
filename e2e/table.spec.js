@@ -362,3 +362,22 @@ test('a barra lateral pode ser ocultada e a escolha é lembrada', async ({ page 
   await page.locator('#sidebar-toggle').click();
   await expect(page.locator('#sidebar')).toBeVisible();
 });
+
+test('compara com a importação anterior e mostra o que mudou', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  const head = 'Produto;Codigo;Estoque;Vendas;Valor do estoque\n';
+  const send = csv => page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from(head + csv) });
+  await send('A;001;50;30;10\nB;002;5;30;20\nC;003;5;30;20');
+  await expect(page.locator('#result-rows tr')).toHaveCount(3);
+  await expect(page.locator('#changes')).toBeHidden();
+  await send('A;001;50;30;10\nB;002;500;1;20\nD;004;5;30;20');
+  await expect(page.locator('#changes')).toBeVisible();
+  await expect(page.locator('#changes-title')).toContainText('1 item mudou de ação · 1 novo · 1 saiu');
+  await expect(page.locator('.change-tag')).toHaveCount(2);
+  await page.locator('#changes-toggle').click();
+  await expect(page.locator('#result-rows tr')).toHaveCount(2);
+  await expect(page.locator('#active-filters')).toContainText('Somente mudanças');
+  await page.locator('#clear-filters').click();
+  await expect(page.locator('#result-rows tr')).toHaveCount(3);
+});

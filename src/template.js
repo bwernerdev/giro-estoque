@@ -69,6 +69,7 @@ export function renderApp() {
               </div>
               <section id="results-section" class="results-section">
                 <div id="data-quality" class="insight-strip data-quality" role="status" hidden><div><strong id="data-quality-title"></strong><span id="data-quality-detail"></span></div></div>
+                <div id="changes" class="insight-strip changes" role="status" hidden><div><strong id="changes-title"></strong><span id="changes-detail"></span></div><button id="changes-toggle" class="discreet-button" type="button" aria-pressed="false">Ver só mudanças</button></div>
                 <div id="action-bar" class="action-bar" role="img" hidden></div>
                 <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
                 <div class="table-panel">
