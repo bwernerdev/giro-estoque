@@ -1,0 +1,168 @@
+/* ──────────────────────────────────────────────────────────────────────────────
+   Tokens de design.
+   Toda cor, tamanho, raio e sombra do app nasce aqui. Componentes só consomem
+   variáveis: o tema escuro redefine os tokens e não precisa de regras próprias.
+
+   Regra de cor: o verde da marca (--accent) marca apenas a ação principal e o
+   foco. "Selecionado" usa --ring (azul-acinzentado). Estados de negócio usam
+   os tons semânticos (danger, warning, success, info, neutral).
+────────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Tipografia */
+  --font-body: "DM Sans", Arial, sans-serif;
+  --font-display: Manrope, "DM Sans", Arial, sans-serif;
+  --fs-2xs: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+
+  /* Espaçamento (escala de 4 px) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  /* Forma */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-pill: 999px;
+
+  /* Altura dos controles */
+  --h-control: 40px;
+  --h-control-sm: 34px;
+
+  /* Movimento */
+  --dur: .15s;
+
+  /* Superfícies */
+  --bg: #eef1f4;
+  --surface: #fff;
+  --surface-2: #f8fafb;
+  --surface-hover: #f1f5f8;
+  --surface-selected: #e8f0f7;
+  --ring: #2d4a66;
+
+  /* Texto */
+  --text: #17263a;
+  --text-strong: #0f1c2b;
+  --text-muted: #566778;
+  --text-faint: #657585;
+
+  /* Linhas */
+  --line: #e1e7eb;
+  --line-strong: #cbd5dc;
+  --control-border: #7f8e9b;
+  --line-soft: #ecf0f2;
+
+  /* Marca */
+  --accent: #a9d842;
+  --accent-hover: #b7e158;
+  --accent-ink: #17300f;
+  --accent-text: #4a7413;
+  --focus: #4a7413;
+
+  /* Barra superior */
+  --topbar-bg: #0b1725;
+  --topbar-line: #223244;
+  --topbar-text: #fff;
+  --topbar-muted: #9db0bb;
+  --topbar-btn-bg: #1b2a3a;
+  --topbar-btn-line: #34495a;
+  --topbar-btn-hover: #27394c;
+
+  /* Tons semânticos */
+  --danger-fg: #a3374d;
+  --danger-bg: #fcebee;
+  --danger-line: #c26577;
+  --warning-fg: #94501a;
+  --warning-bg: #fff0de;
+  --warning-line: #d98a3d;
+  --success-fg: #2b6a4f;
+  --success-bg: #e4f3ea;
+  --success-line: #5fa583;
+  --info-fg: #2b5f84;
+  --info-bg: #e5f0f8;
+  --info-line: #5b8db0;
+  --neutral-fg: #56646f;
+  --neutral-bg: #edf1f4;
+  --neutral-line: #9aa7b2;
+
+  /* Elevação */
+  --shadow-1: 0 1px 2px rgba(12, 26, 38, .05);
+  --shadow-2: 0 4px 16px rgba(12, 26, 38, .07);
+  --shadow-3: 0 12px 32px rgba(12, 26, 38, .18);
+  --backdrop: rgba(8, 16, 26, .22);
+
+  /* Barra de rolagem e seta dos selects */
+  --scrollbar-thumb: #b7c2ca;
+  --scrollbar-track: #edf1f3;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23566778' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+  /* Densidade da tabela (o modo compacto redefine) */
+  --cell-y: 14px;
+}
+
+html[data-density="compact"] {
+  --cell-y: 8px;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0e1621;
+  --surface: #162231;
+  --surface-2: #1b2a3b;
+  --surface-hover: #1f3044;
+  --surface-selected: #233a52;
+  --ring: #8db8de;
+
+  --text: #e6eef6;
+  --text-strong: #f1f6fb;
+  --text-muted: #aab9c8;
+  --text-faint: #9aabbb;
+
+  --line: #31465b;
+  --line-strong: #455c74;
+  --control-border: #71879c;
+  --line-soft: #263749;
+
+  --accent-text: #b7df6c;
+  --focus: #a5cf63;
+
+  --topbar-bg: #080e17;
+  --topbar-line: #253447;
+  --topbar-btn-bg: #243448;
+  --topbar-btn-line: #40566b;
+  --topbar-btn-hover: #31465d;
+
+  --danger-fg: #ffb4c0;
+  --danger-bg: #4a2b34;
+  --danger-line: #ee8397;
+  --warning-fg: #ffd29c;
+  --warning-bg: #4e3928;
+  --warning-line: #e0a35c;
+  --success-fg: #bfe6d1;
+  --success-bg: #1f3d35;
+  --success-line: #79b89b;
+  --info-fg: #bcdcf2;
+  --info-bg: #1f3a4d;
+  --info-line: #7eb4d6;
+  --neutral-fg: #d3dee6;
+  --neutral-bg: #33404b;
+  --neutral-line: #7f91a3;
+
+  --shadow-1: none;
+  --shadow-2: none;
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, .55);
+  --backdrop: rgba(0, 0, 0, .45);
+
+  --scrollbar-thumb: #52677c;
+  --scrollbar-track: #111c2a;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aab9c8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}

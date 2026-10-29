@@ -1,0 +1,575 @@
+/* Componentes reutilizáveis. Cada um vive em um único lugar; o tema vem dos tokens. */
+
+/* ── Ícones ─────────────────────────────────────────────────────────────────── */
+.ui-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────────────────
+   .primary-button   ação principal (verde da marca); também usado em <label>.
+   .secondary-button ação secundária com borda.
+   .discreet-button  ação contextual pequena.
+   .icon-button      só ícone (detalhes da linha).
+   .topbar-button    botões da barra superior.                                   */
+.primary-button,
+.secondary-button,
+.discreet-button,
+.topbar-button,
+.pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  height: var(--h-control);
+  padding: 0 var(--s4);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background var(--dur) ease, border-color var(--dur) ease, box-shadow var(--dur) ease;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: var(--accent-hover);
+}
+
+.secondary-button,
+.pagination button {
+  border-color: var(--control-border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.secondary-button:hover:not(:disabled),
+.pagination button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.discreet-button {
+  height: var(--h-control-sm);
+  padding: 0 var(--s3);
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.discreet-button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.secondary-button[aria-pressed="true"],
+.discreet-button[aria-pressed="true"] {
+  border-color: var(--ring);
+  background: var(--surface-selected);
+  color: var(--text-strong);
+}
+
+.config-toggle,
+.pagination button {
+  height: var(--h-control-sm);
+}
+
+.pagination button {
+  min-width: 88px;
+  font-size: var(--fs-xs);
+}
+
+button:disabled {
+  opacity: .45;
+}
+
+.topbar-button {
+  height: var(--h-control-sm);
+  min-width: 124px;
+  padding: 0 var(--s3);
+  border-color: var(--topbar-btn-line);
+  background: var(--topbar-btn-bg);
+  color: var(--topbar-text);
+  font-size: var(--fs-xs);
+}
+
+.topbar-button:hover {
+  background: var(--topbar-btn-hover);
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.icon-button:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.density-check {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: width var(--dur) ease, opacity var(--dur) ease;
+}
+
+.density-toggle[aria-pressed="true"] .density-check {
+  width: 16px;
+  opacity: 1;
+}
+
+.density-check .ui-icon {
+  display: block;
+}
+
+/* ── Campos de formulário ───────────────────────────────────────────────────── */
+select,
+input[type="number"],
+input[type="search"] {
+  height: var(--h-control);
+  padding: 0 var(--s3);
+  border: 1px solid var(--control-border);
+  border-radius: var(--r-sm);
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  transition: border-color var(--dur) ease;
+}
+
+select {
+  appearance: none;
+  padding-right: 32px;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+select:hover:not(:disabled),
+input[type="number"]:hover {
+  border-color: var(--text-muted);
+}
+
+select:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+select:focus-visible,
+input[type="number"]:focus-visible {
+  border-color: var(--ring);
+  outline-offset: 1px;
+}
+
+select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+input::placeholder {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ring);
+}
+
+/* ── Tons semânticos ─────────────────────────────────────────────────────────────
+   Cada ação tem um tom, usado igualmente pelo badge e pelo cartão do resumo.     */
+.bloquear,
+.verificar-dados,
+.confirmar-saldo,
+.investigar-sem-consumo {
+  --tone-fg: var(--danger-fg);
+  --tone-bg: var(--danger-bg);
+  --tone-line: var(--danger-line);
+}
+
+.bloquear-e-transferir-obsoleto,
+.transferir-obsoleto,
+.comprar,
+.planejar-reposicao,
+.reduzir-compras {
+  --tone-fg: var(--warning-fg);
+  --tone-bg: var(--warning-bg);
+  --tone-line: var(--warning-line);
+}
+
+.desbloquear,
+.zerar-min-max,
+.manter {
+  --tone-fg: var(--success-fg);
+  --tone-bg: var(--success-bg);
+  --tone-line: var(--success-line);
+}
+
+.avaliar-excesso,
+.avaliar-sem-giro,
+.avaliar-transferencia {
+  --tone-fg: var(--info-fg);
+  --tone-bg: var(--info-bg);
+  --tone-line: var(--info-line);
+}
+
+/* ── Badges de ação ─────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--tone-bg, var(--neutral-bg));
+  color: var(--tone-fg, var(--neutral-fg));
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.badge-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.badge-svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.urgent-action {
+  box-shadow: inset 0 0 0 1px var(--tone-line, currentColor);
+}
+
+/* ── Avisos ─────────────────────────────────────────────────────────────────────
+   Um só padrão: superfície com filete de cor à esquerda.                        */
+.message,
+.insight-strip {
+  margin: 0 0 var(--s3);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--tone-line, var(--neutral-line));
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.message {
+  --tone-line: var(--info-line);
+  margin-block: var(--s3);
+  background: var(--info-bg);
+  color: var(--info-fg);
+  font-weight: 600;
+}
+
+.message.warning {
+  --tone-line: var(--warning-line);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.message.error {
+  --tone-line: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.insight-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+}
+
+.data-quality {
+  --tone-line: var(--danger-line);
+}
+
+.data-quality div,
+.data-quality strong,
+.data-quality span {
+  display: block;
+}
+
+.data-quality strong {
+  color: var(--danger-fg);
+  font-size: var(--fs-md);
+}
+
+.data-quality span {
+  margin-top: 2px;
+}
+
+/* ── Cartão de painel ───────────────────────────────────────────────────────── */
+.panel {
+  padding: var(--s5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.panel h3 {
+  font: 700 var(--fs-lg) / 1.3 var(--font-display);
+  color: var(--text-strong);
+}
+
+.panel-intro {
+  margin: var(--s1) 0 var(--s4);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+/* ── Menu de exportação ─────────────────────────────────────────────────────── */
+.export-menu {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+}
+
+.export-menu summary {
+  min-width: 128px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.export-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.export-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
+}
+
+.export-options button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--h-control-sm);
+  padding: var(--s2) var(--s3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-align: left;
+}
+
+.export-options button:hover,
+.export-options button:focus-visible {
+  background: var(--surface-hover);
+}
+
+/* ── Código do item com botão de copiar ─────────────────────────────────────── */
+.item-code {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.item-code > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.copy-code {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.copy-code .ui-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.copy-code:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.copy-code.is-copied {
+  color: var(--accent-text);
+}
+
+.clipboard-fallback {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Painel lateral de detalhes ─────────────────────────────────────────────── */
+.item-panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(440px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-3);
+}
+
+.item-panel[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-panel::backdrop {
+  background: var(--backdrop);
+}
+
+body:has(.item-panel[open]) {
+  overflow: hidden;
+}
+
+.item-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+
+.item-panel-header h2 {
+  font: 700 var(--fs-lg) / 1.3 var(--font-display);
+  color: var(--text-strong);
+}
+
+.item-panel-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-panel-nav .discreet-button {
+  width: var(--h-control-sm);
+  padding: 0;
+}
+
+.item-panel-content {
+  flex: 1;
+  min-height: 0;
+  padding: var(--s5);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.panel-item-name {
+  display: block;
+  color: var(--text-strong);
+  font-size: var(--fs-lg);
+  line-height: 1.4;
+}
+
+.panel-item-code {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s3);
+}
+
+.panel-item-code > span,
+.panel-item-location {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.panel-item-location {
+  margin-top: var(--s2);
+}
+
+.detail-fields {
+  min-width: 0;
+  margin: var(--s4) 0 0;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+
+.detail-fields > div + div {
+  margin-top: var(--s3);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line-soft);
+}
+
+.detail-fields dt {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.detail-fields dd {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}

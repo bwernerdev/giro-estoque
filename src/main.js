@@ -15,6 +15,7 @@ const state = {
   sortKey: '',
   sortDirection: 'asc',
   columns: [],
+  pageRows: [],
   pendingActionFilter: '',
   settings: {
     generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' },
@@ -33,10 +34,6 @@ function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u030
 
 export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
   const summaryCounts = prioritizeActionCounts(counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length })));
-  const localTotalCard = locationFilter || summaryAllResults.length > 0
-    ? `<div class="summary-card local-total"><div><span>${shelfFilter || partitionFilter ? 'VALOR DO ESTOQUE NA LOCALIZAÇÃO' : locationFilter ? 'VALOR DO ESTOQUE NO LOCAL' : 'VALOR TOTAL DO ESTOQUE'}</span><small>Soma da coluna Vl Saldo${locationFilter ? ` · Local ${escapeHtml(locationFilter)}` : ''}${shelfFilter ? ` · Prateleira ${escapeHtml(shelfFilter)}` : ''}${partitionFilter ? ` · Repartição ${escapeHtml(partitionFilter)}` : ''}</small></div><strong>${realCurrency(locationTotal)}</strong></div>`
-    : '';
-
   return [
     `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></button>`,
     ...summaryCounts.filter(({ count }) => count > 0).map(({ action, count }) => {
@@ -46,8 +43,15 @@ export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions,
       const percentage = total ? Math.round((count / total) * 100) : 0;
       return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><div class="summary-value"><strong>${count}</strong><small>${percentage}% ${hiddenCard ? 'do total' : 'do painel'}</small></div></button>`;
     }),
-    localTotalCard,
   ].filter(Boolean).join('');
+}
+
+export function buildTotalMarkup({ summaryAllResults, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
+  if (!locationFilter && summaryAllResults.length === 0) return '';
+  const label = shelfFilter || partitionFilter ? 'Valor do estoque na localização' : locationFilter ? 'Valor do estoque no local' : 'Valor total do estoque';
+  const scope = [locationFilter && `Local ${locationFilter}`, shelfFilter && `Prateleira ${shelfFilter}`, partitionFilter && `Repartição ${partitionFilter}`].filter(Boolean).join(' · ');
+  const title = escapeHtml(`Soma da coluna Vl Saldo${scope ? ` · ${scope}` : ''}`);
+  return `<span class="total-label" title="${title}">${escapeHtml(label)}</span><strong title="${title}">${realCurrency(locationTotal)}</strong>`;
 }
 
 function realCurrency(value) {
@@ -75,7 +79,7 @@ if (typeof document !== 'undefined') {
     installButton.hidden = !visible || standalone;
   }
 
-  setInstallButton(true);
+  setInstallButton(false);
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
@@ -122,12 +126,31 @@ if (typeof document !== 'undefined') {
     document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#080e17' : '#0b1725');
     requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('theme-switching')));
   }
-  try { setTheme(localStorage.getItem('giro-estoque-theme')); } catch { setTheme('light'); }
+  try { setTheme(localStorage.getItem('giro-estoque-theme') ?? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); } catch { setTheme('light'); }
   function setDensity(compact) {
     document.documentElement.dataset.density = compact ? 'compact' : 'comfortable';
     el('#density-toggle').setAttribute('aria-pressed', String(compact));
   }
-  try { setDensity(localStorage.getItem('controle-estoque-density') === 'compact'); } catch { setDensity(false); }
+  const WIDE_DESKTOP = 1366;
+  try {
+    const savedDensity = localStorage.getItem('controle-estoque-density');
+    setDensity(savedDensity ? savedDensity === 'compact' : window.innerWidth >= WIDE_DESKTOP);
+  } catch { setDensity(window.innerWidth >= WIDE_DESKTOP); }
+  function setStripedRows(striped) {
+    document.documentElement.dataset.rows = striped ? 'striped' : 'plain';
+    el('#stripe-toggle').setAttribute('aria-pressed', String(striped));
+  }
+  try { setStripedRows(localStorage.getItem('controle-estoque-rows') === 'striped'); } catch { setStripedRows(false); }
+  function setProgress(value) {
+    const bar = el('#progress');
+    bar.hidden = value === null;
+    bar.classList.toggle('is-indeterminate', value === 'busy');
+    if (typeof value === 'number') {
+      const percent = Math.round(Math.min(1, Math.max(0, value)) * 100);
+      bar.setAttribute('aria-valuenow', String(percent));
+      el('#progress-bar').style.width = `${percent}%`;
+    } else bar.removeAttribute('aria-valuenow');
+  }
   function message(text, type = '') {
     el('#message').textContent = text;
     el('#message').className = text ? `message${type ? ` ${type}` : ''}` : '';
@@ -155,38 +178,40 @@ if (typeof document !== 'undefined') {
       }));
     } catch { /* Os filtros permanecem válidos até fechar a página. */ }
   }
+  const desktopQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)') : null;
   function setSearchExpanded(expanded) {
+    expanded = expanded || Boolean(desktopQuery?.matches);
     el('#search-control').classList.toggle('is-expanded', expanded);
     el('#search-toggle').setAttribute('aria-expanded', String(expanded));
     el('#search-expansion').inert = !expanded;
   }
   function resultColumns(analitico, giro) {
     if (analitico) return [
-      { label: 'DESCRIÇÃO', key: 'item' },
-      { label: 'CÓDIGO', key: 'sku' },
-      { label: 'LOCAL', key: 'localCode' },
-      { label: 'PRATELEIRA', key: 'shelfCode' },
-      { label: 'REPARTIÇÃO', key: 'partitionCode' },
-      { label: 'QTD. ATUAL', key: 'stock' },
-      { label: 'MÍN. / MÁX', key: 'minimum' },
-      { label: 'AÇÃO', key: 'action' },
-      { label: 'OUTROS DADOS', key: 'daysSince', sortLabel: 'dias desde a última movimentação' },
+      { label: 'Descrição', key: 'item' },
+      { label: 'Código', key: 'sku' },
+      { label: 'Local', key: 'localCode' },
+      { label: 'Prateleira', key: 'shelfCode' },
+      { label: 'Repartição', key: 'partitionCode' },
+      { label: 'Qtd. atual', key: 'stock' },
+      { label: 'Mín. / Máx', key: 'minimum' },
+      { label: 'Ação', key: 'action' },
+      { label: 'Dias', key: 'daysSince', sortLabel: 'dias desde a última movimentação' },
     ];
     if (giro) return [
-      { label: 'ITEM / FILIAL', key: 'item' },
-      { label: 'ESTOQUE (R$)', key: 'stockValue' },
-      { label: 'CONSUMO (R$)', key: 'consumption' },
-      { label: 'GIRO', key: 'coverage' },
-      { label: 'RECOMENDAÇÃO', key: 'action' },
-      { label: 'MOTIVO', key: 'reason' },
+      { label: 'Item / Filial', key: 'item' },
+      { label: 'Estoque (R$)', key: 'stockValue' },
+      { label: 'Consumo (R$)', key: 'consumption' },
+      { label: 'Giro', key: 'coverage' },
+      { label: 'Recomendação', key: 'action' },
+      { label: 'Motivo', key: 'reason' },
     ];
     return [
-      { label: 'ITEM', key: 'item' },
-      { label: 'ESTOQUE', key: 'stock' },
-      { label: 'VENDAS / 30D', key: 'sales' },
-      { label: 'COBERTURA', key: 'coverage' },
-      { label: 'RECOMENDAÇÃO', key: 'action' },
-      { label: 'MOTIVO', key: 'reason' },
+      { label: 'Item', key: 'item' },
+      { label: 'Estoque', key: 'stock' },
+      { label: 'Vendas / 30d', key: 'sales' },
+      { label: 'Cobertura', key: 'coverage' },
+      { label: 'Recomendação', key: 'action' },
+      { label: 'Motivo', key: 'reason' },
     ];
   }
   function columnClass(key) {
@@ -211,15 +236,8 @@ if (typeof document !== 'undefined') {
       ? `Campos mais frequentes: ${quality.fields.map(({ field, count }) => `${field} (${count})`).join(' · ')}.`
       : 'Abra “Outros dados” ou “Motivo” para localizar o problema.';
   }
-  function renderHiddenContext(hiddenCount) {
-    const panel = el('#hidden-context');
-    panel.hidden = !isAnaliticoMode() || hiddenCount === 0;
-    if (panel.hidden) return;
-    const included = el('#show-hidden').checked;
-    const subject = hiddenCount === 1 ? 'item ocultado' : 'itens ocultados';
-    const inclusion = hiddenCount === 1 ? 'está incluído' : 'estão incluídos';
-    el('#hidden-context-text').textContent = `${hiddenCount.toLocaleString('pt-BR')} ${subject} pelas regras${included ? ` ${inclusion} no painel.` : '.'}`;
-    el('#toggle-hidden-context').textContent = included ? 'Ocultar novamente' : 'Exibir também';
+  function renderHiddenToggle(hiddenCount) {
+    el('#hidden-toggle-text').textContent = `Mostrar itens ocultos (${hiddenCount.toLocaleString('pt-BR')})`;
   }
   function setConfigExpanded(expanded) {
     el('#config-grid').hidden = !expanded;
@@ -251,7 +269,6 @@ if (typeof document !== 'undefined') {
   }
   function renderSettings() {
     el('#criteria-panel').hidden = isAnaliticoMode();
-    el('.config-grid').classList.toggle('single-panel', isAnaliticoMode());
     if (isAnaliticoMode()) return;
     const giro = isGiroMode();
     const settings = state.settings[giro ? 'giro' : 'generic'];
@@ -267,11 +284,18 @@ if (typeof document !== 'undefined') {
     });
   }
 
+  let optionalFieldsOpen = false;
   function renderMapping() {
     const headers = currentSheet().rows[currentSheet().headerRow] || [];
     const required = new Set(requiredKeys());
-    el('#mapping').innerHTML = `<label class="sheet-select">Aba<select id="sheet-select">${state.sheets.map((sheet, i) => `<option value="${i}" ${i === state.sheet ? 'selected' : ''}>${escapeHtml(sheet.name)}</option>`).join('')}</select></label>` + fields.map(field => `<label>${field.label}${required.has(field.key) ? ' <span class="required">*</span>' : ''}<select data-map="${field.key}"><option value="-1">Não selecionar</option>${headers.map((header, i) => `<option value="${i}" ${state.mapping[field.key] === i ? 'selected' : ''}>${escapeHtml(header || `Coluna ${i + 1}`)}</option>`).join('')}</select></label>`).join('');
-    el('#mapping').insertAdjacentHTML('afterbegin', '<label>Tipo de análise<select id="analysis-mode"><option value="auto">Automático</option><option value="generic">Estoque e vendas</option><option value="giro">Giro por valor de consumo</option><option value="analitico">Analítico</option></select></label><label>Formato dos números em texto<select id="number-format"><option value="pt-BR">Brasileiro: 1.234,56</option><option value="en-US">Internacional: 1,234.56</option></select></label>');
+    const fieldLabel = field => `<span class="field-label">${field.label}${required.has(field.key) ? ' <span class="required" title="Obrigatório">*</span>' : ''}</span>`;
+    const fieldSelect = field => `<label>${fieldLabel(field)}<select data-map="${field.key}"><option value="-1">Não selecionar</option>${headers.map((header, i) => `<option value="${i}" ${state.mapping[field.key] === i ? 'selected' : ''}>${escapeHtml(header || `Coluna ${i + 1}`)}</option>`).join('')}</select></label>`;
+    const optional = fields.filter(field => !required.has(field.key));
+    el('#mapping').innerHTML = `<label class="sheet-select"><span class="field-label">Aba</span><select id="sheet-select">${state.sheets.map((sheet, i) => `<option value="${i}" ${i === state.sheet ? 'selected' : ''}>${escapeHtml(sheet.name)}</option>`).join('')}</select></label>`
+      + fields.filter(field => required.has(field.key)).map(fieldSelect).join('')
+      + `<details class="optional-fields"${optionalFieldsOpen ? ' open' : ''}><summary>Campos opcionais (${optional.length})</summary><div class="mapping-grid">${optional.map(fieldSelect).join('')}</div></details>`;
+    el('#mapping').insertAdjacentHTML('afterbegin', '<label><span class="field-label">Tipo de análise</span><select id="analysis-mode"><option value="auto">Automático</option><option value="generic">Estoque e vendas</option><option value="giro">Giro por valor de consumo</option><option value="analitico">Analítico</option></select></label><label><span class="field-label">Formato dos números em texto</span><select id="number-format"><option value="pt-BR">Brasileiro: 1.234,56</option><option value="en-US">Internacional: 1,234.56</option></select></label>');
+    el('.optional-fields').addEventListener('toggle', event => { optionalFieldsOpen = event.target.open; });
     el('#analysis-mode').value = state.mode;
     el('#number-format').value = state.numberFormat;
     el('#analysis-mode').addEventListener('change', event => {
@@ -301,8 +325,8 @@ if (typeof document !== 'undefined') {
       select.value = state[stateKey];
       select.disabled = values.length === 0;
     };
-    update('#shelf-filter', 'shelfCode', 'shelfFilter', localRows, 'Todas as prateleiras');
-    update('#partition-filter', 'partitionCode', 'partitionFilter', localRows.filter(row => matchesPosition(row, { shelf: state.shelfFilter })), 'Todas as repartições');
+    update('#shelf-filter', 'shelfCode', 'shelfFilter', localRows, 'Todas');
+    update('#partition-filter', 'partitionCode', 'partitionFilter', localRows.filter(row => matchesPosition(row, { shelf: state.shelfFilter })), 'Todas');
   }
 
   async function refresh({ reanalyze = true } = {}) {
@@ -312,9 +336,9 @@ if (typeof document !== 'undefined') {
     const giro = !analitico && isGiroMode();
     const required = new Set(requiredKeys());
     const missing = fields.filter(field => required.has(field.key) && !isMapped(field.key));
-    if (missing.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message(`Selecione as colunas: ${missing.map(field => field.label).join(', ')}.`, 'error'); return; }
+    if (missing.length) { state.results = []; el('#results-section').hidden = true; el('#total-value').hidden = true; setConfigExpanded(true); message(`Selecione as colunas: ${missing.map(field => field.label).join(', ')}.`, 'error'); return; }
     const selected = fields.map(field => state.mapping[field.key]).filter(value => value >= 0);
-    if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', 'error'); return; }
+    if (new Set(selected).size !== selected.length) { state.results = []; el('#results-section').hidden = true; el('#total-value').hidden = true; setConfigExpanded(true); message('Cada dado deve usar uma coluna diferente.', 'error'); return; }
     if (reanalyze) {
       const rows = dataRows();
       const mapping = { ...state.mapping };
@@ -329,10 +353,13 @@ if (typeof document !== 'undefined') {
       const analyzed = await processInChunks(rows, analyzeChunk, {
         firstRow: currentSheet().headerRow + 2,
         onProgress: rows.length > 1000 ? (processed, total) => {
-          if (run === refreshRun) message(`Analisando ${processed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} linhas...`);
+          if (run !== refreshRun) return;
+          message(`Analisando ${processed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} linhas...`);
+          setProgress(processed / total);
         } : undefined,
       });
       if (run !== refreshRun) return;
+      setProgress(null);
       state.allResults = analyzed;
     }
     state.results = analitico && !el('#show-hidden').checked ? state.allResults.filter(row => !row.hidden) : state.allResults;
@@ -343,7 +370,7 @@ if (typeof document !== 'undefined') {
     state.locationFilter = previousLocation
       ? locationValues.find(value => normalizeLocalKey(value) === previousLocation) ?? ''
       : '';
-    el('#location-filter').innerHTML = '<option value="">Todos os locais</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+    el('#location-filter').innerHTML = '<option value="">Todos</option>' + locationValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
     el('#location-filter').value = state.locationFilter;
     updatePositionFilters();
 
@@ -369,6 +396,9 @@ if (typeof document !== 'undefined') {
       shelfFilter: state.shelfFilter,
       partitionFilter: state.partitionFilter,
     });
+    const totalMarkup = buildTotalMarkup({ summaryAllResults, locationFilter: state.locationFilter, locationTotal, shelfFilter: state.shelfFilter, partitionFilter: state.partitionFilter });
+    el('#total-value').innerHTML = totalMarkup;
+    el('#total-value').hidden = !totalMarkup;
     el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + availableActions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
     el('#filter').value = availableActions.includes(previousFilter) ? previousFilter : '';
     el('#filter').setAttribute('aria-label', 'Filtrar ação');
@@ -380,7 +410,7 @@ if (typeof document !== 'undefined') {
     }
     renderTableHead();
     renderDataQuality(summaryResults);
-    renderHiddenContext(hiddenCount);
+    renderHiddenToggle(hiddenCount);
     message('');
     renderResults();
     persistFilters();
@@ -457,7 +487,7 @@ if (typeof document !== 'undefined') {
   }
   function detailsHtml(reason, row) {
     if (!reason) return '<span class="no-details">—</span>';
-    return `<button type="button" class="discreet-button details-button" data-detail-row="${row.row}" aria-haspopup="dialog">Ver detalhes</button>`;
+    return `<button type="button" class="icon-button details-button" data-detail-row="${row.row}" aria-haspopup="dialog" aria-label="Ver detalhes" title="Ver detalhes">${svgIcon('chevronRight')}</button>`;
   }
   function codeHtml(code) {
     const value = String(code ?? '');
@@ -469,12 +499,32 @@ if (typeof document !== 'undefined') {
     const panel = el('#item-panel');
     if (panel.open) panel.close();
   }
-  function openItemPanel(row, trigger) {
-    panelTrigger = trigger;
+  let panelRow = null;
+  function fillItemPanel(row) {
+    panelRow = row;
+    el('#result-rows').querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
+    el(`#result-rows tr[data-row="${row.row}"]`)?.classList.add('is-selected');
     const identity = [stockLocation(row) && `Local ${stockLocation(row)}`, row.shelfCode && `Prateleira ${row.shelfCode}`, row.partitionCode && `Repartição ${row.partitionCode}`].filter(Boolean).join(' · ');
     el('#item-panel-content').innerHTML = `<strong class="panel-item-name">${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${row.sku ? `<div class="panel-item-code"><span>Código</span>${codeHtml(row.sku)}</div>` : ''}${identity ? `<p class="panel-item-location">${escapeHtml(identity)}</p>` : ''}${detailFields(row.reason, row)}`;
-    el('#item-panel').showModal();
+    const neighbours = detailRows();
+    const index = neighbours.indexOf(row);
+    el('#item-panel-prev').disabled = index <= 0;
+    el('#item-panel-next').disabled = index < 0 || index >= neighbours.length - 1;
+  }
+  function detailRows() { return state.pageRows.filter(row => row.reason); }
+  function openItemPanel(row, trigger) {
+    panelTrigger = trigger;
+    fillItemPanel(row);
+    if (!el('#item-panel').open) el('#item-panel').showModal();
     el('#item-panel-close').focus();
+  }
+  function stepItemPanel(direction) {
+    const rows = detailRows();
+    const next = rows[rows.indexOf(panelRow) + direction];
+    if (!next) return;
+    panelTrigger = el(`[data-detail-row="${next.row}"]`) ?? panelTrigger;
+    fillItemPanel(next);
+    panelTrigger?.scrollIntoView?.({ block: 'nearest' });
   }
   async function copyCode(button) {
     const code = button.dataset.copyCode;
@@ -560,12 +610,13 @@ if (typeof document !== 'undefined') {
     const page = paginate(filtered, state.page, state.pageSize);
     state.page = page.page;
     const { pageCount, start, rows: visible } = page;
+    state.pageRows = visible;
     el('#result-rows').innerHTML = visible.length ? visible.map(row => {
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        return `<tr class="${row.hidden ? 'hidden-item' : ''}${row.actions.some(urgentAction) ? ' urgent-row' : ''}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
+        return `<tr data-row="${row.row}" class="${row.hidden ? 'hidden-item' : ''}${row.actions.some(urgentAction) ? ' urgent-row' : ''}${row.reason ? ' has-details' : ''}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`;
       }
-      return `<tr class="${row.hidden ? 'hidden-item' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
+      return `<tr data-row="${row.row}" class="${row.hidden ? 'hidden-item' : ''}${row.reason ? ' has-details' : ''}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`;
     }).join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
     el('#result-rows').querySelectorAll('tr').forEach(tr => {
       if (tr.querySelector('.empty-row')) return;
@@ -677,6 +728,7 @@ if (typeof document !== 'undefined') {
     if (!file) return;
     const run = ++importRun;
     message('Lendo planilha...');
+    setProgress('busy');
     upload.setAttribute('aria-busy', 'true');
     upload.classList.add('loading');
     try {
@@ -706,14 +758,14 @@ if (typeof document !== 'undefined') {
       state.fileName = file.name;
       state.importedAt = new Date();
       setConfigExpanded(false);
-      el('#file-name').textContent = file.name;
       el('#workspace').hidden = false;
       el('.shell').classList.add('has-data');
       renderImportContext(); renderMapping(); renderSettings(); await refresh();
     } catch (error) { if (run === importRun) message(error.message || 'Não foi possível abrir o arquivo.', 'error'); }
-    finally { if (run === importRun) { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); } }
+    finally { if (run === importRun) { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); setProgress(null); } }
   }
 
+  el('#replace-file').addEventListener('click', () => el('#file-input').click());
   el('#file-input').addEventListener('change', event => { const file = event.target.files[0]; event.target.value = ''; loadFile(file); });
   const upload = el('#upload-card');
   const fileButton = upload.querySelector('.primary-button');
@@ -722,9 +774,26 @@ if (typeof document !== 'undefined') {
     event.preventDefault();
     el('#file-input').click();
   });
-  upload.addEventListener('dragover', event => { event.preventDefault(); upload.classList.add('dragging'); });
-  upload.addEventListener('dragleave', () => upload.classList.remove('dragging'));
-  upload.addEventListener('drop', event => { event.preventDefault(); upload.classList.remove('dragging'); loadFile(event.dataTransfer.files[0]); });
+  const shell = el('.shell');
+  const draggingFiles = event => [...(event.dataTransfer?.types ?? [])].includes('Files');
+  shell.addEventListener('dragover', event => {
+    if (!draggingFiles(event)) return;
+    event.preventDefault();
+    upload.classList.add('dragging');
+    shell.classList.add('dragging-file');
+  });
+  shell.addEventListener('dragleave', event => {
+    if (event.relatedTarget && shell.contains(event.relatedTarget)) return;
+    upload.classList.remove('dragging');
+    shell.classList.remove('dragging-file');
+  });
+  shell.addEventListener('drop', event => {
+    if (!draggingFiles(event)) return;
+    event.preventDefault();
+    upload.classList.remove('dragging');
+    shell.classList.remove('dragging-file');
+    loadFile(event.dataTransfer.files[0]);
+  });
   el('#search').addEventListener('input', () => {
     state.page = 1;
     cancelAnimationFrame(searchRenderFrame);
@@ -732,7 +801,7 @@ if (typeof document !== 'undefined') {
   });
   el('#search-toggle').addEventListener('click', () => {
     const expanded = el('#search-toggle').getAttribute('aria-expanded') === 'true';
-    if (expanded && !el('#search').value.trim()) setSearchExpanded(false);
+    if (expanded && !el('#search').value.trim() && !desktopQuery?.matches) setSearchExpanded(false);
     else {
       setSearchExpanded(true);
       el('#search').focus({ preventScroll: true });
@@ -772,7 +841,23 @@ if (typeof document !== 'undefined') {
     setDensity(compact);
     try { localStorage.setItem('controle-estoque-density', compact ? 'compact' : 'comfortable'); } catch { /* A escolha vale até fechar a página. */ }
   });
+  el('#stripe-toggle').addEventListener('click', () => {
+    const striped = document.documentElement.dataset.rows !== 'striped';
+    setStripedRows(striped);
+    try { localStorage.setItem('controle-estoque-rows', striped ? 'striped' : 'plain'); } catch { /* A escolha vale até fechar a página. */ }
+  });
   el('#config-toggle').addEventListener('click', () => setConfigExpanded(el('#config-grid').hidden));
+  document.addEventListener('keydown', event => {
+    if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target.closest?.('input, select, textarea, [contenteditable]') || el('#workspace').hidden || el('#item-panel').open) return;
+    event.preventDefault();
+    setSearchExpanded(true);
+    el('#search').focus({ preventScroll: true });
+  });
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(() => document.documentElement.style.setProperty('--tools-height', `${el('.table-tools').offsetHeight}px`)).observe(el('.table-tools'));
+  }
+  desktopQuery?.addEventListener?.('change', () => setSearchExpanded(Boolean(el('#search').value.trim())));
   el('#show-hidden').addEventListener('change', () => {
     state.page = 1;
     if (!el('#show-hidden').checked) state.hiddenOnly = false;
@@ -794,7 +879,9 @@ if (typeof document !== 'undefined') {
   el('#result-rows').addEventListener('click', event => {
     const copy = event.target.closest('[data-copy-code]');
     if (copy) { copyCode(copy); return; }
-    const trigger = event.target.closest('[data-detail-row]');
+    if (event.target.closest('summary, a, input, select')) return;
+    const line = event.target.closest('tr[data-row]');
+    const trigger = event.target.closest('[data-detail-row]') ?? line?.querySelector('[data-detail-row]');
     if (!trigger) return;
     const row = state.results.find(item => String(item.row) === trigger.dataset.detailRow);
     if (row) openItemPanel(row, trigger);
@@ -804,21 +891,25 @@ if (typeof document !== 'undefined') {
     if (copy) copyCode(copy);
   });
   el('#item-panel-close').addEventListener('click', closeItemPanel);
+  el('#item-panel-prev').addEventListener('click', () => stepItemPanel(-1));
+  el('#item-panel-next').addEventListener('click', () => stepItemPanel(1));
+  el('#item-panel').addEventListener('keydown', event => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (event.target.closest?.('input, select, textarea')) return;
+    event.preventDefault();
+    stepItemPanel(event.key === 'ArrowDown' ? 1 : -1);
+  });
   el('#item-panel').addEventListener('click', event => {
     if (event.target !== el('#item-panel')) return;
     const bounds = event.target.getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeItemPanel();
   });
   el('#item-panel').addEventListener('close', () => {
+    el('#result-rows').querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
     if (panelTrigger?.isConnected) panelTrigger.focus();
     else el('#search').focus();
     panelTrigger = null;
-  });
-  el('#toggle-hidden-context').addEventListener('click', () => {
-    state.page = 1;
-    state.hiddenOnly = false;
-    el('#show-hidden').checked = !el('#show-hidden').checked;
-    refresh({ reanalyze: false });
+    panelRow = null;
   });
   el('#summary').addEventListener('click', event => {
     const card = event.target.closest('.summary-filter');
@@ -869,9 +960,12 @@ if (typeof document !== 'undefined') {
       else exportCsv();
     } catch (error) { message(error.message || 'Não foi possível exportar os itens.', true); }
   }));
-  document.addEventListener('click', event => { if (!el('#export-menu').contains(event.target)) el('#export-menu').open = false; });
+  document.addEventListener('click', event => {
+    if (!el('#export-menu').contains(event.target)) el('#export-menu').open = false;
+  });
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !el('#export-menu').open) return;
+    if (event.key !== 'Escape') return;
+    if (!el('#export-menu').open) return;
     el('#export-menu').open = false;
     el('#export-menu summary').focus();
   });

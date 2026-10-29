@@ -1,0 +1,8 @@
+/* Ponto de entrada do CSS. A ordem das camadas é a ordem da cascata. */
+@import './fonts.css';
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './layout.css';
+@import './table.css';
+@import './print.css';

@@ -24,7 +24,12 @@ for (const width of [768, 1024, 1366, 1920]) {
     const local = await page.locator('#location-filter').boundingBox();
     const searchToggle = await page.locator('#search-toggle').boundingBox();
     expect(Math.abs(searchToggle.y - exportButton.y)).toBeLessThan(1);
-    expect(local.y).toBeGreaterThan(exportButton.y + exportButton.height);
+    if (width >= 1360) {
+      // Pesquisa, filtros e ações dividem a mesma linha e a mesma base.
+      expect(Math.abs((local.y + local.height) - (exportButton.y + exportButton.height))).toBeLessThan(1);
+    } else {
+      expect(local.y).toBeGreaterThan(exportButton.y + exportButton.height);
+    }
     if (width >= 1024) {
       for (const selector of ['#shelf-filter', '#partition-filter', '#filter']) {
         const control = await page.locator(selector).boundingBox();
@@ -38,8 +43,7 @@ for (const width of [768, 1024, 1366, 1920]) {
       const context = document.createElement('canvas').getContext('2d');
       context.font = style.font;
       const text = context.measureText(select.selectedOptions[0].textContent).width;
-      return select.clientWidth >= text + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + 24
-        && parseFloat(style.borderRadius) >= 100;
+      return select.clientWidth >= text + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + 2;
     }))).toBe(true);
     for (const theme of ['light', 'dark']) {
       for (const density of ['comfortable', 'compact']) {
@@ -63,12 +67,7 @@ for (const width of [768, 1024, 1366, 1920]) {
               const rect = badge.getBoundingClientRect();
               return ['.badge-label', '.badge-icon'].every(selector => inside(badge.querySelector(selector).getBoundingClientRect(), rect));
             });
-            const detailsFit = [...document.querySelectorAll('.details-button')].every(control => {
-              const button = control.getBoundingClientRect();
-              const range = document.createRange();
-              range.selectNodeContents(control.firstChild);
-              return range.getClientRects().length === 1 && inside(button, control.closest('td').getBoundingClientRect());
-            });
+            const detailsFit = [...document.querySelectorAll('.details-button')].every(control => inside(control.getBoundingClientRect(), control.closest('td').getBoundingClientRect()));
             return scroll.scrollWidth <= scroll.clientWidth + 1 && wholeHeaders && badgesFit && detailsFit;
           })).toBe(true);
           if (open) {
@@ -140,7 +139,8 @@ test('copia códigos com zeros à esquerda e confirma sucesso na tabela e no pai
 });
 
 test('pesquisa expande ao clicar, recolhe vazia e mantém buscas ativas após perder foco e recarregar', async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 900 });
+  // Abaixo de 1024 px a pesquisa continua recolhida; no desktop ela fica sempre à vista (teste seguinte).
+  await page.setViewportSize({ width: 900, height: 900 });
   await page.goto('./');
   await upload(page);
   const toggle = page.locator('#search-toggle');
@@ -194,7 +194,7 @@ test('combina filtros de localização, exporta todos os filtrados e lembra o ta
   await page.locator('#shelf-filter').selectOption('A');
   await page.locator('#partition-filter').selectOption('I');
   await expect(page.locator('#filtered-count')).toHaveText('15 de 61 itens');
-  await expect(page.locator('#summary .local-total strong')).toHaveText('R$ 150,00');
+  await expect(page.locator('#total-value strong')).toHaveText('R$ 150,00');
   await expect(page.locator('#active-filters-text')).toContainText('Prateleira A');
   await expect(page.locator('#active-filters-text')).toContainText('Repartição I');
   const download = page.waitForEvent('download');
@@ -216,6 +216,81 @@ test('combina filtros de localização, exporta todos os filtrados e lembra o ta
   await expect(page.locator('#page-size')).toHaveValue('100');
   await expect(page.locator('#result-rows tr')).toHaveCount(61);
   await page.locator('#location-filter').selectOption('7');
-  await expect(page.locator('#shelf-filter option')).toHaveText(['Todas as prateleiras', 'B']);
-  await expect(page.locator('#partition-filter option')).toHaveText(['Todas as repartições', 'II']);
+  await expect(page.locator('#shelf-filter option')).toHaveText(['Todas', 'B']);
+  await expect(page.locator('#partition-filter option')).toHaveText(['Todas', 'II']);
+});
+
+test('desktop: pesquisa sempre visível, atalho "/" e Esc não a recolhem', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  const search = page.getByRole('searchbox', { name: 'Pesquisa' });
+  await expect(page.locator('#search-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(search).toBeVisible();
+  await page.locator('#density-toggle').focus();
+  await page.keyboard.press('/');
+  await expect(search).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(search).toBeVisible();
+  await page.locator('#search-toggle').click();
+  await expect(search).toBeFocused();
+});
+
+test('desktop: densidade compacta por padrão em 1366 px e linha com duas linhas no modo padrão', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas\nA;001;50;30\nB;002;5;30') });
+  await expect(page.locator('#result-rows tr')).toHaveCount(2);
+  await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
+  const cell = page.locator('#result-rows td.col-descricao').first();
+  const lines = await cell.evaluate(td => ({ strong: td.querySelector('strong').getBoundingClientRect(), code: td.querySelector('.item-code').getBoundingClientRect(), small: td.querySelector('small').getBoundingClientRect() }));
+  expect(Math.abs(lines.code.y - lines.small.y)).toBeLessThan(8);
+  expect(lines.code.y).toBeGreaterThan(lines.strong.y);
+});
+
+test('desktop: resumo ocupa a linha inteira e o cabeçalho do painel é único', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas;Valor do estoque\nA;001;50;30;10\nB;002;5;30;20') });
+  await expect(page.locator('#result-rows tr')).toHaveCount(2);
+  const gap = await page.locator('#summary').evaluate(grid => {
+    const bounds = grid.getBoundingClientRect();
+    const first = grid.children[0].getBoundingClientRect();
+    const last = [...grid.children].filter(card => Math.abs(card.getBoundingClientRect().y - first.y) < 4).at(-1).getBoundingClientRect();
+    return Math.abs(bounds.right - last.right);
+  });
+  expect(gap).toBeLessThan(2);
+  await expect(page.getByText('Preparar análise')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Trocar arquivo' })).toBeVisible();
+  await expect(page.locator('#upload-card')).not.toBeVisible();
+});
+
+test('desktop: cabeçalho da tabela e rodapé permanecem fixos durante a rolagem', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 700 });
+  await page.goto('./');
+  await upload(page);
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await expect.poll(() => page.evaluate(() => {
+    const tools = document.querySelector('.table-tools').getBoundingClientRect();
+    const head = document.querySelector('#table-head th').getBoundingClientRect();
+    const footer = document.querySelector('#table-footer').getBoundingClientRect();
+    return Math.abs(head.top - tools.bottom) < 2 && Math.abs(footer.bottom - innerHeight) < 2;
+  })).toBe(true);
+});
+
+test('desktop: clicar na linha abre o painel e as setas navegam entre itens', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  await page.locator('#result-rows tr').nth(1).locator('td.col-local').click();
+  await expect(page.locator('#item-panel')).toBeVisible();
+  await expect(page.locator('.panel-item-name')).toHaveText('Item 01');
+  await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(1);
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.panel-item-name')).toHaveText('Item 02');
+  await page.locator('#item-panel-prev').click();
+  await expect(page.locator('.panel-item-name')).toHaveText('Item 01');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#item-panel')).not.toBeVisible();
+  await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(0);
 });

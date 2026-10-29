@@ -131,10 +131,15 @@ test('o evento de instalação do app não exibe mensagem de sucesso', async t =
   assert.equal(message.className, 'message');
 });
 
-test('o botão de instalar fica visível quando o app ainda não foi instalado', async t => {
+test('o botão de instalar só aparece quando o navegador oferece a instalação', async t => {
   const app = await boot(t);
   const installButton = app.el('#install-app');
+  assert.equal(installButton.hidden, true);
+  const view = installButton.ownerDocument.defaultView;
+  view.dispatchEvent(new view.Event('beforeinstallprompt', { cancelable: true }));
   assert.equal(installButton.hidden, false);
+  view.dispatchEvent(new view.Event('appinstalled'));
+  assert.equal(installButton.hidden, true);
 });
 
 test('modo Analítico mostra as nove colunas fixas com código, local e demais dados separados', async t => {
@@ -142,7 +147,7 @@ test('modo Analítico mostra as nove colunas fixas com código, local e demais d
   await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nPeça A;001;298;5;10;20;200;Acima de 90;Bloqueado por saldo;Bloqueado');
   assert.equal(app.el('#result-table').className, 'analitico-table');
   assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
-    ['DESCRIÇÃO', 'CÓDIGO', 'LOCAL', 'PRATELEIRA', 'REPARTIÇÃO', 'QTD. ATUAL', 'MÍN. / MÁX', 'AÇÃO', 'OUTROS DADOS']);
+    ['Descrição', 'Código', 'Local', 'Prateleira', 'Repartição', 'Qtd. atual', 'Mín. / Máx', 'Ação', 'Dias']);
   const cells = [...app.el('#result-rows').querySelector('tr').children].map(node => node.textContent);
   assert.equal(cells.length, 9);
   assert.equal(cells[0], 'Peça A');
@@ -154,7 +159,8 @@ test('modo Analítico mostra as nove colunas fixas com código, local e demais d
   assert.equal(cells[5], '5');
   assert.equal(cells[6], '10 / 20');
   assert.match(cells[7], /ZERAR MIN\/MAX/);
-  assert.equal(cells[8], 'Ver detalhes');
+  assert.equal(cells[8], '200 dias');
+  assert.equal(app.el('#result-rows .details-button').getAttribute('aria-label'), 'Ver detalhes');
   app.change('#search', 'inexistente', 'input');
   await waitFor(() => app.el('#result-rows').textContent.includes('Nenhum item encontrado'));
   assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '9');
@@ -175,7 +181,7 @@ test('fora do Analítico a tabela preserva as seis colunas padrão', async t => 
   await app.csv('Produto;Codigo;Estoque;Vendas\nA;1;5;30');
   assert.equal(app.el('#result-table').className, 'standard-table');
   assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
-    ['ITEM', 'ESTOQUE', 'VENDAS / 30D', 'COBERTURA', 'RECOMENDAÇÃO', 'MOTIVO']);
+    ['Item', 'Estoque', 'Vendas / 30d', 'Cobertura', 'Recomendação', 'Motivo']);
   assert.equal(app.el('#result-rows').querySelector('tr').children.length, 6);
 });
 
@@ -202,12 +208,28 @@ test('mantém filtros úteis, ordena colunas e restaura preferências na próxim
   assert.equal(app.el('#result-rows').querySelectorAll('tr').length, 1);
 });
 
-test('explica itens ocultos e permite incluí-los pelo aviso contextual', async t => {
+test('mostra a contagem de itens ocultos e permite incluí-los pelo checkbox', async t => {
   const app = await boot(t);
   await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nOculto;001;7;5;0;10;10;Item com Giro;Desbloqueado;Desbloqueado\nVisível;002;7;5;0;10;200;Item com Giro;Desbloqueado;Desbloqueado');
-  assert.equal(app.el('#hidden-context').hidden, false);
-  assert.match(app.el('#hidden-context-text').textContent, /1 item ocultado pelas regras/);
-  app.el('#toggle-hidden-context').click();
-  await waitFor(() => app.el('#show-hidden').checked && app.el('#filtered-count').textContent === '2 de 2 itens');
-  assert.match(app.el('#hidden-context-text').textContent, /incluído no painel/);
+  assert.equal(app.el('#hidden-toggle').hidden, false);
+  assert.match(app.el('#hidden-toggle-text').textContent, /\(1\)/);
+  assert.equal(app.el('#hidden-context'), null);
+  app.el('#show-hidden').click();
+  await waitFor(() => app.el('#filtered-count').textContent === '2 de 2 itens');
+});
+
+test('o total do estoque fica na barra do painel e a barra de andamento some ao terminar', async t => {
+  const app = await boot(t);
+  const bar = app.el('#progress');
+  assert.equal(bar.hidden, true);
+  const states = [];
+  const view = bar.ownerDocument.defaultView;
+  new view.MutationObserver(() => states.push(bar.hidden)).observe(bar, { attributes: true, attributeFilter: ['hidden'] });
+  const rows = Array.from({ length: 1200 }, (_, i) => `Item ${i};${i};5;30;10`).join('\n');
+  await app.csv(`Produto;Codigo;Estoque;Vendas;Valor do estoque\n${rows}`);
+  assert.ok(states.includes(false), 'a barra deve aparecer durante a leitura');
+  assert.equal(bar.hidden, true);
+  assert.equal(app.el('#total-value').hidden, false);
+  assert.match(app.el('#total-value').textContent, /Valor total do estoque/);
+  assert.equal(app.el('#summary .local-total'), null);
 });

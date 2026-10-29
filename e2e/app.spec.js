@@ -20,6 +20,7 @@ test('build funciona em subpasta, mantém critérios e gera Excel/CSV completos'
   await expect(page.locator('#result-rows')).toContainText('Linha 3');
   await page.getByRole('button', { name: 'Abrir configuração' }).click();
   await page.locator('#safety-days').fill('50');
+  await page.locator('.optional-fields summary').click();
   await page.locator('[data-map="sku"]').selectOption('-1');
   await expect(page.locator('#safety-days')).toHaveValue('50');
   await page.locator('[data-map="sku"]').selectOption('1');
@@ -89,7 +90,7 @@ for (const width of [1024, 1366, 1920]) {
     await expect(page.locator('#mapping')).toBeVisible();
     const mapping = await page.locator('#mapping').boundingBox();
     const criteria = await page.locator('#criteria-panel').boundingBox();
-    expect(criteria.x).toBeGreaterThan(mapping.x);
+    expect(criteria.y).toBeGreaterThan(mapping.y);
     await page.screenshot({ path: `test-results/desktop-${width}-config.png`, fullPage: true });
     await page.getByRole('button', { name: 'Fechar configuração' }).click();
     await page.screenshot({ path: `test-results/desktop-${width}-results.png`, fullPage: true });
@@ -110,3 +111,29 @@ for (const width of [390, 768]) {
     await page.screenshot({ path: `test-results/responsive-${width}.png`, fullPage: true });
   });
 }
+
+test.describe('tema e zebrado', () => {
+  test.use({ colorScheme: 'dark' });
+  test('sem escolha salva, o tema segue o sistema e a escolha manual prevalece', async ({ page }) => {
+    await page.goto('./');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.locator('#theme-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  });
+});
+
+test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {
+  await page.goto('./');
+  await upload(page);
+  const stripe = page.locator('#stripe-toggle');
+  const second = page.locator('#result-rows tr').nth(1);
+  const plain = await second.evaluate(row => getComputedStyle(row).backgroundColor);
+  await stripe.click();
+  await expect(stripe).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => second.evaluate(row => getComputedStyle(row).backgroundColor)).not.toBe(plain);
+  await page.reload();
+  await upload(page);
+  await expect(page.locator('#stripe-toggle')).toHaveAttribute('aria-pressed', 'true');
+});

@@ -1,0 +1,357 @@
+/* Tabela de resultados.
+   Só divisores horizontais; texto à esquerda, números à direita.
+   A densidade vem de --cell-y (ver tokens.css). */
+
+.table-scroll {
+  max-height: 68vh;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+/* No desktop a página rola inteira, então o cabeçalho gruda abaixo da barra de ferramentas. */
+@media (min-width: 1024px) {
+  .table-panel .table-scroll {
+    max-height: none;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .table-panel .table-scroll th {
+    top: var(--tools-height, 0px);
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+#result-table {
+  min-width: 860px;
+  table-layout: fixed;
+}
+
+#result-table.analitico-table {
+  min-width: 0;
+}
+
+/* ── Cabeçalho ──────────────────────────────────────────────────────────────── */
+th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+
+.sort-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-transform: inherit;
+}
+
+.sort-button::after {
+  content: '↕';
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  letter-spacing: 0;
+}
+
+th[aria-sort="ascending"] .sort-button::after {
+  content: '↑';
+  color: var(--focus);
+}
+
+th[aria-sort="descending"] .sort-button::after {
+  content: '↓';
+  color: var(--focus);
+}
+
+.sort-button:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+/* ── Células ────────────────────────────────────────────────────────────────── */
+td {
+  padding: var(--cell-y) var(--s4);
+  border-top: 1px solid var(--line-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+tbody tr:first-child td {
+  border-top: 0;
+}
+
+/* Números e ações do lado direito, com cabeçalho alinhado à coluna. */
+.col-estoque,
+.col-consumo,
+.col-cobertura,
+.col-limites,
+.col-detalhes {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+th.col-estoque .sort-button,
+th.col-consumo .sort-button,
+th.col-cobertura .sort-button,
+th.col-limites .sort-button,
+th.col-detalhes .sort-button {
+  justify-content: flex-end;
+}
+
+.analitico-table td.col-estoque {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.analitico-table td.col-limites {
+  color: var(--text-muted);
+}
+
+td.col-codigo,
+td.col-local,
+td.col-prateleira,
+td.col-reparticao {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Larguras (layout fixo). A coluna final guarda os dias parados e o ícone de detalhes. */
+th.col-detalhes {
+  width: 64px;
+}
+
+.analitico-table th.col-detalhes {
+  width: 112px;
+}
+
+.analitico-table th.col-codigo { width: 8%; }
+.analitico-table th.col-local { width: 6%; }
+.analitico-table th.col-prateleira { width: 10%; }
+.analitico-table th.col-reparticao { width: 11%; }
+.analitico-table th.col-estoque { width: 8%; }
+.analitico-table th.col-limites { width: 9%; }
+.analitico-table th.col-acao { width: 19%; }
+
+.standard-table th.col-estoque { width: 13%; }
+.standard-table th.col-consumo { width: 13%; }
+.standard-table th.col-cobertura { width: 12%; }
+.standard-table th.col-acao { width: 20%; }
+
+@media (min-width: 1360px) {
+  .analitico-table th.col-codigo { width: 9%; }
+  .analitico-table th.col-local { width: 5%; }
+  .analitico-table th.col-prateleira { width: 9%; }
+  .analitico-table th.col-reparticao { width: 10%; }
+  .analitico-table th.col-estoque { width: 7%; }
+  .analitico-table th.col-limites { width: 9%; }
+  .analitico-table th.col-acao { width: 20%; }
+
+  .analitico-table .item-code {
+    flex-wrap: nowrap;
+  }
+}
+
+.cell-details {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s2);
+}
+
+.days {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+td.col-detalhes {
+  padding-inline: var(--s3);
+}
+
+/* ── Linhas ─────────────────────────────────────────────────────────────────── */
+#result-table tbody tr {
+  transition: background var(--dur) ease;
+}
+
+#result-table tbody tr.hidden-item {
+  background: var(--surface-2);
+}
+
+#result-table tbody tr.hidden-item td {
+  color: var(--text-muted);
+}
+
+/* Zebrado opcional (botão "Zebrado"). */
+html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-item):not(:hover):not(.is-selected) {
+  background: var(--surface-2);
+}
+
+#result-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+#result-table tbody tr.is-selected {
+  background: var(--surface-selected);
+}
+
+#result-table tbody tr.has-details {
+  cursor: pointer;
+}
+
+#result-table .urgent-row > td:first-child {
+  box-shadow: inset 3px 0 0 var(--danger-line);
+}
+
+.empty-row {
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  text-align: center;
+}
+
+.no-details {
+  color: var(--text-faint);
+}
+
+.hidden-indicator {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--neutral-bg);
+  color: var(--neutral-fg);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+/* ── Descrição do item ──────────────────────────────────────────────────────── */
+td.col-descricao strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+/* Modo padrão: código e linha de origem na mesma linha. */
+.standard-table td.col-descricao .item-code {
+  justify-content: flex-start;
+}
+
+.standard-table td.col-descricao small {
+  display: inline;
+  margin-left: var(--s1);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.standard-table td.col-descricao .item-code + small::before {
+  content: '· ';
+}
+
+.item-description summary {
+  list-style: none;
+  cursor: default;
+}
+
+.item-description summary::-webkit-details-marker {
+  display: none;
+}
+
+#result-table .item-description:not([open]) strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.item-description.is-expandable summary {
+  cursor: pointer;
+}
+
+.item-description.is-expandable summary::after {
+  content: 'Ver descrição completa';
+  display: block;
+  margin-top: 3px;
+  color: var(--text-faint);
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.item-description.is-expandable summary:hover::after,
+.item-description.is-expandable summary:focus-visible::after {
+  color: var(--focus);
+  text-decoration: underline;
+}
+
+.item-description.is-expandable[open] summary::after {
+  content: 'Recolher descrição';
+}
+
+.item-description summary:focus-visible {
+  border-radius: 3px;
+  outline-offset: 3px;
+}
+
+/* ── Badges dentro da tabela ────────────────────────────────────────────────── */
+#result-table .badge {
+  max-width: 100%;
+  white-space: normal;
+}
+
+#result-table .badge-label {
+  min-width: 0;
+}
+
+td .badge + .badge {
+  margin: var(--s1) 0 0 var(--s1);
+}
+
+/* ── Abaixo de 1024 px ──────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .analitico-table th.col-detalhes {
+    width: 56px;
+  }
+
+  .days {
+    display: none;
+  }
+
+  #result-table.analitico-table td,
+  #result-table.analitico-table .sort-button {
+    padding-inline: 6px;
+  }
+
+  #result-table.analitico-table th.col-prateleira .sort-button,
+  #result-table.analitico-table th.col-reparticao .sort-button {
+    flex-wrap: wrap;
+    padding-inline: 4px;
+    font-size: 10px;
+    letter-spacing: .02em;
+  }
+}

@@ -6,6 +6,7 @@ const paths = {
   sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
   arrowRight: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
   chevronDown: '<path d="m7 9 5 5 5-5"/>',
+  chevronRight: '<path d="m9 6 6 6-6 6"/>',
   chevronUp: '<path d="m7 15 5-5 5 5"/>',
   search: '<circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/>',
   check: '<path d="m5 12 4 4L19 6"/>',

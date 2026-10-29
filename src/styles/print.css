@@ -1,0 +1,77 @@
+/* Impressão / PDF: só o relatório #print-report é exibido. */
+#print-report {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #172332 !important;
+  }
+
+  .shell {
+    display: none !important;
+  }
+
+  .item-panel,
+  #copy-feedback {
+    display: none !important;
+  }
+
+  #print-report {
+    display: block !important;
+    font: 9px Arial, sans-serif;
+  }
+
+  #print-report h1 {
+    margin: 0 0 6px;
+    font-size: 20px;
+  }
+
+  #print-report p {
+    margin: 0 0 14px;
+    font-size: 11px;
+  }
+
+  #print-report table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  #print-report thead {
+    display: table-header-group;
+  }
+
+  #print-report tr {
+    break-inside: avoid;
+  }
+
+  #print-report th,
+  #print-report td {
+    padding: 5px;
+    border: 1px solid #d4dce3;
+    font-size: 8px;
+    line-height: 1.25;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  #print-report th {
+    position: static;
+    background: #e8edf1 !important;
+    color: #172332 !important;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    print-color-adjust: exact;
+  }
+}

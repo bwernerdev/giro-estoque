@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { actionCounts, dataIssueSummary, filterResults, locationOptions, paginate, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
-import { ANALITICO_ACTIONS, buildSummaryMarkup } from '../src/main.js';
+import { ANALITICO_ACTIONS, buildSummaryMarkup, buildTotalMarkup } from '../src/main.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -15,7 +15,7 @@ const rows = [
 test('estrutura da interface mantém controles e nomes acessíveis', () => {
   const dom = new JSDOM(renderApp());
   const document = dom.window.document;
-  assert.equal(document.querySelector('#search').placeholder, 'Buscar código ou descrição do item');
+  assert.equal(document.querySelector('#search').placeholder, 'Buscar item ou código');
   assert.match(document.querySelector('.brand-mark img').src, /favicon\.webp/);
   assert.equal(document.querySelector('.primary-button').getAttribute('tabindex'), '0');
   assert.equal(document.querySelector('#result-table caption').textContent, 'Resultados da análise de estoque');
@@ -26,7 +26,7 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.ok(document.querySelector('#filtered-count'));
   assert.equal(document.querySelector('.results-counter').getAttribute('aria-live'), 'polite');
   assert.equal(document.querySelector('label[for="location-filter"]'), null);
-  assert.equal(document.querySelector('#location-filter').closest('label').textContent.trim(), 'LocalTodos os locais');
+  assert.equal(document.querySelector('#location-filter').closest('label').textContent.trim(), 'LocalTodos');
   assert.equal(document.querySelector('#filter').closest('label').textContent.trim(), 'AçãoTodas as recomendações');
   assert.equal(document.querySelector('#pagination').getAttribute('aria-label'), 'Páginas de resultados');
 });
@@ -50,20 +50,19 @@ test('pesquisa somente trechos do código ou da descrição, ignorando caixa e a
   }
 });
 
-test('renderiza apenas um card de valor total do estoque e mantém a linha inferior como resumo', () => {
-  const actions = ANALITICO_ACTIONS;
-  const markup = buildSummaryMarkup({
-    summaryResults: [{ item: 'A' }, { item: 'B' }],
-    summaryAllResults: [{ item: 'A' }, { item: 'B' }, { item: 'C', hidden: true }],
-    actions,
-    locationFilter: '',
-    locationTotal: 44302.87,
-  });
-
-  assert.match(markup, /VALOR TOTAL DO ESTOQUE/);
-  assert.doesNotMatch(markup, /VALOR TOTAL DO ESTOQUE[\s\S]*VALOR TOTAL DO ESTOQUE/);
+test('o valor total do estoque aparece uma única vez, fora dos cartões do resumo', () => {
+  const summaryResults = [{ item: 'A' }, { item: 'B' }];
+  const summaryAllResults = [{ item: 'A' }, { item: 'B' }, { item: 'C', hidden: true }];
+  const markup = buildSummaryMarkup({ summaryResults, summaryAllResults, actions: ANALITICO_ACTIONS, locationFilter: '', locationTotal: 44302.87 });
+  assert.doesNotMatch(markup, /VALOR TOTAL/i);
   assert.match(markup, /ITENS NO PAINEL/);
-  assert.equal((markup.match(/summary-card/g) || []).length, 2);
+  assert.equal((markup.match(/summary-card/g) || []).length, 1);
+
+  const total = buildTotalMarkup({ summaryAllResults, locationFilter: '', locationTotal: 44302.87 });
+  assert.match(total, /Valor total do estoque/);
+  assert.match(total, /R\$\s?44\.302,87/);
+  assert.match(buildTotalMarkup({ summaryAllResults, locationFilter: '4', locationTotal: 10, shelfFilter: 'A' }), /na localização/);
+  assert.equal(buildTotalMarkup({ summaryAllResults: [], locationFilter: '', locationTotal: 0 }), '');
 });
 
 test('combina filtros exatos de local, prateleira e repartição, incluindo código zero', () => {
