@@ -63,6 +63,7 @@ const ACTION_PRIORITY = [
   'Planejar reposição',
   'DESBLOQUEAR',
   'ZERAR MIN/MAX',
+  'AJUSTAR MIN/MAX',
   'Reduzir compras',
   'Avaliar transferência',
   'Avaliar excesso',

@@ -230,6 +230,7 @@ input[type="checkbox"] {
   --tone-line: var(--success-line);
 }
 
+.ajustar-min-max,
 .avaliar-excesso,
 .avaliar-sem-giro,
 .avaliar-transferencia {

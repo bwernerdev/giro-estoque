@@ -32,7 +32,7 @@ const state = {
     giro: { shortDays: '30', excessDays: '90', longDays: '365' },
   },
 };
-export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'Sem ação definida', 'Verificar dados'];
+export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'AJUSTAR MIN/MAX', 'Sem ação definida', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -460,6 +460,7 @@ if (typeof document !== 'undefined') {
     if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return 'alert';
     if (normalized.includes('DESBLOQUEAR')) return 'unlock';
     if (normalized.includes('ZERAR')) return 'zero';
+    if (normalized.includes('AJUSTAR')) return 'adjust';
     if (normalized.includes('TRANSFERIR')) return 'transfer';
     if (normalized.includes('BLOQUEAR')) return 'block';
     if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return 'plus';

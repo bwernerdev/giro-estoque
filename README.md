@@ -38,6 +38,7 @@ Regras de ação fornecidas pelo usuário:
 - Se o item já está nos locais obsoletos **1** ou **298**, não é recomendada nova transferência. Para `Dif Dias >= 180`, `Qtde Atual > 0` e status **Desbloqueado**, a ação é **BLOQUEAR**. Se `Id Bloqueio` já indicar bloqueio, essa ação não é repetida.
 - `Dif Dias >= 0`, `Qtde Atual = 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: **DESBLOQUEAR**.
 - `Qtde Atual > 0`, pelo menos um entre `Qnt Min` e `Qnt Max` diferente de zero, `Cd Local Estoque = 1` ou `298`, `Dif Dias >= 180` e `Id Bloqueio` começa por **Bloqueado**: **ZERAR MIN/MAX**.
+- `Qtde Atual > 0`, `Dif Dias < 90` e `Qtde Atual` menor que `Qnt Min` ou maior que `Qnt Max`: **AJUSTAR MIN/MAX**. Não é aplicada nos locais **1** e **298** com `Qnt Min` e `Qnt Max` zerados (limite zero é o esperado no obsoleto).
 
 Um item bloqueado nos locais **1** ou **298** pode receber **ZERAR MIN/MAX** quando atender às condições dessa regra. Se não houver outra ação aplicável, fica **Sem ação definida** e oculto por padrão.
 

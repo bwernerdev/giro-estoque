@@ -234,9 +234,11 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     else if (daysSince !== null && daysSince >= 90 && stock > 0 && reasonStatus === 'desbloqueado') actions.push('BLOQUEAR');
     if (daysSince !== null && daysSince >= 0 && stock === 0 && reasonStatus === 'bloqueado por saldo') actions.push('DESBLOQUEAR');
     if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && isObsoleteLocation && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
+    else if (stock > 0 && daysSince !== null && daysSince < 90 && minimum !== null && maximum !== null && (stock < minimum || stock > maximum) && !(isObsoleteLocation && minimum === 0 && maximum === 0)) actions.push('AJUSTAR MIN/MAX');
     if (!actions.length) actions.push('Sem ação definida');
     const hidden = hiddenByStatus || actions.includes('Sem ação definida');
     if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local obsoleto (1 ou 298), ao menos 180 dias sem requisição e item bloqueado.');
+    if (actions.includes('AJUSTAR MIN/MAX')) details.push(`Ajustar mín./máx.: saldo positivo, ${formatNumber(daysSince)} dias desde a última requisição (abaixo de 90) e saldo ${stock < minimum ? 'abaixo do mínimo' : 'acima do máximo'}.`);
     if (hidden) details.push(hiddenByStatus ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
     return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · ') };
   });

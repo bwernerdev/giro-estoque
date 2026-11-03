@@ -88,6 +88,27 @@ test('aplica as condições de ação e ocultação informadas', () => {
   assert.equal(results[1].hidden, false);
 });
 
+test('recomenda AJUSTAR MIN/MAX com saldo fora dos limites e Dif Dias abaixo de 90', () => {
+  const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  const results = analyzeAnalitico([
+    ['Abaixo do mínimo', 2, 10, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Item com Giro', 7],
+    ['Acima do máximo', 9, 89, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Item com Giro', 7],
+    ['Dentro dos limites', 6, 10, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Item com Giro', 7],
+    ['Dif Dias de 90', 9, 90, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Item com Giro', 7],
+    ['Sem saldo', 0, 10, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Sem Saldo', 7],
+    ['Limites zerados', 9, 10, 'Desbloqueado', 'Desbloqueado', 0, 0, 'Item com Giro', 7],
+    ['Limites zerados em obsoleto', 9, 10, 'Desbloqueado', 'Desbloqueado', 0, 0, 'Item com Giro', 298],
+  ], mapping);
+
+  assert.deepEqual(results.map(row => row.actions), [
+    ['AJUSTAR MIN/MAX'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
+    ['Sem ação definida'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'],
+  ]);
+  assert.equal(results[0].hidden, false);
+  assert.match(results[0].reason, /10 dias desde a última requisição \(abaixo de 90\) e saldo abaixo do mínimo/);
+  assert.match(results[1].reason, /saldo acima do máximo/);
+});
+
 test('status contraditórios exigem revisão antes de recomendar bloqueio ou transferência', () => {
   const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
   for (const [reason, id] of [['Desbloqueado', 'Bloqueado por saldo'], ['Bloqueado por saldo', 'Desbloqueado']]) {

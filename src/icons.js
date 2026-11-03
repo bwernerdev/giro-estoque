@@ -14,6 +14,7 @@ const paths = {
   alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>',
   unlock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M9 10V7a4 4 0 0 1 7-2"/>',
   zero: '<circle cx="12" cy="12" r="9"/><path d="m7 17 10-10"/>',
+  adjust: '<path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
   transfer: '<path d="M5 8h13m-4-4 4 4-4 4M19 16H6m4 4-4-4 4-4"/>',
   block: '<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
