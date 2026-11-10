@@ -44,11 +44,11 @@ th {
   z-index: 2;
   padding: 0;
   border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text-muted);
   font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: .01em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .sort-button {
@@ -57,7 +57,7 @@ th {
   justify-content: flex-start;
   gap: 6px;
   width: 100%;
-  padding: var(--s3) var(--cell-x);
+  padding: var(--s2) var(--cell-x);
   border: 0;
   background: transparent;
   color: inherit;
@@ -162,13 +162,15 @@ th.col-detalhes {
 /* Com espaço de sobra no painel da tabela (não na janela: a barra lateral e o painel de
    detalhes consomem largura), as colunas curtas ficam compactas e a ação cabe em uma linha. */
 @container tablepanel (min-width: 1000px) {
-  .analitico-table th.col-codigo { width: 10%; }
-  .analitico-table th.col-local { width: 7%; }
+  .analitico-table th.col-codigo { width: 9%; }
+  .analitico-table th.col-local { width: 5%; }
   .analitico-table th.col-prateleira { width: 8%; }
-  .analitico-table th.col-reparticao { width: 9%; }
+  .analitico-table th.col-reparticao { width: 8%; }
   .analitico-table th.col-estoque { width: 6%; }
-  .analitico-table th.col-limites { width: 8%; }
-  .analitico-table th.col-acao { width: 20%; }
+  .analitico-table th.col-limites { width: 7%; }
+  .analitico-table th.col-acao { width: 18%; }
+
+  .analitico-table th.col-detalhes { width: 96px; }
 
   .analitico-table .item-code {
     flex-wrap: nowrap;
@@ -192,10 +194,16 @@ td.col-detalhes {
   padding-inline: var(--s3);
 }
 
+/* Botões pequenos dentro da linha, para não aumentarem a altura dela. */
+td .icon-button {
+  width: 24px;
+  height: 24px;
+}
+
 /* ── Linhas ─────────────────────────────────────────────────────────────────── */
-/* Cada linha recebe um tom suave da sua ação (o tom vem da classe da ação, ver components.css). */
+/* Linhas neutras: a cor da ação fica só no badge (urgentes ganham o filete vermelho). */
 #result-table tbody tr {
-  background: color-mix(in srgb, var(--tone-bg, transparent) 35%, transparent);
+  background: transparent;
   transition: background var(--dur) ease;
 }
 
@@ -293,7 +301,7 @@ html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-ite
   background: var(--neutral-bg);
   color: var(--neutral-fg);
   font-size: var(--fs-2xs);
-  font-weight: 800;
+  font-weight: 700;
   vertical-align: middle;
 }
 

@@ -3,14 +3,17 @@
    Toda cor, tamanho, raio e sombra do app nasce aqui. Componentes só consomem
    variáveis: o tema escuro redefine os tokens e não precisa de regras próprias.
 
-   Regra de cor: o verde da marca (--accent) marca apenas a ação principal e o
-   foco. "Selecionado" usa --ring (azul-acinzentado). Estados de negócio usam
-   os tons semânticos (danger, warning, success, info, neutral).
+   Visual alinhado ao app do Robô SRP (RPA): Segoe UI, cinzas neutros, cantos de
+   6 px e superfícies planas com borda fina.
+
+   Regra de cor: o azul da marca (--accent) marca a ação principal, o foco e o
+   selecionado (--ring). Estados de negócio usam os tons semânticos (danger,
+   warning, success, info, neutral).
 ────────────────────────────────────────────────────────────────────────────── */
 :root {
   /* Tipografia */
-  --font-body: "DM Sans", Arial, sans-serif;
-  --font-display: Manrope, "DM Sans", Arial, sans-serif;
+  --font-body: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --font-display: var(--font-body);
   --fs-2xs: 11px;
   --fs-xs: 12px;
   --fs-sm: 13px;
@@ -29,142 +32,152 @@
   --s7: 48px;
 
   /* Forma */
-  --r-sm: 8px;
-  --r-md: 12px;
+  --r-sm: 6px;
+  --r-md: 8px;
   --r-pill: 999px;
 
   /* Altura dos controles */
-  --h-control: 40px;
-  --h-control-sm: 34px;
+  --h-control: 34px;
+  --h-control-sm: 30px;
 
   /* Movimento */
   --dur: .15s;
 
   /* Superfícies */
-  --bg: #eef1f4;
+  --bg: #f6f7f9;
   --surface: #fff;
-  --surface-2: #f8fafb;
-  --surface-hover: #f1f5f8;
-  --surface-selected: #e8f0f7;
-  --ring: #2d4a66;
+  --surface-2: #f9fafb;
+  --surface-hover: #f1f3f5;
+  --surface-selected: #eef3fd;
+  --ring: #2f5bd3;
 
   /* Texto */
-  --text: #17263a;
-  --text-strong: #0f1c2b;
-  --text-muted: #566778;
-  --text-faint: #657585;
+  --text: #1f2328;
+  --text-strong: #111418;
+  --text-muted: #5f6672;
+  --text-faint: #6b7280;
 
   /* Linhas */
-  --line: #e1e7eb;
-  --line-strong: #cbd5dc;
-  --control-border: #7f8e9b;
-  --line-soft: #ecf0f2;
+  --line: #e2e5ea;
+  --line-strong: #c9ced6;
+  --control-border: #9aa1ab;
+  --line-soft: #eef0f3;
 
   /* Marca */
-  --accent: #a9d842;
-  --accent-hover: #b7e158;
-  --accent-ink: #17300f;
-  --accent-text: #4a7413;
-  --focus: #4a7413;
+  --accent: #2f5bd3;
+  --accent-hover: #2749ad;
+  --accent-ink: #fff;
+  --accent-text: #2f5bd3;
+  --focus: #2f5bd3;
+
+  /* Botão secundário: preenchido, sem borda (como no app do RPA) */
+  --button-bg: #e8ebef;
+  --button-hover: #dde1e7;
 
   /* Barra superior (clara; no escuro herda as superfícies do tema) */
   --topbar-bg: #fff;
   --topbar-line: var(--line);
   --topbar-text: var(--text-strong);
   --topbar-muted: var(--text-muted);
-  --topbar-btn-bg: var(--surface);
-  --topbar-btn-line: var(--control-border);
-  --topbar-btn-hover: var(--surface-hover);
+  --topbar-btn-bg: var(--button-bg);
+  --topbar-btn-line: transparent;
+  --topbar-btn-hover: var(--button-hover);
 
   /* Medidas de layout */
-  --topbar-h: 64px;
-  --sidebar-w: 232px;
+  --topbar-h: 52px;
+  --sidebar-w: 216px;
   --dock-w: 360px;
 
   /* Tons semânticos */
-  --danger-fg: #a3374d;
-  --danger-bg: #fcebee;
-  --danger-line: #c26577;
-  --warning-fg: #94501a;
-  --warning-bg: #fff0de;
-  --warning-line: #d98a3d;
-  --success-fg: #2b6a4f;
-  --success-bg: #e4f3ea;
-  --success-line: #5fa583;
-  --info-fg: #2b5f84;
-  --info-bg: #e5f0f8;
-  --info-line: #5b8db0;
-  --neutral-fg: #56646f;
-  --neutral-bg: #edf1f4;
-  --neutral-line: #9aa7b2;
+  --danger-fg: #c62828;
+  --danger-bg: #fdf2f2;
+  --danger-line: #e08585;
+  --warning-fg: #9a6700;
+  --warning-bg: #fff7e0;
+  --warning-line: #e0b54f;
+  --success-fg: #1a7f37;
+  --success-bg: #e3f4e8;
+  --success-line: #5fb47a;
+  --info-fg: #2f5bd3;
+  --info-bg: #eef3fd;
+  --info-line: #87a3ea;
+  --neutral-fg: #5f6672;
+  --neutral-bg: #f1f3f5;
+  --neutral-line: #c9ced6;
 
-  /* Elevação */
-  --shadow-1: 0 1px 2px rgba(12, 26, 38, .05);
-  --shadow-2: 0 4px 16px rgba(12, 26, 38, .07);
-  --shadow-3: 0 12px 32px rgba(12, 26, 38, .18);
-  --backdrop: rgba(8, 16, 26, .22);
+  /* Elevação (plano: borda fina, quase sem sombra) */
+  --shadow-1: none;
+  --shadow-2: 0 2px 8px rgba(17, 20, 24, .06);
+  --shadow-3: 0 12px 32px rgba(17, 20, 24, .16);
+  --backdrop: rgba(17, 20, 24, .25);
 
   /* Barra de rolagem e seta dos selects */
-  --scrollbar-thumb: #b7c2ca;
-  --scrollbar-track: #edf1f3;
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23566778' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --scrollbar-thumb: #c9ced6;
+  --scrollbar-track: #f1f3f5;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235f6672' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 
   /* Densidade da tabela (o modo compacto redefine) */
-  --cell-y: 14px;
-  --cell-x: 12px;
+  --cell-y: 10px;
+  --cell-x: 10px;
 }
 
 html[data-density="compact"] {
-  --cell-y: 8px;
+  --cell-y: 6px;
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0e1621;
-  --surface: #162231;
-  --surface-2: #1b2a3b;
-  --surface-hover: #1f3044;
-  --surface-selected: #233a52;
-  --ring: #8db8de;
+  --bg: #17191e;
+  --surface: #1f2229;
+  --surface-2: #232730;
+  --surface-hover: #2a2f38;
+  --surface-selected: #222c40;
+  --ring: #6b93f0;
 
-  --text: #e6eef6;
-  --text-strong: #f1f6fb;
-  --text-muted: #aab9c8;
-  --text-faint: #9aabbb;
+  --text: #e6e8eb;
+  --text-strong: #f3f4f6;
+  --text-muted: #a3aab4;
+  --text-faint: #9aa1ab;
 
-  --line: #31465b;
-  --line-strong: #455c74;
-  --control-border: #71879c;
-  --line-soft: #263749;
+  --line: #2e333c;
+  --line-strong: #454c58;
+  --control-border: #5c6470;
+  --line-soft: #282c34;
 
-  --accent-text: #b7df6c;
-  --focus: #a5cf63;
+  --accent: #6b93f0;
+  --accent-hover: #86a7f3;
+  --accent-ink: #0f1115;
+  --accent-text: #86a7f3;
+  --focus: #86a7f3;
 
-  --topbar-bg: #0a121c;
+  --button-bg: #2b3039;
+  --button-hover: #353b46;
 
-  --danger-fg: #ffb4c0;
-  --danger-bg: #4a2b34;
-  --danger-line: #ee8397;
-  --warning-fg: #ffd29c;
-  --warning-bg: #4e3928;
-  --warning-line: #e0a35c;
-  --success-fg: #bfe6d1;
-  --success-bg: #1f3d35;
-  --success-line: #79b89b;
-  --info-fg: #bcdcf2;
-  --info-bg: #1f3a4d;
-  --info-line: #7eb4d6;
-  --neutral-fg: #d3dee6;
-  --neutral-bg: #33404b;
-  --neutral-line: #7f91a3;
+  --topbar-bg: #1f2229;
+
+  --danger-fg: #f07a7a;
+  --danger-bg: #2e1f21;
+  --danger-line: #b05656;
+  --warning-fg: #d9a441;
+  --warning-bg: #2b2517;
+  --warning-line: #a37b2c;
+  --success-fg: #57c27a;
+  --success-bg: #1f3d2a;
+  --success-line: #3f8f5a;
+  --info-fg: #86a7f3;
+  --info-bg: #222c40;
+  --info-line: #4e6fbf;
+  --neutral-fg: #a3aab4;
+  --neutral-bg: #262a32;
+  --neutral-line: #454c58;
 
   --shadow-1: none;
   --shadow-2: none;
   --shadow-3: 0 12px 32px rgba(0, 0, 0, .55);
   --backdrop: rgba(0, 0, 0, .45);
 
-  --scrollbar-thumb: #52677c;
-  --scrollbar-track: #111c2a;
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aab9c8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --scrollbar-thumb: #454c58;
+  --scrollbar-track: #1b1e24;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a3aab4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }

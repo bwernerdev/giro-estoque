@@ -67,8 +67,8 @@ main {
   align-items: center;
   justify-self: start;
   gap: var(--s2);
-  font: 800 17px var(--font-display);
-  letter-spacing: .05em;
+  font: 600 16px var(--font-display);
+  letter-spacing: 0;
 }
 
 .brand > span:last-child {
@@ -125,8 +125,8 @@ main {
 .hero h1 {
   margin: var(--s4) 0;
   color: var(--text-strong);
-  font: 800 clamp(36px, 4.4vw, 58px) / 1.1 var(--font-display);
-  letter-spacing: -.04em;
+  font: 600 clamp(36px, 4.4vw, 58px) / 1.1 var(--font-display);
+  letter-spacing: -.01em;
 }
 
 .hero em {
@@ -190,8 +190,8 @@ main {
 
 .upload-card h2 {
   color: var(--text-strong);
-  font: 800 var(--fs-2xl) / 1.15 var(--font-display);
-  letter-spacing: -.03em;
+  font: 600 var(--fs-2xl) / 1.15 var(--font-display);
+  letter-spacing: 0;
 }
 
 .upload-card p {
@@ -232,7 +232,7 @@ main {
   border-radius: var(--r-md);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   color: var(--text-strong);
-  font: 800 var(--fs-xl) var(--font-display);
+  font: 600 var(--fs-xl) var(--font-display);
   pointer-events: none;
 }
 
@@ -360,8 +360,8 @@ main {
 
 .total-value strong {
   color: var(--text-strong);
-  font: 800 var(--fs-2xl) / 1.1 var(--font-display);
-  letter-spacing: -.02em;
+  font: 600 var(--fs-2xl) / 1.1 var(--font-display);
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -518,7 +518,7 @@ main {
 .action-bar {
   display: flex;
   gap: 2px;
-  height: 8px;
+  height: 4px;
   margin-bottom: var(--s3);
   overflow: hidden;
   border-radius: var(--r-pill);
@@ -532,7 +532,7 @@ main {
 .summary-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--s1);
   margin-bottom: var(--s3);
 }
 
@@ -542,13 +542,13 @@ main {
   gap: 6px;
   width: auto;
   min-width: 0;
-  height: var(--h-control);
-  padding: 0 10px;
+  height: var(--h-control-sm);
+  padding: 0 var(--s2);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--text);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 600;
   text-align: left;
   appearance: none;
@@ -590,9 +590,9 @@ main {
   border-radius: var(--r-pill);
   background: var(--tone-bg, var(--neutral-bg));
   color: var(--tone-fg, var(--neutral-fg));
-  font-size: var(--fs-xs);
+  font-size: var(--fs-2xs);
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.4;
 }
 
@@ -609,7 +609,7 @@ main {
 .summary-filter.is-active {
   border-color: var(--ring);
   background: var(--surface-selected);
-  box-shadow: 0 0 0 1px var(--ring);
+  color: var(--accent-text);
 }
 
 /* ── Painel da tabela: ferramentas ──────────────────────────────────────────── */

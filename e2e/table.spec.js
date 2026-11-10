@@ -338,12 +338,13 @@ test('agrupa por ação com cabeçalhos recolhíveis, exporta o grupo e lembra a
   await expect(page.locator('#group-toggle')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('cada linha recebe um tom suave da sua ação', async ({ page }) => {
+test('as linhas ficam neutras e a cor da ação fica só no badge', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await upload(page);
-  const background = await page.locator('#result-rows tr').first().evaluate(row => getComputedStyle(row).backgroundColor);
-  expect(background).not.toBe('rgba(0, 0, 0, 0)');
+  const row = page.locator('#result-rows tr').first();
+  expect(await row.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  expect(await row.locator('.badge').first().evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
 });
 
 test('a barra lateral pode ser ocultada e a escolha é lembrada', async ({ page }) => {

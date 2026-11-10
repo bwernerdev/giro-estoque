@@ -23,7 +23,7 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 - `print.css`: relatório de impressão/PDF.
 
 ## Subpasta
-- `fonts/`: DM Sans e Manrope em woff2, com licenças.
+- `fonts/`: DM Sans e Manrope em woff2, com licenças (declaradas em `fonts.css`; o app hoje usa Segoe UI, então o navegador não as baixa).
 
 ## Onde mexer
 - Nova regra ou ação: `analysis.js` + lista em `main.js` + prioridade em `dashboard.js` (`ACTION_PRIORITY`) + teste em `tests/analysis.test.js`.

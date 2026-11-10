@@ -13,8 +13,8 @@
 }
 
 /* ── Botões ─────────────────────────────────────────────────────────────────────
-   .primary-button   ação principal (verde da marca); também usado em <label>.
-   .secondary-button ação secundária com borda.
+   .primary-button   ação principal (azul da marca); também usado em <label>.
+   .secondary-button ação secundária, preenchida em cinza.
    .discreet-button  ação contextual pequena.
    .icon-button      só ícone (detalhes da linha).
    .topbar-button    botões da barra superior.                                   */
@@ -32,7 +32,7 @@
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
   transition: background var(--dur) ease, border-color var(--dur) ease, box-shadow var(--dur) ease;
@@ -51,14 +51,14 @@
 
 .secondary-button,
 .pagination button {
-  border-color: var(--control-border);
-  background: var(--surface);
+  border-color: transparent;
+  background: var(--button-bg);
   color: var(--text);
 }
 
 .secondary-button:hover:not(:disabled),
 .pagination button:hover:not(:disabled) {
-  background: var(--surface-hover);
+  background: var(--button-hover);
 }
 
 .discreet-button {
@@ -244,12 +244,12 @@ input[type="checkbox"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: var(--r-pill);
   background: var(--tone-bg, var(--neutral-bg));
   color: var(--tone-fg, var(--neutral-fg));
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
 }
 
