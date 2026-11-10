@@ -55,7 +55,8 @@ function actionIcon(action) {
 export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, values = null, analitico = false }) {
   const summaryCounts = prioritizeActionCounts(counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length })));
   const hidden = summaryCounts.find(({ action }) => action === 'Itens ocultos');
-  const money = action => (values?.has(action) ? BRL_COMPACT.format(values.get(action)) : '');
+  // Valor zero (ex.: Desbloquear, sempre sem saldo) não informa nada: fica só a %.
+  const money = action => (values?.get(action) > 0 ? BRL_COMPACT.format(values.get(action)) : '');
   return [
     `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon('list', 'kpi-svg')}</span><span class="kpi-label">${analitico && summaryResults.length < summaryAllResults.length ? 'ITENS COM AÇÃO' : 'TODOS OS ITENS'}</span></span><div class="summary-value"><strong>${summaryResults.length}</strong><small>de ${summaryAllResults.length} no arquivo</small></div></button>`,
     ...summaryCounts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action, count }) => {
@@ -96,7 +97,9 @@ export function buildTotalMarkup({ summaryAllResults, locationFilter, locationTo
   const label = shelfFilter || partitionFilter ? 'Valor do estoque na localização' : locationFilter ? 'Valor do estoque no local' : 'Valor total do estoque';
   const scope = [locationFilter && `Local ${locationFilter}`, shelfFilter && `Prateleira ${shelfFilter}`, partitionFilter && `Repartição ${partitionFilter}`].filter(Boolean).join(' · ');
   const title = escapeHtml(`Soma da coluna Vl Saldo${scope ? ` · ${scope}` : ''}`);
-  return `<span class="total-label" title="${title}">${escapeHtml(label)}</span><strong title="${title}">${realCurrency(locationTotal)}</strong>`;
+  const count = summaryAllResults.length;
+  const detail = scope || `${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'} no arquivo`;
+  return `<span class="total-label" title="${title}">${escapeHtml(label)}</span><strong title="${title}">${realCurrency(locationTotal)}</strong><small>${escapeHtml(detail)}</small>`;
 }
 
 function realCurrency(value) {
