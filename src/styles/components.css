@@ -87,6 +87,11 @@
   height: var(--h-control-sm);
 }
 
+/* Na barra da tabela, tudo na altura da busca e do Exportar. */
+.table-tools .discreet-button {
+  height: var(--h-control);
+}
+
 .pagination button {
   min-width: 88px;
   font-size: var(--fs-xs);

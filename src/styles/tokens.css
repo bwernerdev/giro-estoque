@@ -121,6 +121,14 @@
   --cell-x: 10px;
 }
 
+/* Tela de toque: controles maiores para o dedo (no PC com mouse nada muda). */
+@media (pointer: coarse) {
+  :root {
+    --h-control: 40px;
+    --h-control-sm: 36px;
+  }
+}
+
 html[data-density="compact"] {
   --cell-y: 6px;
 }
