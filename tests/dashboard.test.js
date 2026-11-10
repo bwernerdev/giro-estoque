@@ -33,6 +33,10 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.ok(document.querySelector('.results-bar #hidden-chip'));
   assert.ok(document.querySelector('#aging-chart #aging-chart-bars'));
   assert.match(document.querySelector('.brand').textContent, /GIRO DE ESTOQUE/);
+  assert.match(document.querySelector('.eyebrow').textContent, /ANÁLISE DE ESTOQUE/);
+  assert.match(document.querySelector('.hero p').textContent, /quanto valor está parado/);
+  assert.match(document.querySelector('.upload-copy small').textContent, /Analítico, BBOG6656 ou estoque e vendas.*não saem do seu computador/);
+  assert.equal(document.querySelector('.upload-icon path').getAttribute('d'), document.querySelector('#replace-file path').getAttribute('d'), 'importar e trocar arquivo usam o mesmo ícone de envio');
   assert.ok(document.querySelector('#filtered-count'));
   assert.equal(document.querySelector('.results-counter').getAttribute('aria-live'), 'polite');
   assert.equal(document.querySelector('label[for="location-filter"]'), null);

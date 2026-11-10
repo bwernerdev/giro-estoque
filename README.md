@@ -1,6 +1,6 @@
 # Giro de Estoque
 
-Sistema web local para importar `.xlsx` ou `.csv` e analisar materiais. A interface é otimizada para desktop e ajusta o layout em janelas menores (abaixo de 1024 px, 720 px e 480 px) e em telas largas acima de 1700 px; a tabela de resultados mantém rolagem horizontal quando a largura não é suficiente.
+Sistema web local para importar `.xlsx` ou `.csv` (relatório Analítico, BBOG6656 ou estoque e vendas) e analisar o estoque: o que fazer com cada item e quanto valor está parado. Os dados não saem do computador. A interface é otimizada para desktop e ajusta o layout em janelas menores (abaixo de 1024 px, 720 px e 480 px) e em telas largas acima de 1700 px; a tabela de resultados mantém rolagem horizontal quando a largura não é suficiente.
 
 ## Executar
 

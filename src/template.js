@@ -10,7 +10,7 @@ export function renderApp() {
         <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="${brandIconUrl}" alt="" /></span><span>GIRO<span class="brand-light"> DE ESTOQUE</span></span></div>
         <div id="topbar-file" class="topbar-file" hidden></div>
         <div class="topbar-actions">
-          <button id="replace-file" class="topbar-button topbar-data" type="button" title="Trocar arquivo">${svgIcon('download')}<span>Trocar arquivo</span></button>
+          <button id="replace-file" class="topbar-button topbar-data" type="button" title="Trocar arquivo">${svgIcon('upload')}<span>Trocar arquivo</span></button>
           <button id="config-toggle" class="topbar-button topbar-data config-toggle" type="button" aria-controls="config-grid" aria-expanded="false" title="Abrir configuração">${svgIcon('adjust')}<span>Abrir configuração</span></button>
           <button id="install-app" class="topbar-button install-button" type="button" hidden>${svgIcon('download')}<span>Instalar app</span></button>
           <button id="theme-toggle" class="topbar-button theme-toggle" type="button" aria-pressed="false">${svgIcon('moon')}<span>Modo escuro</span></button>
@@ -18,16 +18,16 @@ export function renderApp() {
       </header>
       <main>
         <section class="hero">
-          <div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE MATERIAIS</div>
+          <div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE ESTOQUE</div>
           <h1>Entenda o giro<br>de cada <em>item.</em></h1>
-          <p>Consulte quantidades, limites, classificação e ações por item.</p>
+          <p>Veja o que fazer com cada item (bloquear, transferir, ajustar ou repor) e quanto valor está parado.</p>
         </section>
         <section class="upload-card" id="upload-card">
-          <div class="upload-icon" aria-hidden="true">${svgIcon('download')}</div>
+          <div class="upload-icon" aria-hidden="true">${svgIcon('upload')}</div>
           <div class="upload-copy">
             <h2>Importar planilha</h2>
-            <p>Arraste um arquivo aqui ou selecione no computador.</p>
-            <small>Excel .xlsx ou CSV · sem enviar dados para servidor</small>
+            <p>Arraste o arquivo para cá ou selecione no computador.</p>
+            <small>Relatório Analítico, BBOG6656 ou estoque e vendas (.xlsx ou .csv). Os dados não saem do seu computador.</small>
           </div>
           <div class="upload-actions">
             <label class="primary-button" for="file-input" role="button" tabindex="0"><span>Selecionar arquivo</span>${svgIcon('arrowRight')}</label>
