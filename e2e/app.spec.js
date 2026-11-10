@@ -58,6 +58,8 @@ test('PDF de resumo cabe em uma página A4 em pé, sem a tabela de itens', async
   const rows = Array.from({ length: 120 }, (_, i) => `Peça ${i};${1000 + i};${i % 5 === 0 ? 298 : 7};${i % 4};2;6;${(i * 7) % 500};Acima de 90;;${i % 3 ? 'Desbloqueado' : 'Bloqueado'};${(i * 13.5).toFixed(2).replace('.', ',')}`);
   await page.goto('./');
   await upload(page, [header, ...rows].join('\n'));
+  // No tema escuro o papel continua branco com texto escuro.
+  if (await page.locator('html').getAttribute('data-theme') !== 'dark') await page.locator('#theme-toggle').click();
   await page.evaluate(() => { window.print = () => {}; });
   await page.locator('#export-menu summary').click();
   await page.locator('[data-export="summary"]').click();
@@ -66,6 +68,7 @@ test('PDF de resumo cabe em uma página A4 em pé, sem a tabela de itens', async
   await expect(page.locator('#print-report .report-bar-row')).toHaveCount(4);
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('#print-report')).toBeVisible();
+  for (const cell of ['#print-report td', '#print-report th', '#print-report .report-kpi strong']) await expect(page.locator(cell).first()).toHaveCSS('color', 'rgb(23, 35, 50)');
   const pdf = await page.pdf({ path: 'test-results/resumo.pdf', preferCSSPageSize: true });
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   expect(pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)/g)).toHaveLength(1);

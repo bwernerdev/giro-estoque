@@ -56,6 +56,13 @@
     break-inside: avoid;
   }
 
+  /* Tinta escura fixa: no tema escuro, as regras de tela dariam texto claro no papel branco. */
+  #print-report,
+  #print-report th,
+  #print-report td {
+    color: #172332 !important;
+  }
+
   #print-report th,
   #print-report td {
     padding: 5px;
