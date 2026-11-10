@@ -166,6 +166,22 @@ test('modo Analítico mostra as oito colunas fixas com posição combinada e val
   assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '8');
 });
 
+test('a coluna Valor mostra a barra do peso de cada item e o esqueleto some depois da importação', async t => {
+  const app = await boot(t);
+  await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio;Vl Saldo\nPeça A;001;7;5;10;20;200;Acima de 90;;Desbloqueado;100\nPeça B;002;7;5;10;20;200;Acima de 90;;Desbloqueado;25\nPeça C;003;7;0;10;20;200;Acima de 90;;Desbloqueado;0');
+  const hidden = app.el('#show-hidden');
+  hidden.checked = true;
+  hidden.dispatchEvent(new hidden.ownerDocument.defaultView.Event('change'));
+  await waitFor(() => app.el('#result-rows').querySelectorAll('tr').length === 3);
+  const cells = [...app.el('#result-rows').querySelectorAll('td.col-valor')];
+  const bars = cells.map(cell => cell.querySelector('.value-bar > span')?.style.width ?? null);
+  assert.deepEqual(bars.sort(), ['100%', '25%', null].sort());
+  const titles = cells.map(cell => cell.querySelector('.value-cell')?.title).filter(Boolean).sort();
+  assert.deepEqual(titles, ['20% do valor dos itens filtrados', '80% do valor dos itens filtrados']);
+  assert.ok(cells.every(cell => /R\$/.test(cell.textContent)), 'o valor continua legível na célula');
+  assert.equal(app.el('.shell').classList.contains('is-loading'), false);
+});
+
 test('modo Analítico usa o número da linha como descrição apenas quando o nome do item não existe', async t => {
   const app = await boot(t);
   await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n;002;7;5;10;20;10;Item com Giro;Desbloqueado;Desbloqueado\nPeça B;003;7;5;10;20;200;Item com Giro;Desbloqueado;Desbloqueado');

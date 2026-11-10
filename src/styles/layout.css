@@ -347,6 +347,7 @@ html[data-summary="collapsed"] .money-kpi small {
   border-left: 3px solid var(--tone-line, var(--accent));
   border-radius: var(--r-md);
   background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
 
 .money-kpi[hidden] {
@@ -562,6 +563,7 @@ html[data-summary="collapsed"] .money-kpi small {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
+  box-shadow: var(--shadow-1);
   color: var(--text);
   text-align: left;
   appearance: none;
@@ -669,12 +671,19 @@ html[data-summary="collapsed"] .money-kpi small {
 
 .summary-filter {
   cursor: pointer;
-  transition: border-color var(--dur) ease, background var(--dur) ease, box-shadow var(--dur) ease;
+  transition: border-color var(--dur) ease, background var(--dur) ease, box-shadow var(--dur) ease, transform var(--dur) var(--ease-out);
 }
 
 .summary-filter:hover:not(:disabled) {
   border-color: var(--line-strong);
   background: var(--surface-hover);
+}
+
+/* Cartão de indicador sobe um pouco com sombra ao passar o mouse. */
+.summary-card.summary-filter:hover:not(:disabled) {
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
 }
 
 .summary-filter.is-active {
@@ -711,6 +720,7 @@ html[data-summary="collapsed"] .money-kpi small {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
 
 .value-chart figcaption strong {
@@ -772,6 +782,7 @@ html[data-summary="collapsed"] .money-kpi small {
   height: 100%;
   border-radius: 0 4px 4px 0;
   background: var(--accent);
+  transition: width var(--dur-slow) var(--ease-out);
 }
 
 .chart-value {
@@ -1162,10 +1173,21 @@ html[data-summary="collapsed"] .table-tools .filter-action {
     --content-share: 96%;
   }
 
-  .table-tools {
+  /* Barra superior fixa e translúcida: o conteúdo passa desfocado por baixo. */
+  .topbar {
     position: sticky;
     top: 0;
+    z-index: 20;
+    background: var(--topbar-glass);
+    -webkit-backdrop-filter: saturate(1.6) blur(14px);
+    backdrop-filter: saturate(1.6) blur(14px);
+  }
+
+  .table-tools {
+    position: sticky;
+    top: var(--topbar-h);
     z-index: 4;
+    scroll-margin-top: var(--topbar-h);
   }
 
   .search-toggle {
@@ -1227,7 +1249,8 @@ html[data-summary="collapsed"] .table-tools .filter-action {
 
   .detail-dock {
     position: sticky;
-    top: var(--s4);
+    top: calc(var(--topbar-h) + var(--s4));
+    max-height: calc(100vh - var(--topbar-h) - 2 * var(--s4));
     display: flex;
   }
 }
@@ -1412,4 +1435,109 @@ html[data-summary="collapsed"] .table-tools .filter-action {
   .panel {
     padding: var(--s4);
   }
+}
+
+/* ── Movimento ──────────────────────────────────────────────────────────────────
+   Entrada depois de importar (indicadores, cartões, gráfico e tabela em sequência),
+   linhas novas ao trocar de página e troca suave nos filtros (View Transitions).
+   Com movimento reduzido, base.css desliga as animações.                         */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.shell.is-entering .money-kpi,
+.shell.is-entering .summary-card,
+.shell.is-entering .chart-row,
+.shell.is-entering .table-panel {
+  animation: rise-in .5s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.shell.is-entering .chart-bar {
+  animation: grow-bar .7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+  transform-origin: left center;
+}
+
+@keyframes grow-bar {
+  from { transform: scaleX(0); }
+  to { transform: none; }
+}
+
+#result-rows.rows-enter tr {
+  animation: fade-in .3s ease both;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .2s;
+}
+
+/* ── Esqueleto: forma do painel enquanto a planilha é lida ─────────────────────── */
+.loading-skeleton {
+  display: none;
+  gap: var(--s4);
+  margin-top: var(--s5);
+}
+
+.shell.is-loading .loading-skeleton {
+  display: grid;
+  grid-column: 1 / -1;
+  animation: fade-in .2s ease both;
+}
+
+.shell.is-loading .hero,
+.shell.is-loading .upload-card,
+.shell.is-loading #workspace {
+  display: none;
+}
+
+.skeleton-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s2);
+}
+
+.skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--s2);
+}
+
+.skeleton-table {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.skeleton-block {
+  display: block;
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--line-soft) 0%, var(--surface) 50%, var(--line-soft) 100%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-kpi { height: 84px; }
+.skeleton-card { height: 88px; }
+.skeleton-tools { height: var(--h-control); width: 60%; }
+
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--r-sm);
+}
+
+.skeleton-line:nth-child(odd) { width: 92%; }
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
 }

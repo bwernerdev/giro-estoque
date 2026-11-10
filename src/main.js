@@ -164,6 +164,39 @@ if (typeof document !== 'undefined') {
     setInstallButton(false);
   });
 
+  const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  // Troca animada (View Transitions) nos filtros; sem suporte ou com movimento reduzido, troca direto.
+  function withTransition(update) {
+    if (typeof document.startViewTransition !== 'function' || reducedMotion()) return update();
+    document.startViewTransition(update);
+  }
+  // Números sobem do valor mostrado antes até o novo. O texto final já está na página: a
+  // animação só reescreve os quadros intermediários e termina devolvendo esse texto.
+  const shownNumbers = new Map();
+  function countUp(key, element, target, format) {
+    const from = shownNumbers.get(key) ?? 0;
+    shownNumbers.set(key, target);
+    if (!element || from === target || reducedMotion() || typeof requestAnimationFrame !== 'function') return;
+    const finalText = element.textContent;
+    const start = performance.now();
+    const step = now => {
+      if (!element.isConnected) return;
+      const progress = Math.min(1, (now - start) / 700);
+      const eased = 1 - (1 - progress) ** 3;
+      element.textContent = progress < 1 ? format(from + (target - from) * eased) : finalText;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  // Entrada da visão geral e da tabela depois de importar: aparecem em sequência.
+  function playEntrance() {
+    if (reducedMotion()) return;
+    const shell = el('.shell');
+    document.querySelectorAll('.money-kpi:not([hidden]), .summary-card, .chart-row, .table-panel')
+      .forEach((node, index) => node.style.setProperty('--i', String(Math.min(index, 12))));
+    shell.classList.add('is-entering');
+    setTimeout(() => shell.classList.remove('is-entering'), 1400);
+  }
   function setTheme(theme) {
     const dark = theme === 'dark';
     document.documentElement.classList.add('theme-switching');
@@ -189,16 +222,41 @@ if (typeof document !== 'undefined') {
   // A barra lateral saiu: filtros na barra da tabela, arquivo e configuração na barra superior.
   try { localStorage.removeItem('controle-estoque-sidebar'); } catch { /* Sem acesso ao armazenamento. */ }
   // Resumo recolhido: ficam só os valores em reais e o filtro de ação aparece na barra da tabela.
-  function setSummaryCollapsed(collapsed) {
+  let summaryAnimation = null;
+  function setSummaryCollapsed(collapsed, animate = false) {
     document.documentElement.dataset.summary = collapsed ? 'collapsed' : 'expanded';
-    el('#overview-body').hidden = collapsed;
+    const body = el('#overview-body');
+    // Altura animada do ponto atual (inclusive no meio de outra animação) até o destino.
+    const from = body.hidden ? 0 : body.getBoundingClientRect().height;
+    summaryAnimation?.cancel();
+    summaryAnimation = null;
+    body.hidden = false;
+    if (!animate || reducedMotion() || typeof body.animate !== 'function') {
+      body.hidden = collapsed;
+      body.style.overflow = '';
+    } else {
+      const to = collapsed ? 0 : body.getBoundingClientRect().height;
+      body.style.overflow = 'hidden';
+      const animation = body.animate(
+        [{ height: `${from}px`, opacity: collapsed ? 1 : 0 }, { height: `${to}px`, opacity: collapsed ? 0 : 1 }],
+        { duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)' },
+      );
+      summaryAnimation = animation;
+      // Um clique no meio da animação cancela esta; só a mais recente encerra o estado.
+      animation.onfinish = () => {
+        if (summaryAnimation !== animation) return;
+        body.hidden = collapsed;
+        body.style.overflow = '';
+        summaryAnimation = null;
+      };
+    }
     el('#summary-toggle').setAttribute('aria-expanded', String(!collapsed));
     el('#summary-toggle').innerHTML = `${svgIcon(collapsed ? 'chevronDown' : 'chevronUp')}<span>${collapsed ? 'Mostrar resumo' : 'Recolher resumo'}</span>`;
   }
   try { setSummaryCollapsed(localStorage.getItem('giro-estoque-summary') === 'collapsed'); } catch { setSummaryCollapsed(false); }
   el('#summary-toggle').addEventListener('click', () => {
-    const collapsed = !el('#overview-body').hidden;
-    setSummaryCollapsed(collapsed);
+    const collapsed = document.documentElement.dataset.summary !== 'collapsed';
+    setSummaryCollapsed(collapsed, true);
     try { localStorage.setItem('giro-estoque-summary', collapsed ? 'collapsed' : 'expanded'); } catch { /* A escolha vale até fechar a página. */ }
   });
   // Bolinha no botão Exibir quando alguma opção que muda a tabela está ligada.
@@ -313,6 +371,7 @@ if (typeof document !== 'undefined') {
     for (const [selector, kind] of [['#idle-value', 'idle'], ['#obsolete-value', 'obsolete']]) {
       el(selector).innerHTML = health ? buildHealthMarkup(kind, health[kind]) : '';
       el(selector).hidden = !health;
+      if (health) countUp(kind, el(`${selector} strong`), Number(health[kind].value) || 0, realCurrency);
     }
     const chart = withValue ? buildAgingChartMarkup(agingSummary(summaryAllResults), state.agingFilter) : '';
     el('#aging-chart-bars').innerHTML = chart;
@@ -489,6 +548,11 @@ if (typeof document !== 'undefined') {
     const totalMarkup = buildTotalMarkup({ summaryAllResults, locationFilter: state.locationFilter, locationTotal, shelfFilter: state.shelfFilter, partitionFilter: state.partitionFilter });
     el('#total-value').innerHTML = totalMarkup;
     el('#total-value').hidden = !totalMarkup;
+    if (totalMarkup) countUp('total', el('#total-value strong'), Number(locationTotal) || 0, realCurrency);
+    el('#summary').querySelectorAll('.summary-card').forEach(card => {
+      const strong = card.querySelector('.summary-value strong');
+      countUp(`card:${card.dataset.summaryAction ?? 'total'}`, strong, Number(strong.textContent) || 0, value => String(Math.round(value)));
+    });
     el('#filter').innerHTML = `<option value="">${analitico ? 'Todas as ações' : 'Todas as recomendações'}</option>` + availableActions.map(action => `<option>${escapeHtml(action)}</option>`).join('');
     el('#filter').value = availableActions.includes(previousFilter) ? previousFilter : '';
     el('#filter').setAttribute('aria-label', 'Filtrar ação');
@@ -745,6 +809,20 @@ if (typeof document !== 'undefined') {
     state.page = page.page;
     const { pageCount, start, rows: visible } = page;
     state.pageRows = visible;
+    // Barra na célula de valor: proporcional ao maior valor dos itens filtrados.
+    let largestValue = 0;
+    let filteredValue = 0;
+    if (analitico || giro) for (const row of filtered) {
+      const value = Number(row.stockValue) || 0;
+      if (value > largestValue) largestValue = value;
+      if (value > 0) filteredValue += value;
+    }
+    const valueCell = value => {
+      const numeric = Number(value) || 0;
+      if (!largestValue || numeric <= 0) return itemCurrency(value);
+      const share = filteredValue ? Math.round((numeric / filteredValue) * 1000) / 10 : 0;
+      return `<span class="value-cell" title="${String(share).replace('.', ',')}% do valor dos itens filtrados">${itemCurrency(value)}<span class="value-bar" aria-hidden="true"><span style="width:${Math.max((numeric / largestValue) * 100, 2).toFixed(1)}%"></span></span></span>`;
+    };
     const groupCounts = new Map();
     if (state.grouped) filtered.forEach(row => groupCounts.set(primaryAction(row), (groupCounts.get(primaryAction(row)) ?? 0) + 1));
     const rowsHtml = [];
@@ -758,11 +836,13 @@ if (typeof document !== 'undefined') {
       if (state.grouped && state.collapsedGroups.has(group)) continue;
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${itemCurrency(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${valueCell(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
       } else {
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? valueCell(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
       }
     }
+    el('#result-rows').classList.toggle('rows-enter', Boolean(state.animateRows) && !reducedMotion());
+    state.animateRows = false;
     el('#result-rows').innerHTML = visible.length ? rowsHtml.join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
     el('#result-rows').querySelectorAll('tr').forEach(tr => {
       if (tr.querySelector('.empty-row') || tr.classList.contains('group-row')) return;
@@ -873,8 +953,11 @@ if (typeof document !== 'undefined') {
   async function loadFile(file) {
     if (!file) return;
     const run = ++importRun;
+    let loaded = false;
     message('Lendo planilha...');
     setProgress('busy');
+    // Esqueleto do painel enquanto a planilha é lida (só se demorar, para não piscar).
+    const skeletonTimer = setTimeout(() => { if (run === importRun) el('.shell').classList.add('is-loading'); }, 120);
     upload.setAttribute('aria-busy', 'true');
     upload.classList.add('loading');
     try {
@@ -882,6 +965,7 @@ if (typeof document !== 'undefined') {
       if (run !== importRun) return;
       if (!sheets.length || !sheets.some(sheet => sheet.rows.length > sheet.headerRow + 1)) throw new Error('Não encontrei linhas de dados na planilha.');
       state.sheets = sheets;
+      shownNumbers.clear();
       expansionVersion++;
       expandedRows.clear();
       state.collapsedGroups.clear();
@@ -908,9 +992,18 @@ if (typeof document !== 'undefined') {
       setConfigExpanded(false);
       el('#workspace').hidden = false;
       el('.shell').classList.add('has-data');
+      state.animateRows = true;
       renderImportContext(); renderMapping(); renderSettings(); await refresh();
+      loaded = run === importRun;
     } catch (error) { if (run === importRun) message(error.message || 'Não foi possível abrir o arquivo.', 'error'); }
-    finally { if (run === importRun) { upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); setProgress(null); } }
+    finally {
+      if (run === importRun) {
+        clearTimeout(skeletonTimer);
+        el('.shell').classList.remove('is-loading');
+        upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); setProgress(null);
+        if (loaded) playEntrance();
+      }
+    }
   }
 
   el('#replace-file').addEventListener('click', () => el('#file-input').click());
@@ -966,14 +1059,15 @@ if (typeof document !== 'undefined') {
     setSearchExpanded(false);
     el('#search-toggle').focus();
   });
-  el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; renderResults(); persistFilters(); });
+  el('#filter').addEventListener('change', () => { state.page = 1; state.hiddenOnly = false; withTransition(() => { renderResults(); persistFilters(); }); });
   el('#location-filter').addEventListener('change', () => {
     state.locationFilter = el('#location-filter').value;
     state.page = 1;
-    refresh({ reanalyze: false });
+    withTransition(() => refresh({ reanalyze: false }));
   });
   function changePage(direction) {
     state.page += direction;
+    state.animateRows = true;
     renderResults();
     el('.table-tools').scrollIntoView({ block: 'start' });
   }
@@ -1022,7 +1116,7 @@ if (typeof document !== 'undefined') {
     el(selector).addEventListener('change', event => {
       state[key] = event.target.value;
       state.page = 1;
-      refresh({ reanalyze: false });
+      withTransition(() => refresh({ reanalyze: false }));
     });
   }
   el('#page-size').addEventListener('change', event => {
@@ -1106,13 +1200,12 @@ if (typeof document !== 'undefined') {
       state.hiddenOnly = true;
       el('#show-hidden').checked = true;
       el('#filter').value = '';
-      refresh({ reanalyze: false });
+      withTransition(() => refresh({ reanalyze: false }));
       return;
     }
     state.hiddenOnly = false;
     el('#filter').value = card.dataset.summaryAction ?? '';
-    renderResults();
-    persistFilters();
+    withTransition(() => { renderResults(); persistFilters(); });
   });
   el('#aging-chart-bars').addEventListener('click', event => {
     const bar = event.target.closest('[data-aging]');
@@ -1130,7 +1223,7 @@ if (typeof document !== 'undefined') {
       el('#show-hidden').checked = false;
       state.agingRevealedHidden = false;
     }
-    refresh({ reanalyze: false });
+    withTransition(() => refresh({ reanalyze: false }));
   });
   el('#table-head').addEventListener('click', event => {
     const button = event.target.closest('[data-sort-key]');
@@ -1155,7 +1248,7 @@ if (typeof document !== 'undefined') {
     el('#search').value = '';
     el('#filter').value = '';
     el('#show-hidden').checked = false;
-    refresh({ reanalyze: false });
+    withTransition(() => refresh({ reanalyze: false }));
   });
   el('#export-menu').querySelectorAll('[data-export]').forEach(button => button.addEventListener('click', async () => {
     el('#export-menu').open = false;

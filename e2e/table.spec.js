@@ -399,6 +399,12 @@ test('o resumo pode ser recolhido, mostra o filtro de ação e a escolha é lemb
   await expect(page.locator('#summary')).toBeHidden();
   await page.locator('#summary-toggle').click();
   await expect(page.locator('#summary')).toBeVisible();
+  // Recolher e reabrir no meio da animação termina aberto, sem cortar o conteúdo.
+  await page.locator('#summary-toggle').click();
+  await page.locator('#summary-toggle').click();
+  await expect(page.locator('#summary-toggle')).toContainText('Recolher resumo');
+  await expect.poll(() => page.locator('#overview-body').evaluate(body => !body.hidden && body.style.overflow === '' && body.getAnimations().length === 0)).toBe(true);
+  await expect(page.locator('#summary')).toBeVisible();
 });
 
 test('itens ocultos ganham aviso que desliga com um clique e não são lembrados', async ({ page }) => {

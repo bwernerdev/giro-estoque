@@ -35,6 +35,11 @@ export function renderApp() {
           </div>
         </section>
         <div id="message" role="status" aria-live="polite"></div>
+        <section id="loading-skeleton" class="loading-skeleton" aria-hidden="true">
+          <div class="skeleton-kpis">${'<span class="skeleton-block skeleton-kpi"></span>'.repeat(3)}</div>
+          <div class="skeleton-cards">${'<span class="skeleton-block skeleton-card"></span>'.repeat(6)}</div>
+          <div class="skeleton-table"><span class="skeleton-block skeleton-tools"></span>${'<span class="skeleton-block skeleton-line"></span>'.repeat(8)}</div>
+        </section>
         <section id="workspace" hidden>
           <div class="workspace">
             <div class="workspace-main">

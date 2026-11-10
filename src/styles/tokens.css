@@ -4,7 +4,7 @@
    variáveis: o tema escuro redefine os tokens e não precisa de regras próprias.
 
    Visual de painel: Segoe UI no texto, Manrope (embutida) em títulos e números,
-   cinzas neutros, cantos de 6/8 px e superfícies planas com borda fina.
+   cinzas neutros, cantos de 6/8 px e superfícies com borda fina e sombra leve.
 
    Regra de cor: o azul da marca (--accent) marca a ação principal, o foco e o
    selecionado (--ring). Estados de negócio usam os tons semânticos (danger,
@@ -42,6 +42,8 @@
 
   /* Movimento */
   --dur: .15s;
+  --dur-slow: .4s;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
 
   /* Superfícies */
   --bg: #f6f7f9;
@@ -76,6 +78,7 @@
 
   /* Barra superior (clara; no escuro herda as superfícies do tema) */
   --topbar-bg: #fff;
+  --topbar-glass: rgba(255, 255, 255, .78);
   --topbar-line: var(--line);
   --topbar-text: var(--text-strong);
   --topbar-muted: var(--text-muted);
@@ -104,9 +107,9 @@
   --neutral-bg: #f1f3f5;
   --neutral-line: #c9ced6;
 
-  /* Elevação (plano: borda fina, quase sem sombra) */
-  --shadow-1: none;
-  --shadow-2: 0 2px 8px rgba(17, 20, 24, .06);
+  /* Elevação: borda fina com sombra leve; --shadow-2 ao passar o mouse nos cartões */
+  --shadow-1: 0 1px 2px rgba(17, 20, 24, .05);
+  --shadow-2: 0 6px 16px rgba(17, 20, 24, .08), 0 1px 3px rgba(17, 20, 24, .06);
   --shadow-3: 0 12px 32px rgba(17, 20, 24, .16);
   --backdrop: rgba(17, 20, 24, .25);
 
@@ -162,6 +165,7 @@ html[data-theme="dark"] {
   --button-hover: #353b46;
 
   --topbar-bg: #1f2229;
+  --topbar-glass: rgba(31, 34, 41, .78);
 
   --danger-fg: #f07a7a;
   --danger-bg: #2e1f21;
@@ -179,8 +183,8 @@ html[data-theme="dark"] {
   --neutral-bg: #262a32;
   --neutral-line: #454c58;
 
-  --shadow-1: none;
-  --shadow-2: none;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .25);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, .4);
   --shadow-3: 0 12px 32px rgba(0, 0, 0, .55);
   --backdrop: rgba(0, 0, 0, .45);
 

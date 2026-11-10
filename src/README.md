@@ -18,8 +18,8 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 - `tokens.css`: cores, tipografia, espaçamento (4 px), raios, sombras, alturas. O tema escuro só redefine tokens aqui; componentes não têm regras por tema.
 - `base.css`: reset, foco, utilitários (`.sr-only`), barra de rolagem.
 - `components.css`: botões, campos, badges, avisos, cartão, menu de exportação, painel lateral. Tom semântico por ação (`--tone-*`) vale para badge e cartão do resumo.
-- `layout.css`: topbar clara (arquivo e configuração após importar), antes da importação, filtros na barra da tabela, resumo recolhível, aviso de itens ocultos, visão geral (indicadores em reais, cartões, atalho de itens sem ação, gráfico por tempo sem requisição), menu Exibir, configuração, barra de ferramentas, painel de detalhes fixo, rodapé e os pontos de quebra (480, 720, 1024, 1180, 1280 e 1700 px).
-- `table.css`: tabela de resultados (densidade em `--cell-y`/`--cell-x`; larguras largas por container query no painel da tabela, porque o painel de detalhes consome largura da janela).
+- `layout.css`: topbar clara (fixa e translúcida a partir de 1024 px; arquivo e configuração após importar), antes da importação, filtros na barra da tabela, resumo recolhível, aviso de itens ocultos, visão geral (indicadores em reais, cartões, atalho de itens sem ação, gráfico por tempo sem requisição), menu Exibir, configuração, barra de ferramentas, painel de detalhes fixo, rodapé os pontos de quebra (480, 720, 1024, 1180, 1280 e 1700 px) e, no fim, movimento (entrada após importar, linhas novas, View Transitions) e o esqueleto de carregamento.
+- `table.css`: tabela de resultados (barra de valor `.value-cell`; densidade em `--cell-y`/`--cell-x`; larguras largas por container query no painel da tabela, porque o painel de detalhes consome largura da janela).
 - `print.css`: relatório de impressão/PDF.
 
 ## Subpasta

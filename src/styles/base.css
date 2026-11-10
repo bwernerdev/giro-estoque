@@ -79,6 +79,7 @@ html.theme-switching *::after {
   *::after {
     scroll-behavior: auto !important;
     transition: none !important;
+    animation: none !important;
   }
 }
 
