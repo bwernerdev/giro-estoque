@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, paginate, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
+import { agingBucket, agingSummary, stockHealth } from '../src/analysis.js';
 import { renderApp } from '../src/template.js';
-import { ANALITICO_ACTIONS, buildSummaryMarkup, buildTotalMarkup, buildValueChartMarkup } from '../src/main.js';
+import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup } from '../src/main.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -22,7 +23,11 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.equal(document.querySelectorAll('[data-export]').length, 3);
   assert.ok(document.querySelector('#density-toggle'));
   assert.ok(document.querySelector('#clear-filters'));
-  assert.ok(document.querySelector('#import-context'));
+  assert.equal(document.querySelector('#import-context'), null);
+  assert.ok(document.querySelector('#view-menu #density-toggle'));
+  assert.ok(document.querySelector('#view-menu #show-hidden'));
+  assert.ok(document.querySelector('#aging-chart #aging-chart-bars'));
+  assert.match(document.querySelector('.brand').textContent, /GIRO DE ESTOQUE/);
   assert.ok(document.querySelector('#filtered-count'));
   assert.equal(document.querySelector('.results-counter').getAttribute('aria-live'), 'polite');
   assert.equal(document.querySelector('label[for="location-filter"]'), null);
@@ -53,9 +58,11 @@ test('pesquisa somente trechos do código ou da descrição, ignorando caixa e a
 test('o valor total do estoque aparece uma única vez, fora dos cartões do resumo', () => {
   const summaryResults = [{ item: 'A' }, { item: 'B' }];
   const summaryAllResults = [{ item: 'A' }, { item: 'B' }, { item: 'C', hidden: true }];
-  const markup = buildSummaryMarkup({ summaryResults, summaryAllResults, actions: ANALITICO_ACTIONS, locationFilter: '', locationTotal: 44302.87 });
+  const markup = buildSummaryMarkup({ summaryResults, summaryAllResults, actions: ANALITICO_ACTIONS, analitico: true });
   assert.doesNotMatch(markup, /VALOR TOTAL/i);
-  assert.match(markup, /ITENS NO PAINEL/);
+  assert.match(markup, /ITENS COM AÇÃO/);
+  assert.match(markup, /de 3 no arquivo/);
+  assert.match(buildSummaryMarkup({ summaryResults, summaryAllResults, actions: ['BLOQUEAR'] }), /TODOS OS ITENS/);
   assert.equal((markup.match(/summary-card/g) || []).length, 1);
 
   const total = buildTotalMarkup({ summaryAllResults, locationFilter: '', locationTotal: 44302.87 });
@@ -107,9 +114,24 @@ test('oculta cards de ação zerados e os exibe quando há itens para executar',
 
   assert.match(markup, /data-summary-action="BLOQUEAR"/);
   assert.match(markup, /data-summary-action="Sem ação definida"/);
-  assert.match(markup, /33% do painel/);
+  assert.match(markup, /33% do total/);
   assert.doesNotMatch(markup, /data-summary-action="TRANSFERIR OBSOLETO"/);
   assert.doesNotMatch(markup, /data-summary-hidden/);
+});
+
+test('itens ocultos viram atalho discreto e cartões mostram o valor da ação', () => {
+  const markup = buildSummaryMarkup({
+    summaryResults: rows,
+    summaryAllResults: rows,
+    actions: ['BLOQUEAR', 'Itens ocultos'],
+    counts: [{ action: 'BLOQUEAR', count: 1 }, { action: 'Itens ocultos', count: 4 }],
+    values: new Map([['BLOQUEAR', 12500]]),
+    analitico: true,
+  });
+  assert.doesNotMatch(markup, /data-summary-action="Itens ocultos"/);
+  assert.match(markup, /class="summary-filter hidden-shortcut" data-summary-hidden/);
+  assert.match(markup, /Ver 4 itens sem ação/);
+  assert.match(markup, /R\$\s?12,5\s?mil · 33%/);
 });
 
 test('prioriza ações críticas e ordena valores sem mover vazios para o início', () => {
@@ -219,10 +241,32 @@ test('soma o valor do estoque por ação e monta o gráfico do maior para o meno
     ['ZERAR MIN/MAX', 1, 2000],
     ['DESBLOQUEAR', 0, 0],
   ]);
-  const chart = buildValueChartMarkup(values);
-  assert.equal((chart.match(/chart-row/g) || []).length, 3);
-  assert.ok(chart.indexOf('ZERAR MIN/MAX') < chart.indexOf('BLOQUEAR'));
-  assert.match(chart, /R\$\s?1\.500,50/);
+});
+
+test('agrupa o valor com saldo por tempo sem requisição e separa parado de obsoleto', () => {
+  const items = [
+    { stock: 5, daysSince: 10, stockValue: 100, obsoleteLocation: false },
+    { stock: 5, daysSince: 120, stockValue: '1.000,50', obsoleteLocation: false },
+    { stock: 5, daysSince: 200, stockValue: 300, obsoleteLocation: false },
+    { stock: 5, daysSince: 400, stockValue: 700, obsoleteLocation: true },
+    { stock: 0, daysSince: 400, stockValue: 999, obsoleteLocation: false },
+    { stock: 5, daysSince: null, stockValue: 50, obsoleteLocation: false },
+  ];
+  assert.deepEqual(items.map(agingBucket), ['0-89', '90-179', '180-364', '365+', null, null]);
+  const buckets = agingSummary(items);
+  assert.deepEqual(buckets.map(({ key, count, value }) => [key, count, value]), [
+    ['0-89', 1, 100], ['90-179', 1, 1000.5], ['180-364', 1, 300], ['365+', 1, 700],
+  ]);
+  const health = stockHealth(items);
+  assert.deepEqual(health.idle, { count: 1, value: 300 });
+  assert.deepEqual(health.obsolete, { count: 1, value: 700 });
+  assert.match(buildHealthMarkup('idle', health.idle), /Parado há 180 dias ou mais/);
+  assert.match(buildHealthMarkup('obsolete', health.obsolete), /R\$\s?700,00/);
+
+  const chart = buildAgingChartMarkup(buckets, '90-179');
+  assert.equal((chart.match(/class="chart-row"/g) || []).length, 4);
+  assert.match(chart, /data-aging="90-179" aria-pressed="true"/);
   assert.match(chart, /width:100\.0%/);
-  assert.equal(buildValueChartMarkup([{ action: 'BLOQUEAR', count: 2, value: 0 }]), '');
+  assert.match(chart, /R\$\s?1\.000,50/);
+  assert.equal(buildAgingChartMarkup(agingSummary([])), '');
 });

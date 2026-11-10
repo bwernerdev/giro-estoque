@@ -1,5 +1,5 @@
 import { importFile, selectDataRows } from './import.js';
-import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { AGING_BUCKETS, ANALITICO_REQUIRED_KEYS, agingBucket, agingSummary, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockHealth, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
 import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
@@ -17,6 +17,7 @@ const state = {
   columns: [],
   pageRows: [],
   grouped: false,
+  agingFilter: '',
   collapsedGroups: new Set(),
   actionOrder: [],
   actionRank: new Map(),
@@ -30,6 +31,7 @@ export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const BRL_COMPACT = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 });
 let refreshRun = 0;
 let searchRenderFrame = 0;
 let importRun = 0;
@@ -50,32 +52,43 @@ function actionIcon(action) {
   return 'dot';
 }
 
-export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
+export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, values = null, analitico = false }) {
   const summaryCounts = prioritizeActionCounts(counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length })));
+  const hidden = summaryCounts.find(({ action }) => action === 'Itens ocultos');
+  const money = action => (values?.has(action) ? BRL_COMPACT.format(values.get(action)) : '');
   return [
-    `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon('list', 'kpi-svg')}</span><span class="kpi-label">ITENS NO PAINEL</span></span><div class="summary-value"><strong>${summaryResults.length}</strong><small>${summaryAllResults.length} no arquivo</small></div></button>`,
-    ...summaryCounts.filter(({ count }) => count > 0).map(({ action, count }) => {
-      const hiddenCard = action === 'Itens ocultos';
-      const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
-      const total = hiddenCard ? summaryAllResults.length : summaryResults.length;
-      const percentage = total ? Math.round((count / total) * 100) : 0;
-      return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon(hiddenCard ? 'eyeOff' : actionIcon(action), 'kpi-svg')}</span><span class="kpi-label">${escapeHtml(action.toUpperCase())}</span></span><div class="summary-value"><strong>${count}</strong><small>${percentage}% ${hiddenCard ? 'do total' : 'do painel'}</small></div></button>`;
+    `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon('list', 'kpi-svg')}</span><span class="kpi-label">${analitico && summaryResults.length < summaryAllResults.length ? 'ITENS COM AÇÃO' : 'TODOS OS ITENS'}</span></span><div class="summary-value"><strong>${summaryResults.length}</strong><small>de ${summaryAllResults.length} no arquivo</small></div></button>`,
+    ...summaryCounts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action, count }) => {
+      const percentage = summaryResults.length ? Math.round((count / summaryResults.length) * 100) : 0;
+      const amount = money(action);
+      return `<button type="button" class="summary-card summary-filter ${slug(action)}" data-summary-action="${escapeHtml(action)}" aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'kpi-svg')}</span><span class="kpi-label">${escapeHtml(action.toUpperCase())}</span></span><div class="summary-value"><strong>${count}</strong><small>${amount ? `${amount} · ${percentage}%` : `${percentage}% do total`}</small></div></button>`;
     }),
+    // Itens sem ação não são indicador: viram um atalho discreto abaixo dos cartões.
+    hidden?.count ? `<button type="button" class="summary-filter hidden-shortcut" data-summary-hidden aria-pressed="false">${svgIcon('eyeOff')}<span>Ver ${hidden.count.toLocaleString('pt-BR')} ${hidden.count === 1 ? 'item sem ação' : 'itens sem ação'}</span></button>` : '',
   ].filter(Boolean).join('');
 }
 
-// Gráfico de barras horizontais: valor do estoque por ação (uma série, uma cor; rótulo em cada barra).
-export function buildValueChartMarkup(values) {
-  const bars = values.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0);
-  const total = bars.reduce((sum, { value }) => sum + value, 0);
-  if (!bars.length || total <= 0) return '';
-  const largest = Math.max(...bars.map(({ value }) => value));
-  return [...bars].sort((a, b) => b.value - a.value).map(({ action, count, value }) => {
-    const share = Math.round((value / total) * 100);
+// Gráfico de envelhecimento: valor do estoque com saldo por faixa de dias sem requisição.
+// Uma série, uma cor; cada faixa é um botão que filtra a tabela.
+export function buildAgingChartMarkup(buckets, selected = '') {
+  if (!buckets.some(({ count }) => count > 0)) return '';
+  const total = buckets.reduce((sum, { value }) => sum + value, 0);
+  const largest = Math.max(...buckets.map(({ value }) => value));
+  return buckets.map(({ key, label, count, value }) => {
+    const share = total ? Math.round((value / total) * 100) : 0;
     const width = largest ? Math.max((value / largest) * 100, value > 0 ? 1.5 : 0) : 0;
-    const tip = `${action}: ${realCurrency(value)} (${share}% do valor) · ${count} ${count === 1 ? 'item' : 'itens'}`;
-    return `<div class="chart-row" title="${escapeHtml(tip)}"><span class="chart-label">${escapeHtml(action.toUpperCase())}</span><span class="chart-track"><span class="chart-bar" style="width:${width.toFixed(1)}%"></span></span><span class="chart-value">${realCurrency(value)}</span></div>`;
+    const items = `${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}`;
+    const tip = `${label}: ${realCurrency(value)} (${share}% do valor) · ${items}`;
+    return `<button type="button" class="chart-row" data-aging="${key}" aria-pressed="${key === selected}" title="${escapeHtml(tip)}"${count ? '' : ' disabled'}><span class="chart-label">${escapeHtml(label)}</span><span class="chart-track"><span class="chart-bar" style="width:${width.toFixed(1)}%"></span></span><span class="chart-value">${realCurrency(value)}<small>${items}</small></span></button>`;
   }).join('');
+}
+
+// Indicadores em reais ao lado do valor total (modo Analítico).
+export function buildHealthMarkup(kind, { count, value }) {
+  const items = `${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}`;
+  return kind === 'idle'
+    ? `<span class="total-label">Parado há 180 dias ou mais</span><strong>${realCurrency(value)}</strong><small>${items} fora dos locais obsoletos</small>`
+    : `<span class="total-label">Em locais obsoletos (1 e 298)</span><strong>${realCurrency(value)}</strong><small>${items} com saldo</small>`;
 }
 
 export function buildTotalMarkup({ summaryAllResults, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
@@ -236,13 +249,12 @@ if (typeof document !== 'undefined') {
     if (analitico) return [
       { label: 'Descrição', key: 'item' },
       { label: 'Código', key: 'sku' },
-      { label: 'Local', key: 'localCode' },
-      { label: 'Prateleira', key: 'shelfCode' },
-      { label: 'Repartição', key: 'partitionCode' },
+      { label: 'Posição', key: 'localCode', sortLabel: 'posição (local)' },
       { label: 'Qtd. atual', key: 'stock' },
       { label: 'Mín. / Máx', key: 'minimum' },
+      { label: 'Valor', key: 'stockValue', sortLabel: 'valor do saldo' },
       { label: 'Ação', key: 'action' },
-      { label: 'Dias', key: 'daysSince', sortLabel: 'dias desde a última movimentação' },
+      { label: 'Sem requisição', key: 'daysSince', sortLabel: 'dias sem requisição' },
     ];
     if (giro) return [
       { label: 'Item / Filial', key: 'item' },
@@ -262,7 +274,7 @@ if (typeof document !== 'undefined') {
     ];
   }
   function columnClass(key) {
-    const names = { item: 'descricao', sku: 'codigo', localCode: 'local', shelfCode: 'prateleira', partitionCode: 'reparticao', stock: 'estoque', stockValue: 'estoque', sales: 'consumo', consumption: 'consumo', coverage: 'cobertura', minimum: 'limites', action: 'acao', daysSince: 'detalhes', reason: 'detalhes' };
+    const names = { item: 'descricao', sku: 'codigo', localCode: 'posicao', shelfCode: 'prateleira', partitionCode: 'reparticao', stock: 'estoque', stockValue: 'valor', sales: 'consumo', consumption: 'consumo', coverage: 'cobertura', minimum: 'limites', action: 'acao', daysSince: 'detalhes', reason: 'detalhes' };
     return `col-${names[key]}`;
   }
   function renderTableHead() {
@@ -283,10 +295,17 @@ if (typeof document !== 'undefined') {
       ? `Campos mais frequentes: ${quality.fields.map(({ field, count }) => `${field} (${count})`).join(' · ')}.`
       : 'Abra “Outros dados” ou “Motivo” para localizar o problema.';
   }
-  function renderValueChart(rows, actions, analitico) {
-    const markup = buildValueChartMarkup(actionValues(rows, actions, analitico));
-    el('#value-chart-bars').innerHTML = markup;
-    el('#value-chart').hidden = !markup;
+  // Indicadores em reais e gráfico só no Analítico com a coluna de valor (Vl Saldo).
+  function renderOverview(summaryAllResults, analitico) {
+    const withValue = analitico && isMapped('stockValue');
+    const health = withValue ? stockHealth(summaryAllResults) : null;
+    for (const [selector, kind] of [['#idle-value', 'idle'], ['#obsolete-value', 'obsolete']]) {
+      el(selector).innerHTML = health ? buildHealthMarkup(kind, health[kind]) : '';
+      el(selector).hidden = !health;
+    }
+    const chart = withValue ? buildAgingChartMarkup(agingSummary(summaryAllResults), state.agingFilter) : '';
+    el('#aging-chart-bars').innerHTML = chart;
+    el('#aging-chart').hidden = !chart;
   }
   function renderHiddenToggle(hiddenCount) {
     el('#hidden-toggle-text').textContent = `Mostrar itens ocultos (${hiddenCount.toLocaleString('pt-BR')})`;
@@ -304,11 +323,10 @@ if (typeof document !== 'undefined') {
   }
   function currentSheet() { return state.sheets[state.sheet]; }
   function renderImportContext() {
-    if (!state.fileName || !currentSheet()) { el('#import-context').textContent = ''; el('#topbar-file').hidden = true; return; }
+    if (!state.fileName || !currentSheet()) { el('#topbar-file').hidden = true; return; }
     const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
-    el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>`;
+    el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span title="Importado às ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : ''}`;
     el('#topbar-file').hidden = false;
-    el('#import-context').innerHTML = `<span><strong>Arquivo:</strong> ${escapeHtml(state.fileName)}</span><span><strong>Aba:</strong> ${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span><strong>Importado às:</strong> ${escapeHtml(importedAt)}</span>` : ''}`;
   }
   function dataRows() { return selectDataRows(currentSheet().rows, state.mapping, currentSheet().headerRow + 1); }
 
@@ -438,7 +456,7 @@ if (typeof document !== 'undefined') {
     const availableActions = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action }) => action);
     state.actionOrder = availableActions;
     state.actionRank = new Map(availableActions.map((action, index) => [action, index]));
-    renderValueChart(summaryResults, availableActions, analitico);
+    renderOverview(summaryAllResults, analitico);
     const hiddenCount = summaryAllResults.filter(row => row.hidden).length;
     const locationTotal = summarizeLocationTotal(summaryAllResults, state.locationFilter);
     const previousFilter = state.pendingActionFilter || el('#filter').value;
@@ -447,7 +465,10 @@ if (typeof document !== 'undefined') {
       summaryResults,
       summaryAllResults,
       actions: analitico ? [...ANALITICO_ACTIONS, 'Itens ocultos'] : giro ? GIRO_ACTIONS : GENERIC_ACTIONS,
-      counts,
+      // Com os ocultos já na tabela, o atalho "Ver N itens sem ação" seria redundante.
+      counts: el('#show-hidden').checked && !state.hiddenOnly ? counts.filter(({ action }) => action !== 'Itens ocultos') : counts,
+      values: isMapped('stockValue') ? new Map(actionValues(summaryResults, availableActions, analitico).map(({ action, value }) => [action, value])) : null,
+      analitico,
       locationFilter: state.locationFilter,
       locationTotal,
       shelfFilter: state.shelfFilter,
@@ -515,24 +536,42 @@ if (typeof document !== 'undefined') {
   }
   const descriptionObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleDescriptionControls) : null;
   document.fonts?.ready.then(scheduleDescriptionControls);
+  function limitsText(row) {
+    if (row.minimum === null || row.minimum === undefined || row.maximum === null || row.maximum === undefined) return formatNumber(row.stock);
+    const status = row.stock < row.minimum ? 'abaixo do mínimo' : row.stock > row.maximum ? 'acima do máximo' : 'dentro dos limites';
+    return `${formatNumber(row.stock)} · mín. ${formatNumber(row.minimum)} / máx. ${formatNumber(row.maximum)} (${status})`;
+  }
   function detailFields(reason, row) {
     const entries = [];
+    const add = (label, value, html = false) => { if (value !== '' && value !== null && value !== undefined) entries.push({ label, value, html }); };
+    const filled = value => value !== null && value !== undefined;
     if (isAnaliticoMode()) {
-      const elapsed = row.daysSince === null || row.daysSince === undefined ? '' : `${formatNumber(row.daysSince)} dias desde a última requisição`;
-      if (row.lastRequest) entries.push(['Última requisição', row.lastRequest]);
-      if (elapsed) entries.push(['Tempo sem requisição', elapsed]);
-      if (row.blockId) entries.push(['Status de bloqueio', row.blockId]);
+      const elapsed = filled(row.daysSince) ? `${formatNumber(row.daysSince)} dias desde a última requisição` : '';
       const notes = reason.split(' · ').filter(part => part !== elapsed && part !== row.blockReason && part !== `Id Bloqueio: ${row.blockId}`).join(' · ');
-      if (row.action) entries.push(['Ação recomendada', row.action]);
-      if (notes) entries.push([reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Observações', notes]);
+      add('Ação recomendada', row.actions?.length ? row.actions.map(badgeHtml).join(' ') : '', true);
+      add(reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Por que', notes);
+      add('Saldo', limitsText(row));
+      add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
+      add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
+      add('Giro do estoque', filled(row.coverage) ? `${formatNumber(row.coverage)} dias` : '');
+      add('Classificação', row.classification);
+      add('Última requisição', row.lastRequest);
+      add('Tempo sem requisição', elapsed);
+      add('Bloqueio', [...new Set([row.blockReason, row.blockId].filter(Boolean))].join(' · '));
     } else {
-      entries.push(['Motivo da ação', reason]);
+      add('Motivo da ação', reason);
     }
-    return `<dl class="detail-fields">${entries.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+    return `<dl class="detail-fields">${entries.map(({ label, value, html }) => `<div><dt>${escapeHtml(label)}</dt><dd>${html ? value : escapeHtml(value)}</dd></div>`).join('')}</dl>`;
   }
   function detailsHtml(reason, row) {
     if (!reason) return '<span class="no-details">—</span>';
     return `<button type="button" class="icon-button details-button" data-detail-row="${row.row}" aria-haspopup="dialog" aria-label="Ver detalhes" title="Ver detalhes">${svgIcon('chevronRight')}</button>`;
+  }
+  // Local, prateleira e repartição em uma coluna (ex.: 7 · 0 · I).
+  function positionHtml(row) {
+    const parts = [stockLocation(row), row.shelfCode, row.partitionCode];
+    const title = [['Local', parts[0]], ['Prateleira', parts[1]], ['Repartição', parts[2]]].map(([label, value]) => `${label} ${value || '—'}`).join(' · ');
+    return `<span title="${escapeHtml(title)}">${escapeHtml(parts.map(value => value || '—').join(' · '))}</span>`;
   }
   function codeHtml(code) {
     const value = String(code ?? '');
@@ -637,7 +676,8 @@ if (typeof document !== 'undefined') {
     return `<tr class="group-row"><td colspan="${state.columns.length}"><div class="group-head"><button type="button" class="group-toggle" data-group-toggle="${escapeHtml(action)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Expandir' : 'Recolher'} grupo ${escapeHtml(action)}">${svgIcon(collapsed ? 'chevronRight' : 'chevronDown')}</button>${badgeHtml(action)}<span class="group-count">${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}</span><button type="button" class="discreet-button group-export" data-group-export="${escapeHtml(action)}">Exportar grupo</button></div></td></tr>`;
   }
   function visibleResults() {
-    const sorted = sortResults(filterResults(state.results, {
+    const base = state.agingFilter ? state.results.filter(row => agingBucket(row) === state.agingFilter) : state.results;
+    const sorted = sortResults(filterResults(base, {
       query: el('#search').value,
       action: el('#filter').value,
       location: state.locationFilter,
@@ -669,6 +709,7 @@ if (typeof document !== 'undefined') {
     if (state.partitionFilter) parts.push(`Repartição ${state.partitionFilter}`);
     if (el('#filter').value) parts.push(el('#filter').value);
     if (query) parts.push(`Busca: “${query}”`);
+    if (state.agingFilter) parts.push(`Sem requisição: ${AGING_BUCKETS.find(bucket => bucket.key === state.agingFilter)?.label ?? ''}`);
     if (state.hiddenOnly) parts.push('Somente itens ocultos');
     else if (el('#show-hidden').checked && isAnaliticoMode()) parts.push('Itens ocultos incluídos');
     const sortedColumn = state.columns.find(column => column.key === state.sortKey);
@@ -702,7 +743,7 @@ if (typeof document !== 'undefined') {
       if (state.grouped && state.collapsedGroups.has(group)) continue;
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${escapeHtml(stockLocation(row)) || '—'}</td><td>${escapeHtml(row.shelfCode) || '—'}</td><td>${escapeHtml(row.partitionCode) || '—'}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${itemCurrency(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
       } else {
         rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? itemCurrency(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
       }
@@ -716,7 +757,7 @@ if (typeof document !== 'undefined') {
     descriptionObserver?.disconnect();
     el('#result-rows').querySelectorAll('.item-description strong').forEach(text => descriptionObserver?.observe(text));
     const itemLabel = filtered.length === 1 ? 'item' : 'itens';
-    const filterLabel = query || filter || state.locationFilter || state.shelfFilter || state.partitionFilter || state.hiddenOnly ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
+    const filterLabel = query || filter || state.locationFilter || state.shelfFilter || state.partitionFilter || state.hiddenOnly || state.agingFilter ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
     el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
     el('#filtered-count').textContent = `${filtered.length.toLocaleString('pt-BR')} de ${state.allResults.length.toLocaleString('pt-BR')} ${state.allResults.length === 1 ? 'item' : 'itens'}`;
     el('#pagination').hidden = pageCount <= 1;
@@ -810,7 +851,7 @@ if (typeof document !== 'undefined') {
     const local = state.locationFilter ? ` · Local: ${escapeHtml(state.locationFilter)}` : '';
     const shelf = state.shelfFilter ? ` · Prateleira: ${escapeHtml(state.shelfFilter)}` : '';
     const partition = state.partitionFilter ? ` · Repartição: ${escapeHtml(state.partitionFilter)}` : '';
-    el('#print-report').innerHTML = `<h1>Controle de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${shelf}${partition}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    el('#print-report').innerHTML = `<h1>Giro de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${shelf}${partition}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     window.print();
   }
 
@@ -1050,6 +1091,24 @@ if (typeof document !== 'undefined') {
     renderResults();
     persistFilters();
   });
+  el('#aging-chart-bars').addEventListener('click', event => {
+    const bar = event.target.closest('[data-aging]');
+    if (!bar) return;
+    const previous = state.agingFilter;
+    state.agingFilter = previous === bar.dataset.aging ? '' : bar.dataset.aging;
+    state.page = 1;
+    // A faixa conta todos os itens com saldo; mostra os ocultos para a tabela bater com o gráfico
+    // e volta a escondê-los ao sair do filtro, se estavam escondidos antes.
+    if (state.agingFilter) {
+      if (!previous) state.agingRevealedHidden = !el('#show-hidden').checked;
+      el('#show-hidden').checked = true;
+      state.hiddenOnly = false;
+    } else if (state.agingRevealedHidden) {
+      el('#show-hidden').checked = false;
+      state.agingRevealedHidden = false;
+    }
+    refresh({ reanalyze: false });
+  });
   el('#table-head').addEventListener('click', event => {
     const button = event.target.closest('[data-sort-key]');
     if (!button) return;
@@ -1067,6 +1126,7 @@ if (typeof document !== 'undefined') {
     state.shelfFilter = '';
     state.partitionFilter = '';
     state.hiddenOnly = false;
+    state.agingFilter = '';
     state.sortKey = '';
     state.sortDirection = 'asc';
     el('#search').value = '';
@@ -1083,13 +1143,15 @@ if (typeof document !== 'undefined') {
       else exportCsv();
     } catch (error) { message(error.message || 'Não foi possível exportar os itens.', true); }
   }));
+  const menus = ['#export-menu', '#view-menu'];
   document.addEventListener('click', event => {
-    if (!el('#export-menu').contains(event.target)) el('#export-menu').open = false;
+    for (const menu of menus) if (!el(menu).contains(event.target)) el(menu).open = false;
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    if (!el('#export-menu').open) return;
-    el('#export-menu').open = false;
-    el('#export-menu summary').focus();
+    const menu = menus.find(selector => el(selector).open);
+    if (!menu) return;
+    el(menu).open = false;
+    el(`${menu} summary`).focus();
   });
 }

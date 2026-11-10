@@ -51,7 +51,7 @@ for (const width of [768, 1024, 1366, 1920]) {
           await expect.poll(() => page.evaluate(() => {
             const scroll = document.querySelector('.table-scroll');
             const inside = (child, parent, inset = 0) => child.left >= parent.left + inset - 1 && child.right <= parent.right - inset + 1 && child.top >= parent.top - 1 && child.bottom <= parent.bottom + 1;
-            const wholeHeaders = ['prateleira', 'reparticao'].every(name => {
+            const wholeHeaders = ['posicao', 'valor'].every(name => {
               const button = document.querySelector(`th.col-${name} button`);
               const range = document.createRange();
               range.selectNodeContents(button.firstChild);
@@ -77,7 +77,7 @@ for (const width of [768, 1024, 1366, 1920]) {
         }
       }
     }
-    await expect(page.locator('#table-head th')).toHaveCount(9);
+    await expect(page.locator('#table-head th')).toHaveCount(8);
   });
 }
 
@@ -85,8 +85,8 @@ test('descrições sobrevivem à ordenação, busca e paginação e detalhes abr
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await upload(page);
-  const first = page.locator('#result-rows tr').filter({ has: page.locator('.col-prateleira', { hasText: /^ESTANTE-0$/ }) });
-  const second = page.locator('#result-rows tr').filter({ has: page.locator('.col-prateleira', { hasText: /^ESTANTE-1$/ }) });
+  const first = page.locator('#result-rows tr').filter({ has: page.locator('.col-posicao', { hasText: /· ESTANTE-0 ·/ }) });
+  const second = page.locator('#result-rows tr').filter({ has: page.locator('.col-posicao', { hasText: /· ESTANTE-1 ·/ }) });
   await expect(first.locator('.item-description')).toHaveClass(/is-expandable/);
   const collapsed = await first.locator('strong').evaluate(text => text.clientHeight);
   await first.locator('.item-description summary').click();
@@ -155,6 +155,7 @@ test('pesquisa expande ao clicar, recolhe vazia e mantém buscas ativas após pe
   const searchBounds = await search.boundingBox();
   expect(searchBounds.x).toBeGreaterThan(toggleBounds.x + toggleBounds.width);
   expect(Math.abs((searchBounds.y + searchBounds.height / 2) - (toggleBounds.y + toggleBounds.height / 2))).toBeLessThan(1);
+  await page.locator('#view-menu summary').click();
   await page.locator('#density-toggle').click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await toggle.focus();
@@ -166,6 +167,7 @@ test('pesquisa expande ao clicar, recolhe vazia e mantém buscas ativas após pe
   await toggle.click();
   await search.fill('Item 60');
   await expect(page.locator('#result-rows tr')).toHaveCount(1);
+  await page.locator('#view-menu summary').click();
   await page.locator('#density-toggle').click();
   await expect(search).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -226,7 +228,7 @@ test('desktop: pesquisa sempre visível, atalho "/" e Esc não a recolhem', asyn
   const search = page.getByRole('searchbox', { name: 'Pesquisa' });
   await expect(page.locator('#search-toggle')).toHaveAttribute('aria-expanded', 'true');
   await expect(search).toBeVisible();
-  await page.locator('#density-toggle').focus();
+  await page.locator('#sidebar-toggle').focus();
   await page.keyboard.press('/');
   await expect(search).toBeFocused();
   await page.keyboard.press('Escape');
@@ -247,19 +249,38 @@ test('desktop: densidade compacta por padrão em 1366 px e linha com duas linhas
   expect(lines.code.y).toBeGreaterThan(lines.strong.y);
 });
 
-test('desktop: visão geral com total, cartões de ação e gráfico de valor por ação', async ({ page }) => {
+test('desktop: visão geral com indicadores em reais, cartões de ação e gráfico por tempo sem requisição', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
-  await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas;Valor do estoque\nA;001;50;30;10\nB;002;5;30;20') });
-  await expect(page.locator('#result-rows tr')).toHaveCount(2);
-  expect(await page.locator('#summary .summary-card').count()).toBeGreaterThan(1);
+  const rows = [
+    'Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio;Vl Saldo',
+    'Novo;001;7;5;0;10;10;Item com Giro;Desbloqueado;Desbloqueado;100',
+    'Parado;002;7;5;0;10;200;Acima de 90;Desbloqueado;Desbloqueado;300',
+    'Antigo;003;298;5;0;10;400;Acima de 90;Bloqueado;Bloqueado;700',
+  ].join('\n');
+  await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from(rows) });
+  await expect(page.locator('#summary .summary-card').first()).toContainText(/itens com ação/i);
   await expect(page.locator('.overview #total-value')).toContainText('Valor total do estoque');
+  await expect(page.locator('#idle-value')).toContainText('Parado há 180 dias ou mais');
+  await expect(page.locator('#idle-value')).toContainText('R$');
+  await expect(page.locator('#obsolete-value')).toContainText('Em locais obsoletos');
   await expect(page.locator('#sidebar #total-value')).toHaveCount(0);
-  await expect(page.locator('#value-chart')).toBeVisible();
-  await expect(page.locator('#value-chart .chart-row').first()).toContainText('R$');
-  const chart = await page.locator('#value-chart').boundingBox();
+  await expect(page.locator('#summary .hidden-shortcut')).toContainText('Ver 1 item sem ação');
+  await expect(page.locator('#aging-chart')).toBeVisible();
+  await expect(page.locator('#aging-chart .chart-row')).toHaveCount(4);
+  const chart = await page.locator('#aging-chart').boundingBox();
   const cards = await page.locator('#summary').boundingBox();
   expect(chart.x).toBeGreaterThan(cards.x + cards.width - 1);
+
+  await page.locator('[data-aging="180-364"]').click();
+  await expect(page.locator('[data-aging="180-364"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#active-filters-text')).toContainText('Sem requisição: 180 a 364 dias');
+  await expect(page.locator('#result-rows tr')).toHaveCount(1);
+  await expect(page.locator('#result-rows')).toContainText('Parado');
+  await page.locator('[data-aging="180-364"]').click();
+  await expect(page.locator('#active-filters')).toBeHidden();
+  await expect(page.locator('#show-hidden')).not.toBeChecked();
+
   await expect(page.locator('#topbar-file')).toContainText('g.csv');
   await expect(page.getByText('Preparar análise')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Trocar arquivo' })).toBeVisible();
@@ -267,11 +288,25 @@ test('desktop: visão geral com total, cartões de ação e gráfico de valor po
   await expect(page.locator('#detail-dock')).toBeHidden();
 });
 
+test('menu Exibir reúne compacto, zebrado, agrupar e itens ocultos', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  await upload(page);
+  await expect(page.locator('#sidebar #density-toggle')).toHaveCount(0);
+  await expect(page.locator('#density-toggle')).toBeHidden();
+  await page.locator('#view-menu summary').click();
+  await expect(page.locator('#density-toggle')).toBeVisible();
+  await expect(page.locator('#group-toggle')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#density-toggle')).toBeHidden();
+  await expect(page.locator('#view-menu summary')).toBeFocused();
+});
+
 test('desktop: cabeçalho da tabela e rodapé permanecem fixos durante a rolagem', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 700 });
   await page.goto('./');
   await upload(page);
-  await page.evaluate(() => window.scrollTo(0, 400));
+  await page.evaluate(() => window.scrollTo(0, document.querySelector('.table-panel').getBoundingClientRect().top + scrollY + 300));
   await expect.poll(() => page.evaluate(() => {
     const tools = document.querySelector('.table-tools').getBoundingClientRect();
     const head = document.querySelector('#table-head th').getBoundingClientRect();
@@ -284,7 +319,7 @@ test('desktop: clicar na linha abre o painel e as setas navegam entre itens', as
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await upload(page);
-  await page.locator('#result-rows tr').nth(1).locator('td.col-local').click();
+  await page.locator('#result-rows tr').nth(1).locator('td.col-posicao').click();
   await expect(page.locator('#item-panel')).toBeVisible();
   await expect(page.locator('.panel-item-name')).toHaveText('Item 01');
   await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(1);
@@ -303,7 +338,7 @@ test('1920 px: os detalhes ficam fixos ao lado da tabela e as setas navegam', as
   await upload(page);
   await expect(page.locator('#detail-dock')).toBeVisible();
   await expect(page.locator('#detail-dock .dock-empty')).toBeVisible();
-  await page.locator('#result-rows tr').nth(1).locator('td.col-local').click();
+  await page.locator('#result-rows tr').nth(1).locator('td.col-posicao').click();
   await expect(page.locator('#item-panel')).not.toBeVisible();
   await expect(page.locator('#detail-dock .panel-item-name')).toHaveText('Item 01');
   await expect(page.locator('#result-rows tr.is-selected')).toHaveCount(1);
@@ -321,6 +356,7 @@ test('agrupa por ação com cabeçalhos recolhíveis, exporta o grupo e lembra a
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await upload(page);
+  await page.locator('#view-menu summary').click();
   await page.locator('#group-toggle').click();
   await expect(page.locator('#group-toggle')).toHaveAttribute('aria-pressed', 'true');
   const header = page.locator('#result-rows tr.group-row');

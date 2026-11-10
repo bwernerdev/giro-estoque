@@ -158,6 +158,7 @@ export function resetDashboardState(state) {
   state.page = 1;
   state.locationFilter = '';
   state.hiddenOnly = false;
+  state.agingFilter = '';
   state.sortKey = '';
   state.sortDirection = 'asc';
   return state;

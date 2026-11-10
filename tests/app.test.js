@@ -114,7 +114,7 @@ test('uma importação vazia preserva a planilha anterior e seus controles', asy
   await app.csv('Produto;Estoque;Vendas\nA;5;30', 'anterior.csv');
   await app.csv('', 'vazio.csv');
   assert.match(app.el('#message').textContent, /Não encontrei/);
-  assert.match(app.el('#import-context').textContent, /anterior.csv/);
+  assert.match(app.el('#topbar-file').textContent, /anterior.csv/);
   app.change('[data-map="sku"]', '-1');
   await waitFor(() => app.el('#message').textContent === '');
   assert.equal(app.el('#filtered-count').textContent, '1 de 1 item');
@@ -142,28 +142,28 @@ test('o botão de instalar só aparece quando o navegador oferece a instalação
   assert.equal(installButton.hidden, true);
 });
 
-test('modo Analítico mostra as nove colunas fixas com código, local e demais dados separados', async t => {
+test('modo Analítico mostra as oito colunas fixas com posição combinada e valor', async t => {
   const app = await boot(t);
   await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nPeça A;001;298;5;10;20;200;Acima de 90;Bloqueado por saldo;Bloqueado');
   assert.equal(app.el('#result-table').className, 'analitico-table');
   assert.deepEqual([...app.el('#table-head').querySelectorAll('th')].map(node => node.textContent),
-    ['Descrição', 'Código', 'Local', 'Prateleira', 'Repartição', 'Qtd. atual', 'Mín. / Máx', 'Ação', 'Dias']);
+    ['Descrição', 'Código', 'Posição', 'Qtd. atual', 'Mín. / Máx', 'Valor', 'Ação', 'Sem requisição']);
   const cells = [...app.el('#result-rows').querySelector('tr').children].map(node => node.textContent);
-  assert.equal(cells.length, 9);
+  assert.equal(cells.length, 8);
   assert.equal(cells[0], 'Peça A');
   assert.equal(app.el('#result-rows').querySelector('tr').children[0].querySelectorAll('small').length, 0);
   assert.equal(cells[1], '001');
-  assert.equal(cells[2], '298');
-  assert.equal(cells[3], '—');
-  assert.equal(cells[4], '—');
-  assert.equal(cells[5], '5');
-  assert.equal(cells[6], '10 / 20');
-  assert.match(cells[7], /ZERAR MIN\/MAX/);
-  assert.equal(cells[8], '200 dias');
+  assert.equal(cells[2], '298 · — · —');
+  assert.match(app.el('#result-rows td.col-posicao span').title, /Local 298 · Prateleira — · Repartição —/);
+  assert.equal(cells[3], '5');
+  assert.equal(cells[4], '10 / 20');
+  assert.equal(cells[5], '—');
+  assert.match(cells[6], /ZERAR MIN\/MAX/);
+  assert.equal(cells[7], '200 dias');
   assert.equal(app.el('#result-rows .details-button').getAttribute('aria-label'), 'Ver detalhes');
   app.change('#search', 'inexistente', 'input');
   await waitFor(() => app.el('#result-rows').textContent.includes('Nenhum item encontrado'));
-  assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '9');
+  assert.equal(app.el('#result-rows').querySelector('td').getAttribute('colspan'), '8');
 });
 
 test('modo Analítico usa o número da linha como descrição apenas quando o nome do item não existe', async t => {
@@ -240,7 +240,8 @@ test('agrupa por ação, recolhe grupos, mostra cartões com ícone e o arquivo 
   assert.match(app.el('#topbar-file').textContent, /estoque\.csv/);
   assert.equal(app.el('#topbar-file').hidden, false);
   assert.ok(app.el('#summary').querySelectorAll('.summary-card .kpi-icon svg').length >= 2);
-  assert.equal(app.el('#value-chart').hidden, true, 'sem coluna de valor, o gráfico não aparece');
+  assert.equal(app.el('#aging-chart').hidden, true, 'sem coluna de valor, o gráfico não aparece');
+  assert.equal(app.el('#idle-value').hidden, true);
 
   assert.equal(app.el('#result-rows').querySelectorAll('tr.group-row').length, 0);
   app.el('#group-toggle').click();

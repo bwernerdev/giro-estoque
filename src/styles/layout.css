@@ -315,8 +315,7 @@ main {
   gap: var(--s2);
 }
 
-.sidebar .config-toggle,
-.view-toggle {
+.sidebar .config-toggle {
   width: 100%;
   height: var(--h-control);
   justify-content: flex-start;
@@ -326,45 +325,53 @@ main {
   justify-content: space-between;
 }
 
-.import-context {
+/* Indicadores em reais: valor total, parado há 180 dias ou mais e em locais obsoletos. */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s2);
+}
+
+.money-kpi {
   display: flex;
   flex-direction: column;
-  gap: var(--s1);
+  gap: 2px;
   min-width: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--tone-line, var(--accent));
+  border-radius: var(--r-md);
+  background: var(--surface);
 }
 
-.import-context span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.money-kpi[hidden] {
+  display: none;
 }
 
-.import-context strong {
-  color: var(--text-strong);
-  font-weight: 700;
+.money-kpi.idle {
+  --tone-line: var(--warning-line);
 }
 
-.total-value {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px var(--s3);
+.money-kpi.obsolete {
+  --tone-line: var(--danger-line);
 }
 
 .total-label {
   color: var(--text-muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 
-.total-value strong {
+.money-kpi strong {
   color: var(--text-strong);
-  font: 700 30px / 1.1 var(--font-display);
+  font: 700 24px / 1.15 var(--font-display);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.money-kpi small {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
 }
 
 /* Filtros de posição. O select de ação continua disponível só para leitores de tela
@@ -524,17 +531,15 @@ main {
   margin-bottom: var(--s4);
 }
 
-.overview-main {
+.overview-body {
   display: grid;
-  align-content: start;
-  gap: var(--s3);
+  gap: var(--s4);
   min-width: 0;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  grid-auto-rows: 1fr;
   gap: var(--s2);
 }
 
@@ -569,11 +574,13 @@ main {
   background: var(--accent);
 }
 
+/* Altura de duas linhas de rótulo: todos os cartões ficam iguais sem esticar a linha do atalho. */
 .kpi-head {
   display: flex;
   align-items: center;
   gap: var(--s2);
   min-width: 0;
+  min-height: 2.5em;
   color: var(--text-muted);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -666,6 +673,27 @@ main {
   box-shadow: 0 0 0 1px var(--ring);
 }
 
+/* Itens sem ação: atalho discreto, não um indicador. */
+.hidden-shortcut {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-self: start;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.hidden-shortcut .ui-icon {
+  width: 14px;
+  height: 14px;
+}
+
 /* Gráfico: barras horizontais de uma só série (cor da marca), rótulo e valor em texto. */
 .value-chart {
   margin: 0;
@@ -692,19 +720,37 @@ main {
   margin-top: var(--s3);
 }
 
+/* Cada faixa é um botão que filtra a tabela. */
 .chart-row {
   display: grid;
-  grid-template-columns: minmax(0, 10.5em) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 8.5em) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--s2);
+  width: 100%;
   padding: 5px var(--s1);
+  border: 1px solid transparent;
   border-radius: var(--r-sm);
+  background: transparent;
   color: var(--text);
+  font: inherit;
   font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
 }
 
-.chart-row:hover {
+.chart-row:hover:not(:disabled) {
   background: var(--surface-hover);
+}
+
+.chart-row[aria-pressed="true"] {
+  border-color: var(--ring);
+  background: var(--surface-selected);
+}
+
+.chart-row:disabled {
+  cursor: default;
+  opacity: .55;
 }
 
 .chart-track {
@@ -719,16 +765,23 @@ main {
 }
 
 .chart-value {
+  display: grid;
+  justify-items: end;
   color: var(--text-strong);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   white-space: nowrap;
 }
 
+.chart-value small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 /* Gráfico ao lado dos cartões só com a barra lateral (≥1280 px); abaixo disso, embaixo deles. */
 @media (min-width: 1280px) {
-  .overview {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  .overview-body {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
     align-items: start;
   }
 }
@@ -777,6 +830,35 @@ main {
 .filter-actions .export-menu summary {
   min-width: max-content;
   white-space: nowrap;
+}
+
+/* Menu Exibir: opções da tabela que antes ficavam na barra lateral. */
+.view-menu summary {
+  min-width: 0;
+}
+
+.view-options {
+  min-width: 220px;
+}
+
+/* O espaço do visto fica reservado para os textos alinharem. */
+.view-options .density-check {
+  flex: none;
+  width: 16px;
+  margin-right: var(--s1);
+}
+
+.view-options .hidden-toggle {
+  display: flex;
+  min-height: var(--h-control-sm);
+  margin-top: var(--s1);
+  padding: var(--s2) var(--s3) var(--s1);
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--fs-sm);
+}
+
+.view-options .hidden-toggle[hidden] {
+  display: none;
 }
 
 /* Pesquisa: no desktop fica sempre aberta; abaixo de 1024 px recolhe até ser tocada. */
@@ -1181,16 +1263,6 @@ html[data-sidebar="hidden"] .sidebar {
     gap: var(--s2);
   }
 
-  .side-section:last-child {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .side-section:last-child .side-title,
-  .side-section:last-child .hidden-toggle {
-    grid-column: 1 / -1;
-  }
-
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -1210,11 +1282,23 @@ html[data-sidebar="hidden"] .sidebar {
     width: 100%;
   }
 
-  .filter-actions,
-  .filter-actions .export-menu,
+  .filter-actions {
+    width: 100%;
+  }
+
+  .filter-actions .export-menu {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   .filter-actions .export-menu summary {
     width: 100%;
     min-width: 0;
+  }
+
+  .view-options {
+    right: auto;
+    left: 0;
   }
 
   .table-footer {

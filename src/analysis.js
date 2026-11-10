@@ -189,7 +189,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     const localCode = String(get('localCode') ?? '').trim();
     const localNumber = parseQuantity(get('localCode'));
     const isObsoleteLocation = OBSOLETE_LOCATION_CODES.has(localNumber);
-    const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
+    const base = { row: index + firstRow, item, sku, shelfCode, partitionCode, divisionCode, address, stock, minimum, maximum, stockValue, coverage, daysSince, averageConsumption, classification, blockReason, blockId, lastRequest, localCode, obsoleteLocation: isObsoleteLocation, hidden: false, actions: ['Verificar dados'], action: 'Verificar dados', reason: '' };
     const issues = [];
     const checkNumber = (key, label, value, required = false) => {
       if (!(mapping[key] >= 0)) {
@@ -227,12 +227,28 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     const alreadyBlocked = blockId ? blockStatus.startsWith('bloqueado') : false;
     const hiddenByStatus = stock === 0 && minimum === 0 && maximum === 0 && reasonStatus === 'desbloqueado';
     const actions = [];
+    // Explicação de cada ação, exibida nos detalhes do item e exportada em Outros dados.
+    const why = [];
+    const days = formatNumber(daysSince);
     if (daysSince !== null && daysSince >= 180 && stock > 0 && isObsoleteLocation && ['desbloqueado', 'bloqueado por saldo'].includes(reasonStatus)) {
-      if (!alreadyBlocked) actions.push('BLOQUEAR');
+      if (!alreadyBlocked) {
+        actions.push('BLOQUEAR');
+        why.push(`Bloquear: saldo positivo, ${days} dias sem requisição (180 ou mais) e item ainda não bloqueado no local obsoleto (1 ou 298).`);
+      }
     }
-    else if (daysSince !== null && daysSince >= 180 && stock > 0 && (reasonStatus === 'bloqueado por saldo' || (reasonStatus === 'desbloqueado' && localNumber !== null && localNumber !== 7))) actions.push(alreadyBlocked ? 'TRANSFERIR OBSOLETO' : 'BLOQUEAR E TRANSFERIR OBSOLETO');
-    else if (daysSince !== null && daysSince >= 90 && stock > 0 && reasonStatus === 'desbloqueado') actions.push('BLOQUEAR');
-    if (daysSince !== null && daysSince >= 0 && stock === 0 && reasonStatus === 'bloqueado por saldo') actions.push('DESBLOQUEAR');
+    else if (daysSince !== null && daysSince >= 180 && stock > 0 && (reasonStatus === 'bloqueado por saldo' || (reasonStatus === 'desbloqueado' && localNumber !== null && localNumber !== 7))) {
+      actions.push(alreadyBlocked ? 'TRANSFERIR OBSOLETO' : 'BLOQUEAR E TRANSFERIR OBSOLETO');
+      why.push(`${alreadyBlocked ? 'Transferir obsoleto' : 'Bloquear e transferir obsoleto'}: saldo positivo, ${days} dias sem requisição (180 ou mais) e fora dos locais obsoletos (1 e 298)${alreadyBlocked ? '; item já bloqueado' : ''}.`);
+    }
+    else if (daysSince !== null && daysSince >= 90 && stock > 0 && reasonStatus === 'desbloqueado') {
+      actions.push('BLOQUEAR');
+      why.push(`Bloquear: saldo positivo, ${days} dias sem requisição (90 ou mais) e item desbloqueado.`);
+    }
+    if (daysSince !== null && daysSince >= 0 && stock === 0 && reasonStatus === 'bloqueado por saldo') {
+      actions.push('DESBLOQUEAR');
+      why.push('Desbloquear: saldo zerado e item bloqueado por saldo.');
+    }
+    details.push(...why);
     if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && isObsoleteLocation && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
     else if (stock > 0 && daysSince !== null && daysSince < 90 && minimum !== null && maximum !== null && (stock < minimum || stock > maximum) && !(isObsoleteLocation && minimum === 0 && maximum === 0)) actions.push('AJUSTAR MIN/MAX');
     if (!actions.length) actions.push('Sem ação definida');
@@ -242,6 +258,51 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     if (hidden) details.push(hiddenByStatus ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
     return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · ') };
   });
+}
+
+const stockAmount = row => {
+  const amount = parseNumber(row.stockValue);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+// Faixas de tempo sem requisição (Dif Dias) do gráfico de envelhecimento; `until` é exclusivo.
+export const AGING_BUCKETS = [
+  { key: '0-89', label: '0 a 89 dias', from: 0, until: 90 },
+  { key: '90-179', label: '90 a 179 dias', from: 90, until: 180 },
+  { key: '180-364', label: '180 a 364 dias', from: 180, until: 365 },
+  { key: '365+', label: '365 dias ou mais', from: 365, until: Infinity },
+];
+
+// Faixa do item, só para quem tem saldo e Dif Dias.
+export function agingBucket(row) {
+  if (!(row.stock > 0) || row.daysSince === null || row.daysSince === undefined) return null;
+  return AGING_BUCKETS.find(bucket => row.daysSince >= bucket.from && row.daysSince < bucket.until)?.key ?? null;
+}
+
+export function agingSummary(rows) {
+  const totals = new Map(AGING_BUCKETS.map(bucket => [bucket.key, { ...bucket, count: 0, value: 0 }]));
+  rows.forEach(row => {
+    const total = totals.get(agingBucket(row));
+    if (!total) return;
+    total.count++;
+    total.value += stockAmount(row);
+  });
+  return [...totals.values()];
+}
+
+// Indicadores em reais: parado (180 dias ou mais sem requisição, fora dos locais obsoletos)
+// e o que já está nos locais obsoletos 1 e 298. Só itens com saldo.
+export function stockHealth(rows) {
+  const idle = { count: 0, value: 0 };
+  const obsolete = { count: 0, value: 0 };
+  rows.forEach(row => {
+    if (!(row.stock > 0)) return;
+    const target = row.obsoleteLocation ? obsolete : row.daysSince >= 180 ? idle : null;
+    if (!target) return;
+    target.count++;
+    target.value += stockAmount(row);
+  });
+  return { idle, obsolete };
 }
 
 export function summarizeLocationTotal(rows, localFilter) {

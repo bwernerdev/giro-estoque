@@ -139,7 +139,7 @@ button:disabled {
   transition: width var(--dur) ease, opacity var(--dur) ease;
 }
 
-.density-toggle[aria-pressed="true"] .density-check {
+.view-toggle[aria-pressed="true"] .density-check {
   width: 16px;
   opacity: 1;
 }

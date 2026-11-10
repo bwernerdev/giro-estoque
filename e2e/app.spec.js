@@ -130,6 +130,7 @@ test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ 
   const stripe = page.locator('#stripe-toggle');
   const second = page.locator('#result-rows tr').nth(1);
   const plain = await second.evaluate(row => getComputedStyle(row).backgroundColor);
+  await page.locator('#view-menu summary').click();
   await stripe.click();
   await expect(stripe).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => second.evaluate(row => getComputedStyle(row).backgroundColor)).not.toBe(plain);
