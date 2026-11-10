@@ -180,6 +180,15 @@ test('a coluna Valor mostra a barra do peso de cada item e o esqueleto some depo
   assert.deepEqual(titles, ['20% do valor dos itens filtrados', '80% do valor dos itens filtrados']);
   assert.ok(cells.every(cell => /R\$/.test(cell.textContent)), 'o valor continua legível na célula');
   assert.equal(app.el('.shell').classList.contains('is-loading'), false);
+  app.el('[data-export="summary"]').click();
+  assert.equal(app.el('#print-report').className, 'summary-report');
+  assert.match(app.el('#print-report h1').textContent, /Resumo do estoque/);
+  assert.match(app.el('#print-report .report-kpi').textContent, /Valor total do estoque/);
+  assert.match(app.el('#print-report .report-kpi').textContent, /R\$\s?125,00/);
+  assert.equal(app.el('#print-report .report-bars') !== null, true);
+  app.el('[data-export="pdf"]').click();
+  assert.equal(app.el('#print-report').className, '');
+  assert.ok(app.el('#print-report tbody tr'));
 });
 
 test('modo Analítico usa o número da linha como descrição apenas quando o nome do item não existe', async t => {

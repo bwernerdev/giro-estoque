@@ -53,6 +53,24 @@ test('build funciona em subpasta, mantém critérios e gera Excel/CSV completos'
   expect(failed).toEqual([]);
 });
 
+test('PDF de resumo cabe em uma página A4 em pé, sem a tabela de itens', async ({ page }) => {
+  const header = 'Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio;Vl Saldo';
+  const rows = Array.from({ length: 120 }, (_, i) => `Peça ${i};${1000 + i};${i % 5 === 0 ? 298 : 7};${i % 4};2;6;${(i * 7) % 500};Acima de 90;;${i % 3 ? 'Desbloqueado' : 'Bloqueado'};${(i * 13.5).toFixed(2).replace('.', ',')}`);
+  await page.goto('./');
+  await upload(page, [header, ...rows].join('\n'));
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.locator('#export-menu summary').click();
+  await page.locator('[data-export="summary"]').click();
+  await expect(page.locator('#print-report h1')).toHaveText('Resumo do estoque');
+  await expect(page.locator('#print-report .report-kpi')).toHaveCount(4);
+  await expect(page.locator('#print-report .report-bar-row')).toHaveCount(4);
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('#print-report')).toBeVisible();
+  const pdf = await page.pdf({ path: 'test-results/resumo.pdf', preferCSSPageSize: true });
+  expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)/g)).toHaveLength(1);
+});
+
 test('leitura Excel, filtros, paginação e impressão incluem todos os resultados', async ({ page }) => {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Analítico');

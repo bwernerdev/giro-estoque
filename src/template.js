@@ -84,7 +84,7 @@ export function renderApp() {
                           <button id="group-toggle" class="view-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Agrupar por ação</span></button>
                           <label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> <span id="hidden-toggle-text">Mostrar itens ocultos</span></label>
                         </div></details>
-                        <details id="export-menu" class="export-menu"><summary class="primary-button"><span>Exportar</span>${svgIcon('chevronDown')}</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF (salvar/imprimir)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
+                        <details id="export-menu" class="export-menu"><summary class="primary-button"><span>Exportar</span>${svgIcon('chevronDown')}</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF da tabela</button><button type="button" data-export="summary">PDF de resumo (1 página)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
                       </div>
                     </div>
                   </div>

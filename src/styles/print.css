@@ -1,4 +1,6 @@
-/* Impressão / PDF: só o relatório #print-report é exibido. */
+/* Impressão / PDF: só o relatório #print-report é exibido.
+   Tabela: A4 deitado. Resumo (.summary-report): A4 em pé, uma página.
+   Cores fixas: o papel é sempre claro, nos dois temas. */
 #print-report {
   display: none;
 }
@@ -65,6 +67,11 @@
     overflow-wrap: anywhere;
   }
 
+  #print-report.summary-report {
+    page: summary;
+    font: 11px Arial, sans-serif;
+  }
+
   #print-report th {
     position: static;
     background: #e8edf1 !important;
@@ -73,5 +80,141 @@
     letter-spacing: 0;
     text-transform: none;
     print-color-adjust: exact;
+  }
+}
+
+/* ── Resumo de uma página ───────────────────────────────────────────────────── */
+@page summary {
+  size: A4 portrait;
+  margin: 14mm;
+}
+
+@media print {
+  #print-report.summary-report * {
+    print-color-adjust: exact;
+  }
+
+  #print-report.summary-report .report-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #2f5bd3;
+  }
+
+  #print-report.summary-report h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+  }
+
+  #print-report.summary-report .report-header p {
+    margin: 0;
+    color: #4b5563;
+    font-size: 10px;
+  }
+
+  #print-report.summary-report .report-generated {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  #print-report.summary-report h2 {
+    margin: 18px 0 6px;
+    font-size: 13px;
+  }
+
+  #print-report.summary-report .report-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  #print-report.summary-report .report-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid #d4dce3;
+    border-left: 3px solid #2f5bd3;
+    border-radius: 4px;
+    break-inside: avoid;
+  }
+
+  #print-report.summary-report .report-kpi.idle {
+    border-left-color: #e0b54f;
+  }
+
+  #print-report.summary-report .report-kpi.obsolete {
+    border-left-color: #e08585;
+  }
+
+  #print-report.summary-report .report-kpi span,
+  #print-report.summary-report .report-kpi small {
+    color: #4b5563;
+    font-size: 9.5px;
+  }
+
+  #print-report.summary-report .report-kpi strong {
+    font-size: 18px;
+  }
+
+  #print-report.summary-report table {
+    table-layout: auto;
+  }
+
+  #print-report.summary-report th,
+  #print-report.summary-report td {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  #print-report.summary-report .number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  #print-report.summary-report .report-note {
+    margin: 4px 0 0;
+    color: #4b5563;
+    font-size: 9px;
+  }
+
+  #print-report.summary-report .report-bars {
+    display: grid;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  #print-report.summary-report .report-bar-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 110px 110px;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+  }
+
+  #print-report.summary-report .report-bar-row strong {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #print-report.summary-report .report-bar-row small {
+    color: #4b5563;
+    font-size: 9px;
+  }
+
+  #print-report.summary-report .report-track {
+    height: 10px;
+    border-radius: 2px;
+    background: #eef0f3 !important;
+  }
+
+  #print-report.summary-report .report-bar {
+    display: block;
+    height: 100%;
+    border-radius: 0 3px 3px 0;
+    background: #2f5bd3 !important;
   }
 }

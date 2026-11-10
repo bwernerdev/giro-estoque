@@ -102,6 +102,44 @@ export function buildTotalMarkup({ summaryAllResults, locationFilter, locationTo
   return `<span class="total-label" title="${title}">${escapeHtml(label)}</span><strong title="${title}">${realCurrency(locationTotal)}</strong><small>${escapeHtml(detail)}</small>`;
 }
 
+// Ação em caixa de frase, como nos badges ("AJUSTAR MIN/MAX" vira "Ajustar min/max").
+function actionText(action) {
+  const text = String(action ?? '');
+  return text === text.toUpperCase() ? text.charAt(0) + text.slice(1).toLowerCase() : text;
+}
+
+// Resumo de uma página para reunião ou e-mail: indicadores em reais, ações e tempo sem
+// requisição, sem a tabela de itens.
+export function buildSummaryReport({ fileName = '', sheetName = '', importedAt = null, generatedAt = new Date(), scope = '', total = null, health = null, aging = null, actions = [], itemsWithAction = 0, itemsInFile = 0, withoutAction = 0, analitico = false }) {
+  const dateTime = date => (date ? date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '');
+  const items = count => `${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}`;
+  const share = (part, whole) => (whole ? `${Math.round((part / whole) * 100)}%` : '—');
+  const money = value => (value > 0 ? realCurrency(value) : '—');
+  const source = [fileName, sheetName && `aba ${sheetName}`, importedAt && `importado em ${dateTime(importedAt)}`].filter(Boolean).join(' · ');
+  const kpi = (label, value, detail, tone = '') => `<div class="report-kpi${tone ? ` ${tone}` : ''}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></div>`;
+  const kpis = [
+    total !== null && kpi(scope ? 'Valor do estoque no recorte' : 'Valor total do estoque', realCurrency(total), `${items(itemsInFile)} no arquivo`),
+    health && kpi('Parado há 180 dias ou mais', realCurrency(health.idle.value), `${items(health.idle.count)} · ${share(health.idle.value, total)} do valor`, 'idle'),
+    health && kpi('Em locais obsoletos (1 e 298)', realCurrency(health.obsolete.value), `${items(health.obsolete.count)} · ${share(health.obsolete.value, total)} do valor`, 'obsolete'),
+    kpi(analitico ? 'Itens com ação' : 'Itens analisados', itemsWithAction.toLocaleString('pt-BR'), analitico ? `de ${items(itemsInFile)} no arquivo` : 'com recomendação'),
+  ].filter(Boolean).join('');
+  const withValue = total !== null;
+  const actionRows = actions.map(({ action, count, value }) => `<tr><td>${escapeHtml(actionText(action))}</td><td class="number">${count.toLocaleString('pt-BR')}</td><td class="number">${share(count, itemsWithAction)}</td>${withValue ? `<td class="number">${money(value)}</td>` : ''}</tr>`).join('');
+  const notes = [
+    analitico && 'Um item pode ter mais de uma ação.',
+    withoutAction > 0 && `${items(withoutAction)} sem ação não ${withoutAction === 1 ? 'entra' : 'entram'} na tabela.`,
+  ].filter(Boolean).join(' ');
+  const actionsSection = actions.length
+    ? `<section><h2>${analitico ? 'Ações recomendadas' : 'Recomendações'}</h2><table><thead><tr><th>${analitico ? 'Ação' : 'Recomendação'}</th><th class="number">Itens</th><th class="number">% dos itens</th>${withValue ? '<th class="number">Valor do saldo</th>' : ''}</tr></thead><tbody>${actionRows}</tbody></table>${notes ? `<p class="report-note">${escapeHtml(notes)}</p>` : ''}</section>`
+    : '';
+  const agingTotal = aging?.reduce((sum, { value }) => sum + value, 0) ?? 0;
+  const agingLargest = aging ? Math.max(...aging.map(({ value }) => value)) : 0;
+  const agingSection = aging?.some(({ count }) => count > 0)
+    ? `<section><h2>Tempo sem requisição</h2><p class="report-note">Valor do estoque com saldo por faixa de dias sem requisição.</p><div class="report-bars">${aging.map(({ label, count, value }) => `<div class="report-bar-row"><span>${escapeHtml(label)}</span><span class="report-track"><span class="report-bar" style="width:${agingLargest ? Math.max((value / agingLargest) * 100, value > 0 ? 1.5 : 0).toFixed(1) : 0}%"></span></span><strong>${realCurrency(value)}</strong><small>${items(count)} · ${share(value, agingTotal)}</small></div>`).join('')}</div></section>`
+    : '';
+  return `<header class="report-header"><div><h1>Resumo do estoque</h1>${source ? `<p>${escapeHtml(source)}</p>` : ''}${scope ? `<p>Recorte: ${escapeHtml(scope)}</p>` : ''}</div><p class="report-generated">Giro de Estoque<br>Gerado em ${escapeHtml(dateTime(generatedAt))}</p></header><div class="report-kpis">${kpis}</div>${actionsSection}${agingSection}`;
+}
+
 function realCurrency(value) {
   const numeric = Number(value) || 0;
   return BRL_FORMATTER.format(numeric);
@@ -528,6 +566,7 @@ if (typeof document !== 'undefined') {
     state.actionOrder = availableActions;
     state.actionRank = new Map(availableActions.map((action, index) => [action, index]));
     renderOverview(summaryAllResults, analitico);
+    state.overview = { summaryAllResults, locationTotal: summarizeLocationTotal(summaryAllResults, state.locationFilter), analitico, giro };
     const hiddenCount = summaryAllResults.filter(row => row.hidden).length;
     const locationTotal = summarizeLocationTotal(summaryAllResults, state.locationFilter);
     const previousFilter = state.pendingActionFilter || el('#filter').value;
@@ -946,7 +985,37 @@ if (typeof document !== 'undefined') {
     const local = state.locationFilter ? ` · Local: ${escapeHtml(state.locationFilter)}` : '';
     const shelf = state.shelfFilter ? ` · Prateleira: ${escapeHtml(state.shelfFilter)}` : '';
     const partition = state.partitionFilter ? ` · Repartição: ${escapeHtml(state.partitionFilter)}` : '';
+    el('#print-report').className = '';
     el('#print-report').innerHTML = `<h1>Giro de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${shelf}${partition}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    window.print();
+  }
+
+  // Resumo de uma página: mesmo recorte de posição da visão geral, sem busca nem filtro de ação.
+  function exportSummaryPdf() {
+    if (!state.overview) return;
+    const { summaryAllResults, locationTotal, analitico, giro } = state.overview;
+    const withValue = isMapped('stockValue');
+    const rows = analitico ? summaryAllResults.filter(row => !row.hidden) : summaryAllResults;
+    const actionList = analitico ? ANALITICO_ACTIONS : giro ? GIRO_ACTIONS : GENERIC_ACTIONS;
+    const counts = prioritizeActionCounts(actionCounts(rows, actionList, analitico)).filter(({ count }) => count > 0);
+    const values = withValue ? new Map(actionValues(rows, counts.map(({ action }) => action), analitico).map(({ action, value }) => [action, value])) : null;
+    el('#print-report').className = 'summary-report';
+    el('#print-report').innerHTML = buildSummaryReport({
+      fileName: state.fileName,
+      // CSV não tem abas: o nome "CSV" não informa nada no relatório.
+      sheetName: /\.csv$/i.test(state.fileName) ? '' : currentSheet()?.name ?? '',
+      importedAt: state.importedAt,
+      generatedAt: new Date(),
+      scope: [state.locationFilter && `Local ${state.locationFilter}`, state.shelfFilter && `Prateleira ${state.shelfFilter}`, state.partitionFilter && `Repartição ${state.partitionFilter}`].filter(Boolean).join(' · '),
+      total: withValue ? Number(locationTotal) || 0 : null,
+      health: analitico && withValue ? stockHealth(summaryAllResults) : null,
+      aging: analitico && withValue ? agingSummary(summaryAllResults) : null,
+      actions: counts.map(({ action, count }) => ({ action, count, value: values?.get(action) ?? null })),
+      itemsWithAction: rows.length,
+      itemsInFile: summaryAllResults.length,
+      withoutAction: analitico ? summaryAllResults.length - rows.length : 0,
+      analitico,
+    });
     window.print();
   }
 
@@ -1256,6 +1325,7 @@ if (typeof document !== 'undefined') {
     try {
       if (button.dataset.export === 'xlsx') await exportXlsx();
       else if (button.dataset.export === 'pdf') exportPdf();
+      else if (button.dataset.export === 'summary') exportSummaryPdf();
       else exportCsv();
     } catch (error) { message(error.message || 'Não foi possível exportar os itens.', true); }
   }));

@@ -5,7 +5,7 @@ import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOp
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { agingBucket, agingSummary, stockHealth } from '../src/analysis.js';
 import { renderApp } from '../src/template.js';
-import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup } from '../src/main.js';
+import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildSummaryReport, buildTotalMarkup } from '../src/main.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -20,7 +20,8 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.match(document.querySelector('.brand-mark img').src, /favicon\.webp/);
   assert.equal(document.querySelector('.primary-button').getAttribute('tabindex'), '0');
   assert.equal(document.querySelector('#result-table caption').textContent, 'Resultados da análise de estoque');
-  assert.equal(document.querySelectorAll('[data-export]').length, 3);
+  assert.equal(document.querySelectorAll('[data-export]').length, 4);
+  assert.equal(document.querySelector('[data-export="summary"]').textContent, 'PDF de resumo (1 página)');
   assert.ok(document.querySelector('#density-toggle'));
   assert.ok(document.querySelector('#clear-filters'));
   assert.equal(document.querySelector('#import-context'), null);
@@ -43,6 +44,56 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.equal(document.querySelector('#location-filter').closest('label').textContent.trim(), 'LocalTodos');
   assert.equal(document.querySelector('#filter').closest('label').textContent.trim(), 'AçãoTodas as recomendações');
   assert.equal(document.querySelector('#pagination').getAttribute('aria-label'), 'Páginas de resultados');
+});
+
+test('o resumo de uma página traz indicadores, ações em caixa de frase e tempo sem requisição', () => {
+  const { document } = new JSDOM('<div id="report"></div>').window;
+  const report = document.querySelector('#report');
+  report.innerHTML = buildSummaryReport({
+    fileName: 'ESTOQUE.xlsx',
+    sheetName: 'Analítico',
+    importedAt: new Date(2026, 10, 10, 9, 30),
+    generatedAt: new Date(2026, 10, 10, 10, 0),
+    scope: 'Local 7',
+    total: 1000,
+    health: { idle: { count: 2, value: 250 }, obsolete: { count: 1, value: 100 } },
+    aging: [
+      { key: '0-89', label: '0 a 89 dias', count: 3, value: 600 },
+      { key: '90-179', label: '90 a 179 dias', count: 0, value: 0 },
+      { key: '180-364', label: '180 a 364 dias', count: 2, value: 300 },
+      { key: '365+', label: '365 dias ou mais', count: 1, value: 100 },
+    ],
+    actions: [{ action: 'BLOQUEAR', count: 3, value: 400 }, { action: 'DESBLOQUEAR', count: 1, value: 0 }],
+    itemsWithAction: 4,
+    itemsInFile: 10,
+    withoutAction: 6,
+    analitico: true,
+  });
+  assert.equal(report.querySelector('h1').textContent, 'Resumo do estoque');
+  assert.match(report.querySelector('.report-header').textContent, /ESTOQUE\.xlsx · aba Analítico · importado em 10\/11\/2026/);
+  assert.match(report.querySelector('.report-header').textContent, /Recorte: Local 7/);
+  assert.deepEqual([...report.querySelectorAll('.report-kpi span')].map(node => node.textContent),
+    ['Valor do estoque no recorte', 'Parado há 180 dias ou mais', 'Em locais obsoletos (1 e 298)', 'Itens com ação']);
+  assert.match(report.querySelector('.report-kpi.idle small').textContent, /2 itens · 25% do valor/);
+  const cells = [...report.querySelectorAll('tbody tr')].map(row => [...row.children].map(cell => cell.textContent));
+  assert.equal(cells[0][0], 'Bloquear');
+  assert.deepEqual(cells[0].slice(1, 3), ['3', '75%']);
+  assert.match(cells[0][3], /R\$\s?400,00/);
+  assert.deepEqual(cells[1], ['Desbloquear', '1', '25%', '—']);
+  assert.match(report.querySelector('.report-note').textContent, /6 itens sem ação não entram na tabela/);
+  assert.equal(report.querySelectorAll('.report-bar-row').length, 4);
+  assert.equal(report.querySelector('.report-bar').style.width, '100%');
+  assert.match(report.querySelectorAll('.report-bar-row small')[0].textContent, /3 itens · 60%/);
+  assert.equal(report.querySelector('#result-table'), null, 'o resumo não leva a tabela de itens');
+});
+
+test('sem coluna de valor, o resumo mostra só contagens', () => {
+  const { document } = new JSDOM('<div id="report"></div>').window;
+  const report = document.querySelector('#report');
+  report.innerHTML = buildSummaryReport({ actions: [{ action: 'Comprar', count: 2, value: null }], itemsWithAction: 5, itemsInFile: 5 });
+  assert.deepEqual([...report.querySelectorAll('.report-kpi span')].map(node => node.textContent), ['Itens analisados']);
+  assert.deepEqual([...report.querySelectorAll('thead th')].map(node => node.textContent), ['Recomendação', 'Itens', '% dos itens']);
+  assert.equal(report.querySelector('.report-bars'), null);
 });
 
 test('filtra por busca, ação e local sem perder correspondências', () => {

@@ -9,7 +9,7 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 | `dashboard.js` | ~160 | Filtros (`filterResults`), busca sem acento, `paginate` (`PAGE_SIZE = 50`), `actionCounts`/`actionValues` (valor por ação)/`prioritizeActionCounts`, `sortResults`, `dataIssueSummary`, `processInChunks` (leitura em blocos) |
 | `export-data.js` | ~80 | `buildExportData`, `buildCsv`, `csvField` (neutraliza fórmulas), `currencyNumber`, `shouldIncludeDaysSince` |
 | `import.js` | ~70 | `importFile` (xlsx via ExcelJS e csv), `parseCsv`, `selectDataRows` |
-| `main.js` | ~1000 | Estado da UI, listas de ações por modo (`ANALITICO_ACTIONS`, `GIRO_ACTIONS`, `GENERIC_ACTIONS`), cartões de indicador e atalho de itens sem ação (`buildSummaryMarkup`), indicadores em reais (`buildHealthMarkup`), gráfico por tempo sem requisição que filtra a tabela (`buildAgingChartMarkup`), tabela (coluna Posição combinada), painel de detalhes, menus Exibir/Exportar, exportação, tema, PWA |
+| `main.js` | ~1000 | Estado da UI, listas de ações por modo (`ANALITICO_ACTIONS`, `GIRO_ACTIONS`, `GENERIC_ACTIONS`), cartões de indicador e atalho de itens sem ação (`buildSummaryMarkup`), indicadores em reais (`buildHealthMarkup`), gráfico por tempo sem requisição que filtra a tabela (`buildAgingChartMarkup`), tabela (coluna Posição combinada), painel de detalhes, menus Exibir/Exportar, exportação (inclui o PDF de resumo de uma página, `buildSummaryReport`), tema, PWA |
 | `template.js` | ~80 | `renderApp()`: HTML da interface |
 | `icons.js` | ~25 | `svgIcon(name)`: ícones SVG inline |
 
@@ -20,7 +20,7 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 - `components.css`: botões, campos, badges, avisos, cartão, menu de exportação, painel lateral. Tom semântico por ação (`--tone-*`) vale para badge e cartão do resumo.
 - `layout.css`: topbar clara (fixa e translúcida a partir de 1024 px; arquivo e configuração após importar), antes da importação, filtros na barra da tabela, resumo recolhível, aviso de itens ocultos, visão geral (indicadores em reais, cartões, atalho de itens sem ação, gráfico por tempo sem requisição), menu Exibir, configuração, barra de ferramentas, painel de detalhes fixo, rodapé os pontos de quebra (480, 720, 1024, 1180, 1280 e 1700 px) e, no fim, movimento (entrada após importar, linhas novas, View Transitions) e o esqueleto de carregamento.
 - `table.css`: tabela de resultados (barra de valor `.value-cell`; densidade em `--cell-y`/`--cell-x`; larguras largas por container query no painel da tabela, porque o painel de detalhes consome largura da janela).
-- `print.css`: relatório de impressão/PDF.
+- `print.css`: relatório de impressão/PDF (tabela em A4 deitado; resumo de uma página em A4 em pé, `.summary-report`).
 
 ## Subpasta
 - `fonts/`: DM Sans e Manrope em woff2, com licenças (declaradas em `fonts.css`; o app usa Manrope em títulos e números e Segoe UI no texto).
