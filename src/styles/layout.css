@@ -270,7 +270,7 @@ main {
   }
 }
 
-/* ── Espaço de trabalho: barra lateral, conteúdo e painel de detalhes ───────── */
+/* ── Espaço de trabalho: conteúdo e painel de detalhes ──────────────────────── */
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -283,46 +283,51 @@ main {
   min-width: 0;
 }
 
-.sidebar {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s4) var(--s5);
-  padding: var(--s4);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  box-shadow: var(--shadow-1);
+/* Arquivo e configuração ficam na barra superior depois da importação. */
+.shell:not(.has-data) .topbar-data {
+  display: none;
 }
 
-.side-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s3);
+.topbar-data {
   min-width: 0;
 }
 
-.side-title {
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.side-buttons {
+/* Valores em reais e o botão de recolher o resumo. */
+.overview-top {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
   gap: var(--s2);
 }
 
-.sidebar .config-toggle {
-  width: 100%;
-  height: var(--h-control);
-  justify-content: flex-start;
+.overview-top .kpi-row {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-#config-toggle {
-  justify-content: space-between;
+.summary-toggle {
+  flex: none;
+  gap: var(--s1);
+  height: var(--h-control-sm);
+  padding-inline: var(--s2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* Resumo recolhido: só os valores em reais, mais baixos. */
+html[data-summary="collapsed"] .money-kpi {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s2);
+  padding-block: var(--s2);
+}
+
+html[data-summary="collapsed"] .money-kpi strong {
+  font-size: 18px;
+}
+
+html[data-summary="collapsed"] .money-kpi small {
+  display: none;
 }
 
 /* Indicadores em reais: valor total, parado há 180 dias ou mais e em locais obsoletos. */
@@ -783,7 +788,7 @@ main {
   font-weight: 400;
 }
 
-/* Gráfico ao lado dos cartões só com a barra lateral (≥1280 px); abaixo disso, embaixo deles. */
+/* Gráfico ao lado dos cartões a partir de 1280 px; abaixo disso, embaixo deles. */
 @media (min-width: 1280px) {
   .overview-body {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
@@ -812,16 +817,89 @@ main {
 
 .table-tools-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--s4);
+  gap: var(--s2) var(--s4);
   width: 100%;
   min-width: 0;
 }
 
-.sidebar-toggle {
+/* Filtros de posição na barra da tabela, com o nome antes do seletor. */
+.table-tools .table-filters {
+  display: flex;
   flex: none;
-  gap: var(--s2);
-  white-space: nowrap;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.table-tools .filter-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-tools .filter-field > span:first-child {
+  padding-left: 0;
+}
+
+.table-tools .table-filters select {
+  width: auto;
+  min-width: 96px;
+  max-width: 180px;
+}
+
+/* Com o resumo recolhido, o filtro de ação aparece aqui (os cartões ficam escondidos). */
+html[data-summary="collapsed"] .table-tools .filter-action {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+
+.menu-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.menu-dot[hidden] {
+  display: none;
+}
+
+/* Aviso de itens ocultos ao lado do contador: clicar esconde de novo. */
+.filter-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 var(--s2) 0 var(--s3);
+  border: 1px solid var(--ring);
+  border-radius: var(--r-pill);
+  background: var(--surface-selected);
+  color: var(--accent-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  background: var(--surface-hover);
+}
+
+.filter-chip[hidden] {
+  display: none;
+}
+
+.filter-chip .ui-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .filter-actions {
@@ -1084,10 +1162,6 @@ main {
     --content-share: 96%;
   }
 
-  .sidebar {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .table-tools {
     position: sticky;
     top: 0;
@@ -1145,32 +1219,10 @@ main {
   }
 }
 
-/* ── 1280 px ou mais: barra lateral fixa ────────────────────────────────────── */
-@media (min-width: 1280px) {
-  .workspace {
-    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
-  }
-
-  .sidebar {
-    position: sticky;
-    top: var(--s4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--s4);
-    max-height: calc(100vh - 2 * var(--s4));
-    overflow-y: auto;
-  }
-
-  .side-section + .side-section {
-    padding-top: var(--s4);
-    border-top: 1px solid var(--line-soft);
-  }
-}
-
 /* ── 1700 px ou mais: detalhes sempre à vista ao lado da tabela ─────────────── */
 @media (min-width: 1700px) {
   .workspace {
-    grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--dock-w);
+    grid-template-columns: minmax(0, 1fr) var(--dock-w);
   }
 
   .detail-dock {
@@ -1180,27 +1232,32 @@ main {
   }
 }
 
-/* ── Barra lateral oculta pelo usuário ──────────────────────────────────────── */
-html[data-sidebar="hidden"] .sidebar {
-  display: none;
-}
-
-@media (min-width: 1280px) {
-  html[data-sidebar="hidden"] .workspace {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (min-width: 1700px) {
-  html[data-sidebar="hidden"] .workspace {
-    grid-template-columns: minmax(0, 1fr) var(--dock-w);
-  }
-}
-
 /* ── Abaixo de 1024 px ──────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
   .shell:not(.has-data) .hero {
     padding-top: 48px;
+  }
+
+  /* Pesquisa e ações na primeira linha; filtros numa linha própria abaixo. */
+  .table-tools .table-filters {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* ── Abaixo de 1180 px: arquivo e configuração só com ícone na barra superior ── */
+@media (max-width: 1179px) {
+  .topbar-data {
+    width: var(--h-control-sm);
+    padding: 0;
+  }
+
+  .topbar-data span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
   }
 }
 
@@ -1258,14 +1315,30 @@ html[data-sidebar="hidden"] .sidebar {
     width: 100%;
   }
 
-  .sidebar {
-    grid-template-columns: 1fr;
-  }
-
-  .table-filters {
+  .table-tools .table-filters {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--s2);
+  }
+
+  .table-tools .filter-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s1);
+  }
+
+  .table-tools .table-filters select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .overview-top {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .summary-toggle {
+    align-self: flex-end;
   }
 
   .settings-grid {

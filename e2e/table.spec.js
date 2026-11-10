@@ -21,17 +21,14 @@ for (const width of [768, 1024, 1366, 1920]) {
     const exportButton = await page.locator('#export-menu summary').boundingBox();
     const searchToggle = await page.locator('#search-toggle').boundingBox();
     expect(Math.abs(searchToggle.y - exportButton.y)).toBeLessThan(1);
-    const sidebar = await page.locator('#sidebar').boundingBox();
-    const tablePanel = await page.locator('.table-panel').boundingBox();
-    if (width >= 1280) {
-      // Barra lateral à esquerda da tabela, com os filtros empilhados.
-      expect(sidebar.x + sidebar.width).toBeLessThanOrEqual(tablePanel.x + 1);
-      const local = await page.locator('#location-filter').boundingBox();
-      const shelf = await page.locator('#shelf-filter').boundingBox();
-      expect(Math.abs(local.x - shelf.x)).toBeLessThan(1);
-      expect(shelf.y).toBeGreaterThan(local.y);
-    } else {
-      expect(sidebar.y + sidebar.height).toBeLessThanOrEqual(tablePanel.y + 1);
+    // Sem barra lateral: os filtros ficam na barra da tabela e a tabela ocupa a largura toda.
+    await expect(page.locator('#sidebar')).toHaveCount(0);
+    const tools = await page.locator('.table-tools').boundingBox();
+    for (const selector of ['#location-filter', '#shelf-filter', '#partition-filter']) {
+      const box = await page.locator(selector).boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(tools.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(tools.x + tools.width + 1);
+      expect(box.y).toBeGreaterThanOrEqual(tools.y);
     }
     expect(await page.locator('.table-filters select:not(#filter)').evaluateAll(selects => selects.every(select => {
       const style = getComputedStyle(select);
@@ -228,7 +225,7 @@ test('desktop: pesquisa sempre visível, atalho "/" e Esc não a recolhem', asyn
   const search = page.getByRole('searchbox', { name: 'Pesquisa' });
   await expect(page.locator('#search-toggle')).toHaveAttribute('aria-expanded', 'true');
   await expect(search).toBeVisible();
-  await page.locator('#sidebar-toggle').focus();
+  await page.locator('#view-menu summary').focus();
   await page.keyboard.press('/');
   await expect(search).toBeFocused();
   await page.keyboard.press('Escape');
@@ -264,7 +261,7 @@ test('desktop: visão geral com indicadores em reais, cartões de ação e gráf
   await expect(page.locator('#idle-value')).toContainText('Parado há 180 dias ou mais');
   await expect(page.locator('#idle-value')).toContainText('R$');
   await expect(page.locator('#obsolete-value')).toContainText('Em locais obsoletos');
-  await expect(page.locator('#sidebar #total-value')).toHaveCount(0);
+  await expect(page.locator('#sidebar')).toHaveCount(0);
   await expect(page.locator('#summary .hidden-shortcut')).toContainText('Ver 1 item sem ação');
   await expect(page.locator('#aging-chart')).toBeVisible();
   await expect(page.locator('#aging-chart .chart-row')).toHaveCount(4);
@@ -292,7 +289,6 @@ test('menu Exibir reúne compacto, zebrado, agrupar e itens ocultos', async ({ p
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await upload(page);
-  await expect(page.locator('#sidebar #density-toggle')).toHaveCount(0);
   await expect(page.locator('#density-toggle')).toBeHidden();
   await page.locator('#view-menu summary').click();
   await expect(page.locator('#density-toggle')).toBeVisible();
@@ -385,19 +381,47 @@ test('as linhas ficam neutras e a cor da ação fica só no badge', async ({ pag
   expect(await row.locator('.badge').first().evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
 });
 
-test('a barra lateral pode ser ocultada e a escolha é lembrada', async ({ page }) => {
+test('o resumo pode ser recolhido, mostra o filtro de ação e a escolha é lembrada', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await upload(page);
-  await expect(page.locator('#sidebar')).toBeVisible();
-  const before = (await page.locator('.table-panel').boundingBox()).width;
-  await page.locator('#sidebar-toggle').click();
-  await expect(page.locator('#sidebar')).toBeHidden();
-  await expect(page.locator('#sidebar-toggle')).toContainText('Mostrar barra lateral');
-  expect((await page.locator('.table-panel').boundingBox()).width).toBeGreaterThan(before + 150);
+  await expect(page.locator('#summary')).toBeVisible();
+  await expect(page.locator('#filter')).not.toBeInViewport();
+  const before = (await page.locator('.table-panel').boundingBox()).y;
+  await page.locator('#summary-toggle').click();
+  await expect(page.locator('#summary')).toBeHidden();
+  await expect(page.locator('#summary-toggle')).toContainText('Mostrar resumo');
+  await expect(page.locator('#total-value')).toBeVisible();
+  await expect(page.locator('#filter')).toBeVisible();
+  expect((await page.locator('.table-panel').boundingBox()).y).toBeLessThan(before - 100);
   await page.reload();
   await upload(page);
-  await expect(page.locator('#sidebar')).toBeHidden();
-  await page.locator('#sidebar-toggle').click();
-  await expect(page.locator('#sidebar')).toBeVisible();
+  await expect(page.locator('#summary')).toBeHidden();
+  await page.locator('#summary-toggle').click();
+  await expect(page.locator('#summary')).toBeVisible();
+});
+
+test('itens ocultos ganham aviso que desliga com um clique e não são lembrados', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('./');
+  const rows = [headers, 'Com ação;001;4;A;B;8;0;0;200;Acima de 90;Desbloqueado;Desbloqueado', 'Sem ação;002;4;A;B;5;0;10;10;Item com Giro;Desbloqueado;Desbloqueado'].join('\n');
+  const load = () => page.locator('#file-input').setInputFiles({ name: 'ocultos.csv', mimeType: 'text/csv', buffer: Buffer.from(rows) });
+  await load();
+  await expect(page.locator('#result-rows tr')).toHaveCount(1);
+  await expect(page.locator('#hidden-chip')).toBeHidden();
+  await expect(page.locator('#view-dot')).toBeHidden();
+  await page.locator('#summary .hidden-shortcut').click();
+  await expect(page.locator('#hidden-chip')).toContainText('Somente itens ocultos');
+  await expect(page.locator('#view-dot')).toBeVisible();
+  await page.locator('#hidden-chip').click();
+  await expect(page.locator('#hidden-chip')).toBeHidden();
+  await expect(page.locator('#result-rows tr')).toHaveCount(1);
+  await page.locator('#view-menu summary').click();
+  await page.locator('#show-hidden').check();
+  await expect(page.locator('#hidden-chip')).toContainText('Itens ocultos incluídos');
+  await expect(page.locator('#result-rows tr')).toHaveCount(2);
+  await page.reload();
+  await load();
+  await expect(page.locator('#result-rows tr')).toHaveCount(1);
+  await expect(page.locator('#hidden-chip')).toBeHidden();
 });

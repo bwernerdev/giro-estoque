@@ -186,20 +186,30 @@ if (typeof document !== 'undefined') {
   } catch { setDensity(window.innerWidth >= WIDE_DESKTOP); }
   try { state.grouped = localStorage.getItem('controle-estoque-group') === 'on'; } catch { state.grouped = false; }
   el('#group-toggle').setAttribute('aria-pressed', String(state.grouped));
-  function setSidebar(visible) {
-    document.documentElement.dataset.sidebar = visible ? 'shown' : 'hidden';
-    el('#sidebar-toggle').setAttribute('aria-expanded', String(visible));
-    el('#sidebar-toggle span').textContent = visible ? 'Ocultar barra lateral' : 'Mostrar barra lateral';
+  // A barra lateral saiu: filtros na barra da tabela, arquivo e configuração na barra superior.
+  try { localStorage.removeItem('controle-estoque-sidebar'); } catch { /* Sem acesso ao armazenamento. */ }
+  // Resumo recolhido: ficam só os valores em reais e o filtro de ação aparece na barra da tabela.
+  function setSummaryCollapsed(collapsed) {
+    document.documentElement.dataset.summary = collapsed ? 'collapsed' : 'expanded';
+    el('#overview-body').hidden = collapsed;
+    el('#summary-toggle').setAttribute('aria-expanded', String(!collapsed));
+    el('#summary-toggle').innerHTML = `${svgIcon(collapsed ? 'chevronDown' : 'chevronUp')}<span>${collapsed ? 'Mostrar resumo' : 'Recolher resumo'}</span>`;
   }
-  try { setSidebar(localStorage.getItem('controle-estoque-sidebar') !== 'hidden'); } catch { setSidebar(true); }
-  el('#sidebar-toggle').addEventListener('click', () => {
-    const visible = document.documentElement.dataset.sidebar === 'hidden';
-    setSidebar(visible);
-    try { localStorage.setItem('controle-estoque-sidebar', visible ? 'shown' : 'hidden'); } catch { /* A escolha vale até fechar a página. */ }
+  try { setSummaryCollapsed(localStorage.getItem('giro-estoque-summary') === 'collapsed'); } catch { setSummaryCollapsed(false); }
+  el('#summary-toggle').addEventListener('click', () => {
+    const collapsed = !el('#overview-body').hidden;
+    setSummaryCollapsed(collapsed);
+    try { localStorage.setItem('giro-estoque-summary', collapsed ? 'collapsed' : 'expanded'); } catch { /* A escolha vale até fechar a página. */ }
   });
+  // Bolinha no botão Exibir quando alguma opção que muda a tabela está ligada.
+  function updateViewDot() {
+    const on = document.documentElement.dataset.rows === 'striped' || state.grouped || (el('#show-hidden').checked && isAnaliticoMode());
+    el('#view-dot').hidden = !on;
+  }
   function setStripedRows(striped) {
     document.documentElement.dataset.rows = striped ? 'striped' : 'plain';
     el('#stripe-toggle').setAttribute('aria-pressed', String(striped));
+    updateViewDot();
   }
   try { setStripedRows(localStorage.getItem('controle-estoque-rows') === 'striped'); } catch { setStripedRows(false); }
   // A comparação com a importação anterior foi removida; libera o que ela guardava.
@@ -234,8 +244,6 @@ if (typeof document !== 'undefined') {
         shelf: state.shelfFilter,
         partition: state.partitionFilter,
         pageSize: state.pageSize,
-        showHidden: el('#show-hidden').checked,
-        hiddenOnly: state.hiddenOnly,
         sortKey: state.sortKey,
         sortDirection: state.sortDirection,
       }));
@@ -316,7 +324,8 @@ if (typeof document !== 'undefined') {
   function setConfigExpanded(expanded) {
     el('#config-grid').hidden = !expanded;
     el('#config-toggle').setAttribute('aria-expanded', String(expanded));
-    el('#config-toggle').innerHTML = `<span>${expanded ? 'Fechar configuração' : 'Abrir configuração'}</span>${svgIcon(expanded ? 'chevronUp' : 'chevronDown')}`;
+    el('#config-toggle').innerHTML = `${svgIcon('adjust')}<span>${expanded ? 'Fechar configuração' : 'Abrir configuração'}</span>`;
+    el('#config-toggle').title = expanded ? 'Fechar configuração' : 'Abrir configuração';
   }
 
   const initialMessage = el('#message');
@@ -713,10 +722,13 @@ if (typeof document !== 'undefined') {
     if (el('#filter').value) parts.push(el('#filter').value);
     if (query) parts.push(`Busca: “${query}”`);
     if (state.agingFilter) parts.push(`Sem requisição: ${AGING_BUCKETS.find(bucket => bucket.key === state.agingFilter)?.label ?? ''}`);
-    if (state.hiddenOnly) parts.push('Somente itens ocultos');
-    else if (el('#show-hidden').checked && isAnaliticoMode()) parts.push('Itens ocultos incluídos');
     const sortedColumn = state.columns.find(column => column.key === state.sortKey);
     if (sortedColumn) parts.push(`Ordem: ${sortedColumn.sortLabel || sortedColumn.label} (${state.sortDirection === 'asc' ? 'crescente' : 'decrescente'})`);
+    // Itens ocultos ganham um aviso próprio, ao lado do contador, que desliga com um clique.
+    const showingHidden = el('#show-hidden').checked && isAnaliticoMode();
+    el('#hidden-chip').hidden = !showingHidden;
+    el('#hidden-chip-text').textContent = state.hiddenOnly ? 'Somente itens ocultos' : 'Itens ocultos incluídos';
+    updateViewDot();
     el('#active-filters').hidden = parts.length === 0;
     el('#active-filters-text').textContent = parts.length ? `${parts.join(' · ')} · ${filteredCount} ${filteredCount === 1 ? 'item' : 'itens'}` : '';
   }
@@ -876,8 +888,9 @@ if (typeof document !== 'undefined') {
       state.sheet = state.sheets.findIndex(sheet => sheet.rows.length > sheet.headerRow + 1);
       state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []);
       const savedFilters = readFilterPreferences();
-      const restoreHidden = currentMode() === 'analitico' && Boolean(savedFilters.showHidden);
-      el('#show-hidden').checked = restoreHidden;
+      // Itens ocultos não são lembrados: cada importação começa só com os itens com ação.
+      el('#show-hidden').checked = false;
+      state.agingRevealedHidden = false;
       el('#search').value = typeof savedFilters.query === 'string' ? savedFilters.query : '';
       el('#filter').value = '';
       resetDashboardState(state);
@@ -886,7 +899,7 @@ if (typeof document !== 'undefined') {
       state.partitionFilter = typeof savedFilters.partition === 'string' ? savedFilters.partition : '';
       state.pageSize = [25, 50, 100].includes(Number(savedFilters.pageSize)) ? Number(savedFilters.pageSize) : PAGE_SIZE;
       el('#page-size').value = String(state.pageSize);
-      state.hiddenOnly = Boolean(savedFilters.hiddenOnly && restoreHidden);
+      state.hiddenOnly = false;
       state.sortKey = typeof savedFilters.sortKey === 'string' ? savedFilters.sortKey : '';
       state.sortDirection = savedFilters.sortDirection === 'desc' ? 'desc' : 'asc';
       state.pendingActionFilter = typeof savedFilters.action === 'string' ? savedFilters.action : '';
@@ -993,6 +1006,13 @@ if (typeof document !== 'undefined') {
     new ResizeObserver(() => document.documentElement.style.setProperty('--tools-height', `${el('.table-tools').offsetHeight}px`)).observe(el('.table-tools'));
   }
   desktopQuery?.addEventListener?.('change', () => setSearchExpanded(Boolean(el('#search').value.trim())));
+  el('#hidden-chip').addEventListener('click', () => {
+    el('#show-hidden').checked = false;
+    state.hiddenOnly = false;
+    state.agingRevealedHidden = false;
+    state.page = 1;
+    refresh({ reanalyze: false });
+  });
   el('#show-hidden').addEventListener('change', () => {
     state.page = 1;
     if (!el('#show-hidden').checked) state.hiddenOnly = false;

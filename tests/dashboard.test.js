@@ -26,6 +26,11 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.equal(document.querySelector('#import-context'), null);
   assert.ok(document.querySelector('#view-menu #density-toggle'));
   assert.ok(document.querySelector('#view-menu #show-hidden'));
+  assert.equal(document.querySelector('#sidebar'), null);
+  assert.ok(document.querySelector('.table-tools #location-filter'));
+  assert.ok(document.querySelector('.topbar #replace-file'));
+  assert.ok(document.querySelector('#summary-toggle[aria-controls="overview-body"]'));
+  assert.ok(document.querySelector('.results-bar #hidden-chip'));
   assert.ok(document.querySelector('#aging-chart #aging-chart-bars'));
   assert.match(document.querySelector('.brand').textContent, /GIRO DE ESTOQUE/);
   assert.ok(document.querySelector('#filtered-count'));

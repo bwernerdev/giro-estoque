@@ -10,6 +10,8 @@ export function renderApp() {
         <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="${brandIconUrl}" alt="" /></span><span>GIRO<span class="brand-light"> DE ESTOQUE</span></span></div>
         <div id="topbar-file" class="topbar-file" hidden></div>
         <div class="topbar-actions">
+          <button id="replace-file" class="topbar-button topbar-data" type="button" title="Trocar arquivo">${svgIcon('download')}<span>Trocar arquivo</span></button>
+          <button id="config-toggle" class="topbar-button topbar-data config-toggle" type="button" aria-controls="config-grid" aria-expanded="false" title="Abrir configuração">${svgIcon('adjust')}<span>Abrir configuração</span></button>
           <button id="install-app" class="topbar-button install-button" type="button" hidden>${svgIcon('download')}<span>Instalar app</span></button>
           <button id="theme-toggle" class="topbar-button theme-toggle" type="button" aria-pressed="false">${svgIcon('moon')}<span>Modo escuro</span></button>
         </div>
@@ -35,24 +37,6 @@ export function renderApp() {
         <div id="message" role="status" aria-live="polite"></div>
         <section id="workspace" hidden>
           <div class="workspace">
-            <aside id="sidebar" class="sidebar" aria-label="Arquivo e filtros">
-              <section class="side-section">
-                <h2 class="side-title">Arquivo</h2>
-                <div class="side-buttons">
-                  <button id="replace-file" class="secondary-button config-toggle" type="button">${svgIcon('download')}<span>Trocar arquivo</span></button>
-                  <button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false"><span>Abrir configuração</span>${svgIcon('chevronDown')}</button>
-                </div>
-              </section>
-              <section class="side-section">
-                <h2 class="side-title">Filtros</h2>
-                <div class="table-filters">
-                  <label class="filter-field"><span>Local</span><select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos</option></select></label>
-                  <label class="filter-field"><span>Prateleira</span><select id="shelf-filter" aria-label="Filtrar prateleira"><option value="">Todas</option></select></label>
-                  <label class="filter-field"><span>Repartição</span><select id="partition-filter" aria-label="Filtrar repartição"><option value="">Todas</option></select></label>
-                  <label class="filter-field filter-action"><span>Ação</span><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select></label>
-                </div>
-              </section>
-            </aside>
             <div class="workspace-main">
               <div id="config-grid" class="config-grid" hidden>
                 <div class="panel"><h3>Colunas da planilha</h3><p class="panel-intro">Confirme quais colunas contêm os dados de cada item.</p><div id="mapping" class="mapping-grid"></div></div>
@@ -61,13 +45,16 @@ export function renderApp() {
               <section id="results-section" class="results-section">
                 <div id="data-quality" class="insight-strip data-quality" role="status" hidden><div><strong id="data-quality-title"></strong><span id="data-quality-detail"></span></div></div>
                 
-                <div class="overview">
-                  <div class="kpi-row">
-                    <div id="total-value" class="total-value money-kpi" hidden></div>
-                    <div id="idle-value" class="money-kpi idle" hidden></div>
-                    <div id="obsolete-value" class="money-kpi obsolete" hidden></div>
+                <div id="overview" class="overview">
+                  <div class="overview-top">
+                    <div class="kpi-row">
+                      <div id="total-value" class="total-value money-kpi" hidden></div>
+                      <div id="idle-value" class="money-kpi idle" hidden></div>
+                      <div id="obsolete-value" class="money-kpi obsolete" hidden></div>
+                    </div>
+                    <button id="summary-toggle" class="discreet-button summary-toggle" type="button" aria-controls="overview-body" aria-expanded="true">${svgIcon('chevronUp')}<span>Recolher resumo</span></button>
                   </div>
-                  <div class="overview-body">
+                  <div id="overview-body" class="overview-body">
                     <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
                     <figure id="aging-chart" class="value-chart aging-chart" hidden>
                       <figcaption><strong>Tempo sem requisição</strong><span>Valor do estoque com saldo por faixa de dias · clique para filtrar</span></figcaption>
@@ -78,10 +65,15 @@ export function renderApp() {
                 <div class="table-panel">
                   <div class="table-tools">
                     <div class="table-tools-header">
-                      <button id="sidebar-toggle" class="discreet-button sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="true">${svgIcon('sidebar')}<span>Ocultar barra lateral</span></button>
                       <div id="search-control" class="search-control"><button id="search-toggle" class="discreet-button search-toggle" type="button" aria-expanded="false" aria-controls="search-expansion">${svgIcon('search')}<span>Pesquisar</span></button><div id="search-expansion" class="search-expansion" inert><div class="search-expansion-inner"><label class="filter-field search-field"><span>Pesquisa</span><span class="search-label">${svgIcon('search')}<input id="search" type="search" placeholder="Buscar item ou código"></span></label></div></div></div>
+                      <div class="table-filters" role="group" aria-label="Filtros">
+                        <label class="filter-field"><span>Local</span><select id="location-filter" aria-label="Filtrar local de estoque"><option value="">Todos</option></select></label>
+                        <label class="filter-field"><span>Prateleira</span><select id="shelf-filter" aria-label="Filtrar prateleira"><option value="">Todas</option></select></label>
+                        <label class="filter-field"><span>Repartição</span><select id="partition-filter" aria-label="Filtrar repartição"><option value="">Todas</option></select></label>
+                        <label class="filter-field filter-action"><span>Ação</span><select id="filter" aria-label="Filtrar recomendação"><option value="">Todas as recomendações</option></select></label>
+                      </div>
                       <div class="filter-actions" role="group" aria-label="Ações da tabela">
-                        <details id="view-menu" class="export-menu view-menu"><summary class="secondary-button"><span>Exibir</span>${svgIcon('chevronDown')}</summary><div class="export-options view-options">
+                        <details id="view-menu" class="export-menu view-menu"><summary class="secondary-button"><span>Exibir</span><span id="view-dot" class="menu-dot" title="Há opções de exibição ligadas" hidden></span>${svgIcon('chevronDown')}</summary><div class="export-options view-options">
                           <button id="density-toggle" class="view-toggle density-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Modo compacto</span></button>
                           <button id="stripe-toggle" class="view-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Zebrado</span></button>
                           <button id="group-toggle" class="view-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Agrupar por ação</span></button>
@@ -91,7 +83,7 @@ export function renderApp() {
                       </div>
                     </div>
                   </div>
-                  <div class="results-bar"><div class="results-counter" role="status" aria-live="polite"><strong id="filtered-count">0 de 0 itens</strong><span>conforme os filtros atuais</span></div></div>
+                  <div class="results-bar"><div class="results-counter" role="status" aria-live="polite"><strong id="filtered-count">0 de 0 itens</strong><span>conforme os filtros atuais</span></div><button id="hidden-chip" class="filter-chip" type="button" hidden><span id="hidden-chip-text">Itens ocultos incluídos</span>${svgIcon('close')}<span class="sr-only">: ocultar de novo</span></button></div>
                   <div id="active-filters" class="active-filters" hidden><span id="active-filters-text"></span><button id="clear-filters" class="discreet-button" type="button">Limpar filtros</button></div>
                   <div class="table-scroll"><table id="result-table"><caption class="sr-only">Resultados da análise de estoque</caption><thead id="table-head"></thead><tbody id="result-rows"></tbody></table></div>
                   <div id="table-footer" class="table-footer"><span id="page-status"></span><label class="page-size-control">Itens por página<select id="page-size"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></label><nav id="pagination" class="pagination" aria-label="Páginas de resultados" hidden><button id="page-previous" type="button">Anterior</button><span id="page-label"></span><button id="page-next" type="button">Próxima</button></nav></div>
