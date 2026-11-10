@@ -1,6 +1,6 @@
 import { importFile, selectDataRows } from './import.js';
 import { ANALITICO_REQUIRED_KEYS, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
-import { actionCounts, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
+import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
 import { svgIcon } from './icons.js';
@@ -36,18 +36,46 @@ let importRun = 0;
 
 function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
+function actionIcon(action) {
+  const normalized = String(action).toUpperCase();
+  if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return 'alert';
+  if (normalized.includes('DESBLOQUEAR')) return 'unlock';
+  if (normalized.includes('ZERAR')) return 'zero';
+  if (normalized.includes('AJUSTAR')) return 'adjust';
+  if (normalized.includes('TRANSFERIR')) return 'transfer';
+  if (normalized.includes('BLOQUEAR')) return 'block';
+  if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return 'plus';
+  if (normalized.includes('REDUZIR')) return 'minus';
+  if (normalized.includes('MANTER')) return 'check';
+  return 'dot';
+}
+
 export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions, counts, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
   const summaryCounts = prioritizeActionCounts(counts ?? actions.map(action => ({ action, count: summaryResults.filter(row => row.action === action).length })));
   return [
-    `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span>ITENS NO PAINEL</span><strong>${summaryResults.length}</strong></button>`,
+    `<button type="button" class="summary-card total summary-filter" data-summary-clear aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon('list', 'kpi-svg')}</span><span class="kpi-label">ITENS NO PAINEL</span></span><div class="summary-value"><strong>${summaryResults.length}</strong><small>${summaryAllResults.length} no arquivo</small></div></button>`,
     ...summaryCounts.filter(({ count }) => count > 0).map(({ action, count }) => {
       const hiddenCard = action === 'Itens ocultos';
       const attribute = hiddenCard ? 'data-summary-hidden' : `data-summary-action="${escapeHtml(action)}"`;
       const total = hiddenCard ? summaryAllResults.length : summaryResults.length;
       const percentage = total ? Math.round((count / total) * 100) : 0;
-      return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span>${escapeHtml(action.toUpperCase())}</span><div class="summary-value"><strong>${count}</strong><small>${percentage}% ${hiddenCard ? 'do total' : 'do painel'}</small></div></button>`;
+      return `<button type="button" class="summary-card summary-filter ${slug(action)}" ${attribute} aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon(hiddenCard ? 'eyeOff' : actionIcon(action), 'kpi-svg')}</span><span class="kpi-label">${escapeHtml(action.toUpperCase())}</span></span><div class="summary-value"><strong>${count}</strong><small>${percentage}% ${hiddenCard ? 'do total' : 'do painel'}</small></div></button>`;
     }),
   ].filter(Boolean).join('');
+}
+
+// Gráfico de barras horizontais: valor do estoque por ação (uma série, uma cor; rótulo em cada barra).
+export function buildValueChartMarkup(values) {
+  const bars = values.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0);
+  const total = bars.reduce((sum, { value }) => sum + value, 0);
+  if (!bars.length || total <= 0) return '';
+  const largest = Math.max(...bars.map(({ value }) => value));
+  return [...bars].sort((a, b) => b.value - a.value).map(({ action, count, value }) => {
+    const share = Math.round((value / total) * 100);
+    const width = largest ? Math.max((value / largest) * 100, value > 0 ? 1.5 : 0) : 0;
+    const tip = `${action}: ${realCurrency(value)} (${share}% do valor) · ${count} ${count === 1 ? 'item' : 'itens'}`;
+    return `<div class="chart-row" title="${escapeHtml(tip)}"><span class="chart-label">${escapeHtml(action.toUpperCase())}</span><span class="chart-track"><span class="chart-bar" style="width:${width.toFixed(1)}%"></span></span><span class="chart-value">${realCurrency(value)}</span></div>`;
+  }).join('');
 }
 
 export function buildTotalMarkup({ summaryAllResults, locationFilter, locationTotal, shelfFilter = '', partitionFilter = '' }) {
@@ -255,12 +283,10 @@ if (typeof document !== 'undefined') {
       ? `Campos mais frequentes: ${quality.fields.map(({ field, count }) => `${field} (${count})`).join(' · ')}.`
       : 'Abra “Outros dados” ou “Motivo” para localizar o problema.';
   }
-  function renderActionBar(counts) {
-    const bar = el('#action-bar');
-    const segments = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0);
-    bar.hidden = segments.length === 0;
-    bar.innerHTML = segments.map(({ action, count }) => `<span class="seg ${slug(action)}" style="flex:${count}" title="${escapeHtml(action)}: ${count}"></span>`).join('');
-    bar.setAttribute('aria-label', `Distribuição das ações: ${segments.map(({ action, count }) => `${action} ${count}`).join(', ')}`);
+  function renderValueChart(rows, actions, analitico) {
+    const markup = buildValueChartMarkup(actionValues(rows, actions, analitico));
+    el('#value-chart-bars').innerHTML = markup;
+    el('#value-chart').hidden = !markup;
   }
   function renderHiddenToggle(hiddenCount) {
     el('#hidden-toggle-text').textContent = `Mostrar itens ocultos (${hiddenCount.toLocaleString('pt-BR')})`;
@@ -412,7 +438,7 @@ if (typeof document !== 'undefined') {
     const availableActions = counts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action }) => action);
     state.actionOrder = availableActions;
     state.actionRank = new Map(availableActions.map((action, index) => [action, index]));
-    renderActionBar(counts);
+    renderValueChart(summaryResults, availableActions, analitico);
     const hiddenCount = summaryAllResults.filter(row => row.hidden).length;
     const locationTotal = summarizeLocationTotal(summaryAllResults, state.locationFilter);
     const previousFilter = state.pendingActionFilter || el('#filter').value;
@@ -447,19 +473,6 @@ if (typeof document !== 'undefined') {
     persistFilters();
   }
 
-  function actionIcon(action) {
-    const normalized = String(action).toUpperCase();
-    if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return 'alert';
-    if (normalized.includes('DESBLOQUEAR')) return 'unlock';
-    if (normalized.includes('ZERAR')) return 'zero';
-    if (normalized.includes('AJUSTAR')) return 'adjust';
-    if (normalized.includes('TRANSFERIR')) return 'transfer';
-    if (normalized.includes('BLOQUEAR')) return 'block';
-    if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return 'plus';
-    if (normalized.includes('REDUZIR')) return 'minus';
-    if (normalized.includes('MANTER')) return 'check';
-    return 'dot';
-  }
   function urgentAction(action) {
     return ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'VERIFICAR DADOS'].includes(String(action).toUpperCase());
   }

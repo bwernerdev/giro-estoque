@@ -247,17 +247,19 @@ test('desktop: densidade compacta por padrão em 1366 px e linha com duas linhas
   expect(lines.code.y).toBeGreaterThan(lines.strong.y);
 });
 
-test('desktop: ações viram abas em uma linha, com barra proporcional e total na lateral', async ({ page }) => {
+test('desktop: visão geral com total, cartões de ação e gráfico de valor por ação', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas;Valor do estoque\nA;001;50;30;10\nB;002;5;30;20') });
   await expect(page.locator('#result-rows tr')).toHaveCount(2);
-  const tabs = await page.locator('#summary .summary-card').evaluateAll(cards => cards.map(card => Math.round(card.getBoundingClientRect().y)));
-  expect(tabs.length).toBeGreaterThan(1);
-  expect(new Set(tabs).size).toBe(1);
-  await expect(page.locator('#action-bar .seg').first()).toBeVisible();
-  await expect(page.locator('#action-bar')).toHaveAttribute('aria-label', /Distribuição das ações/);
-  await expect(page.locator('#sidebar #total-value')).toContainText('Valor total do estoque');
+  expect(await page.locator('#summary .summary-card').count()).toBeGreaterThan(1);
+  await expect(page.locator('.overview #total-value')).toContainText('Valor total do estoque');
+  await expect(page.locator('#sidebar #total-value')).toHaveCount(0);
+  await expect(page.locator('#value-chart')).toBeVisible();
+  await expect(page.locator('#value-chart .chart-row').first()).toContainText('R$');
+  const chart = await page.locator('#value-chart').boundingBox();
+  const cards = await page.locator('#summary').boundingBox();
+  expect(chart.x).toBeGreaterThan(cards.x + cards.width - 1);
   await expect(page.locator('#topbar-file')).toContainText('g.csv');
   await expect(page.getByText('Preparar análise')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Trocar arquivo' })).toBeVisible();

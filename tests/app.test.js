@@ -234,13 +234,13 @@ test('o total do estoque fica na barra do painel e a barra de andamento some ao 
   assert.equal(app.el('#summary .local-total'), null);
 });
 
-test('agrupa por ação, recolhe grupos, mostra a barra proporcional e o arquivo na topbar', async t => {
+test('agrupa por ação, recolhe grupos, mostra cartões com ícone e o arquivo na topbar', async t => {
   const app = await boot(t);
   await app.csv('Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\nA;001;7;5;0;10;200;Item com Giro;Desbloqueado;Desbloqueado\nB;002;7;0;0;0;50;Item com Giro;Bloqueado por saldo;Bloqueado\nC;003;7;5;0;10;200;Item com Giro;Desbloqueado;Desbloqueado', 'estoque.csv');
   assert.match(app.el('#topbar-file').textContent, /estoque\.csv/);
   assert.equal(app.el('#topbar-file').hidden, false);
-  assert.ok(app.el('#action-bar').querySelectorAll('.seg').length >= 2);
-  assert.match(app.el('#action-bar').getAttribute('aria-label'), /Distribuição das ações/);
+  assert.ok(app.el('#summary').querySelectorAll('.summary-card .kpi-icon svg').length >= 2);
+  assert.equal(app.el('#value-chart').hidden, true, 'sem coluna de valor, o gráfico não aparece');
 
   assert.equal(app.el('#result-rows').querySelectorAll('tr.group-row').length, 0);
   app.el('#group-toggle').click();

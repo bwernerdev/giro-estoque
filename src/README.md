@@ -6,10 +6,10 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 | Arquivo | Linhas | Papel |
 |---|---|---|
 | `analysis.js` | ~260 | **Regras de negócio.** `fields`, `suggestMapping`, `findHeaderRow`, `detectAnalysisMode`, `parseNumber` (pt-BR/en-US), `analyze` (genérico), `analyzeGiro` (BBOG6656), `analyzeAnalitico` (ações BLOQUEAR, TRANSFERIR OBSOLETO, DESBLOQUEAR, ZERAR MIN/MAX, AJUSTAR MIN/MAX), `summarizeLocationTotal`. Locais obsoletos: 1 e 298 |
-| `dashboard.js` | ~160 | Filtros (`filterResults`), busca sem acento, `paginate` (`PAGE_SIZE = 50`), `actionCounts`/`prioritizeActionCounts`, `sortResults`, `dataIssueSummary`, `processInChunks` (leitura em blocos) |
+| `dashboard.js` | ~160 | Filtros (`filterResults`), busca sem acento, `paginate` (`PAGE_SIZE = 50`), `actionCounts`/`actionValues` (valor por ação)/`prioritizeActionCounts`, `sortResults`, `dataIssueSummary`, `processInChunks` (leitura em blocos) |
 | `export-data.js` | ~80 | `buildExportData`, `buildCsv`, `csvField` (neutraliza fórmulas), `currencyNumber`, `shouldIncludeDaysSince` |
 | `import.js` | ~70 | `importFile` (xlsx via ExcelJS e csv), `parseCsv`, `selectDataRows` |
-| `main.js` | ~1000 | Estado da UI, listas de ações por modo (`ANALITICO_ACTIONS`, `GIRO_ACTIONS`, `GENERIC_ACTIONS`), cartões de resumo, tabela, exportação, tema, PWA |
+| `main.js` | ~1000 | Estado da UI, listas de ações por modo (`ANALITICO_ACTIONS`, `GIRO_ACTIONS`, `GENERIC_ACTIONS`), cartões de indicador e gráfico de valor por ação (`buildSummaryMarkup`, `buildValueChartMarkup`), tabela, exportação, tema, PWA |
 | `template.js` | ~80 | `renderApp()`: HTML da interface |
 | `icons.js` | ~25 | `svgIcon(name)`: ícones SVG inline |
 
@@ -18,12 +18,12 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 - `tokens.css`: cores, tipografia, espaçamento (4 px), raios, sombras, alturas. O tema escuro só redefine tokens aqui; componentes não têm regras por tema.
 - `base.css`: reset, foco, utilitários (`.sr-only`), barra de rolagem.
 - `components.css`: botões, campos, badges, avisos, cartão, menu de exportação, painel lateral. Tom semântico por ação (`--tone-*`) vale para badge e cartão do resumo.
-- `layout.css`: topbar clara, antes da importação, barra lateral, abas de ação, configuração, barra de ferramentas, painel de detalhes fixo, rodapé e os pontos de quebra (480, 720, 1024, 1280 e 1700 px).
+- `layout.css`: topbar clara, antes da importação, barra lateral, visão geral (total, cartões, gráfico), configuração, barra de ferramentas, painel de detalhes fixo, rodapé e os pontos de quebra (480, 720, 1024, 1280 e 1700 px).
 - `table.css`: tabela de resultados (densidade em `--cell-y`/`--cell-x`; larguras largas por container query no painel da tabela, porque a barra lateral e o painel de detalhes consomem largura da janela).
 - `print.css`: relatório de impressão/PDF.
 
 ## Subpasta
-- `fonts/`: DM Sans e Manrope em woff2, com licenças (declaradas em `fonts.css`; o app hoje usa Segoe UI, então o navegador não as baixa).
+- `fonts/`: DM Sans e Manrope em woff2, com licenças (declaradas em `fonts.css`; o app usa Manrope em títulos e números e Segoe UI no texto).
 
 ## Onde mexer
 - Nova regra ou ação: `analysis.js` + lista em `main.js` + prioridade em `dashboard.js` (`ACTION_PRIORITY`) + teste em `tests/analysis.test.js`.

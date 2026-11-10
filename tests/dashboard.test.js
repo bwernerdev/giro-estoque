@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { actionCounts, dataIssueSummary, filterResults, locationOptions, paginate, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from '../src/dashboard.js';
+import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, paginate, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from '../src/dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { renderApp } from '../src/template.js';
-import { ANALITICO_ACTIONS, buildSummaryMarkup, buildTotalMarkup } from '../src/main.js';
+import { ANALITICO_ACTIONS, buildSummaryMarkup, buildTotalMarkup, buildValueChartMarkup } from '../src/main.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -203,4 +203,26 @@ test('inclui os dias desde a última movimentação em todas as ações, menos D
   assert.equal(shouldIncludeDaysSince('analitico', 'TRANSFERIR OBSOLETO'), true);
   assert.equal(shouldIncludeDaysSince('analitico', 'DESBLOQUEAR'), false);
   assert.equal(shouldIncludeDaysSince('giro', 'BLOQUEAR'), false);
+});
+
+test('soma o valor do estoque por ação e monta o gráfico do maior para o menor', () => {
+  const items = [
+    { action: 'BLOQUEAR', actions: ['BLOQUEAR'], stockValue: '1.000,50' },
+    { action: 'BLOQUEAR', actions: ['BLOQUEAR', 'TRANSFERIR OBSOLETO'], stockValue: 500 },
+    { action: 'TRANSFERIR OBSOLETO', actions: ['TRANSFERIR OBSOLETO'], stockValue: null },
+    { action: 'ZERAR MIN/MAX', actions: ['ZERAR MIN/MAX'], stockValue: 2000 },
+  ];
+  const values = actionValues(items, ['BLOQUEAR', 'TRANSFERIR OBSOLETO', 'ZERAR MIN/MAX', 'DESBLOQUEAR'], true);
+  assert.deepEqual(values.map(({ action, count, value }) => [action, count, value]), [
+    ['BLOQUEAR', 2, 1500.5],
+    ['TRANSFERIR OBSOLETO', 2, 500],
+    ['ZERAR MIN/MAX', 1, 2000],
+    ['DESBLOQUEAR', 0, 0],
+  ]);
+  const chart = buildValueChartMarkup(values);
+  assert.equal((chart.match(/chart-row/g) || []).length, 3);
+  assert.ok(chart.indexOf('ZERAR MIN/MAX') < chart.indexOf('BLOQUEAR'));
+  assert.match(chart, /R\$\s?1\.500,50/);
+  assert.match(chart, /width:100\.0%/);
+  assert.equal(buildValueChartMarkup([{ action: 'BLOQUEAR', count: 2, value: 0 }]), '');
 });

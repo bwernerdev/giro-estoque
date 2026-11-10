@@ -20,6 +20,8 @@ const paths = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   dot: '<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+  eyeOff: '<path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 9 6 9 6a15.6 15.6 0 0 1-2.6 3.2M6.6 6.7C4.3 8.2 3 12 3 12s4 6 9 6a8.7 8.7 0 0 0 4.4-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 };
 
 export function svgIcon(name, className = 'ui-icon') {

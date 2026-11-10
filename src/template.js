@@ -44,7 +44,6 @@ export function renderApp() {
                   <button id="config-toggle" class="secondary-button config-toggle" type="button" aria-controls="config-grid" aria-expanded="false"><span>Abrir configuração</span>${svgIcon('chevronDown')}</button>
                 </div>
               </section>
-              <div id="total-value" class="total-value side-section" hidden></div>
               <section class="side-section">
                 <h2 class="side-title">Filtros</h2>
                 <div class="table-filters">
@@ -70,8 +69,16 @@ export function renderApp() {
               <section id="results-section" class="results-section">
                 <div id="data-quality" class="insight-strip data-quality" role="status" hidden><div><strong id="data-quality-title"></strong><span id="data-quality-detail"></span></div></div>
                 
-                <div id="action-bar" class="action-bar" role="img" hidden></div>
-                <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
+                <div class="overview">
+                  <div class="overview-main">
+                    <div id="total-value" class="total-value" hidden></div>
+                    <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
+                  </div>
+                  <figure id="value-chart" class="value-chart" hidden>
+                    <figcaption><strong>Valor do estoque por ação</strong><span>Soma do Vl Saldo dos itens no painel</span></figcaption>
+                    <div id="value-chart-bars" class="chart-bars"></div>
+                  </figure>
+                </div>
                 <div class="table-panel">
                   <div class="table-tools">
                     <div class="table-tools-header">

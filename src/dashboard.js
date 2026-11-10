@@ -1,4 +1,4 @@
-import { normalize, normalizeLocalKey, stockLocation } from './analysis.js';
+import { normalize, normalizeLocalKey, parseNumber, stockLocation } from './analysis.js';
 
 export const PAGE_SIZE = 50;
 const searchTextCache = new WeakMap();
@@ -50,6 +50,21 @@ export function actionCounts(rows, actions, analitico) {
     });
   });
   return actions.map(action => ({ action, count: counts.get(action) }));
+}
+
+// Soma do valor do estoque (Vl Saldo) dos itens de cada ação, com a contagem; item com duas ações entra nas duas.
+export function actionValues(rows, actions, analitico) {
+  const totals = new Map(actions.map(action => [action, { action, count: 0, value: 0 }]));
+  rows.forEach(row => {
+    const amount = parseNumber(row.stockValue);
+    (analitico ? row.actions : [row.action]).forEach(action => {
+      const total = totals.get(action);
+      if (!total) return;
+      total.count++;
+      if (Number.isFinite(amount)) total.value += amount;
+    });
+  });
+  return actions.map(action => totals.get(action));
 }
 
 const ACTION_PRIORITY = [

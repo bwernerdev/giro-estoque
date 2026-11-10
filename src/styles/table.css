@@ -134,7 +134,21 @@ td.col-codigo,
 td.col-local,
 td.col-prateleira,
 td.col-reparticao {
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Posição (local, prateleira, repartição): códigos curtos, centralizados. */
+.analitico-table td.col-local,
+.analitico-table td.col-prateleira,
+.analitico-table td.col-reparticao {
+  text-align: center;
+}
+
+.analitico-table th.col-local .sort-button,
+.analitico-table th.col-prateleira .sort-button,
+.analitico-table th.col-reparticao .sort-button {
+  justify-content: center;
 }
 
 /* Larguras (layout fixo). A coluna final guarda os dias parados e o ícone de detalhes. */
@@ -308,7 +322,7 @@ html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-ite
 /* ── Descrição do item ──────────────────────────────────────────────────────── */
 td.col-descricao strong {
   display: block;
-  color: var(--text);
+  color: var(--text-strong);
   font-size: var(--fs-sm);
   font-weight: 600;
 }
@@ -381,8 +395,15 @@ td.col-descricao strong {
   white-space: normal;
 }
 
+/* Ações em caixa de frase na tabela: mais fáceis de ler que tudo em maiúsculas. */
 #result-table .badge-label {
+  display: inline-block;
   min-width: 0;
+  text-transform: lowercase;
+}
+
+#result-table .badge-label::first-letter {
+  text-transform: uppercase;
 }
 
 td .badge + .badge {

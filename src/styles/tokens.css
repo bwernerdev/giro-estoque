@@ -3,8 +3,8 @@
    Toda cor, tamanho, raio e sombra do app nasce aqui. Componentes só consomem
    variáveis: o tema escuro redefine os tokens e não precisa de regras próprias.
 
-   Visual alinhado ao app do Robô SRP (RPA): Segoe UI, cinzas neutros, cantos de
-   6 px e superfícies planas com borda fina.
+   Visual de painel: Segoe UI no texto, Manrope (embutida) em títulos e números,
+   cinzas neutros, cantos de 6/8 px e superfícies planas com borda fina.
 
    Regra de cor: o azul da marca (--accent) marca a ação principal, o foco e o
    selecionado (--ring). Estados de negócio usam os tons semânticos (danger,
@@ -13,7 +13,7 @@
 :root {
   /* Tipografia */
   --font-body: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
-  --font-display: var(--font-body);
+  --font-display: Manrope, var(--font-body);
   --fs-2xs: 11px;
   --fs-xs: 12px;
   --fs-sm: 13px;
