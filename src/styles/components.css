@@ -35,7 +35,20 @@
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
-  transition: background var(--dur) ease, border-color var(--dur) ease, box-shadow var(--dur) ease;
+  transition: background var(--dur) ease, border-color var(--dur) ease, box-shadow var(--dur) ease, transform var(--dur) var(--ease-out);
+}
+
+/* Botão "afunda" ao ser pressionado. */
+@media (prefers-reduced-motion: no-preference) {
+  .primary-button:active:not(:disabled),
+  .secondary-button:active:not(:disabled),
+  .discreet-button:active:not(:disabled),
+  .topbar-button:active:not(:disabled),
+  .pagination button:active:not(:disabled),
+  .icon-button:active:not(:disabled),
+  .chart-row:active:not(:disabled) {
+    transform: scale(.96);
+  }
 }
 
 .primary-button {
@@ -125,6 +138,7 @@ button:disabled {
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-faint);
+  transition: background var(--dur) ease, color var(--dur) ease, transform var(--dur) var(--ease-out);
 }
 
 .icon-button:hover {

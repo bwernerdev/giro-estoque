@@ -348,6 +348,9 @@ html[data-summary="collapsed"] .money-kpi small {
   border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: var(--shadow-1);
+  position: relative;
+  isolation: isolate;
+  transition: box-shadow var(--dur) ease, transform var(--dur) var(--ease-out);
 }
 
 .money-kpi[hidden] {
@@ -567,6 +570,7 @@ html[data-summary="collapsed"] .money-kpi small {
   color: var(--text);
   text-align: left;
   appearance: none;
+  isolation: isolate;
 }
 
 /* Filete superior com o tom da ação. */
@@ -679,7 +683,8 @@ html[data-summary="collapsed"] .money-kpi small {
   background: var(--surface-hover);
 }
 
-/* Cartão de indicador sobe um pouco com sombra ao passar o mouse. */
+/* Cartão de indicador sobe um pouco com sombra ao passar o mouse; a inclinação vem
+   da seção "Hover" (fim do arquivo). */
 .summary-card.summary-filter:hover:not(:disabled) {
   background: var(--surface);
   box-shadow: var(--shadow-2);
@@ -757,6 +762,7 @@ html[data-summary="collapsed"] .money-kpi small {
   text-align: left;
   cursor: pointer;
   appearance: none;
+  transition: background var(--dur) ease, transform var(--dur) var(--ease-out);
 }
 
 .chart-row:hover:not(:disabled) {
@@ -782,7 +788,7 @@ html[data-summary="collapsed"] .money-kpi small {
   height: 100%;
   border-radius: 0 4px 4px 0;
   background: var(--accent);
-  transition: width var(--dur-slow) var(--ease-out);
+  transition: width var(--dur-slow) var(--ease-out), opacity var(--dur) ease;
 }
 
 .chart-value {
@@ -1540,4 +1546,95 @@ html[data-summary="collapsed"] .table-tools .filter-action {
 @keyframes shimmer {
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }
+}
+
+/* ── Hover: inclinação, brilho e ícones ─────────────────────────────────────────
+   main.js informa a posição do cursor no cartão (--rx/--ry em graus, --mx/--my em %).
+   Tudo fica dentro de "no-preference": com movimento reduzido nada inclina nem gira. */
+.summary-card::after,
+.money-kpi::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--tone-line, var(--accent)) 16%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity var(--dur-slow) ease;
+  pointer-events: none;
+}
+
+.summary-card.summary-filter:hover:not(:disabled)::after,
+.money-kpi:hover::after {
+  opacity: 1;
+}
+
+.kpi-icon,
+.upload-icon .ui-icon {
+  transition: transform var(--dur-slow) cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* Faixa sob o mouse em destaque; as outras esmaecem. */
+.chart-bars:has(.chart-row:hover:not(:disabled)) .chart-row:not(:hover) .chart-bar {
+  opacity: .35;
+}
+
+.chart-row:hover:not(:disabled) .chart-value {
+  color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .summary-card.summary-filter:hover:not(:disabled) {
+    transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-2px);
+  }
+
+  .summary-card.summary-filter:active:not(:disabled) {
+    transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(.98);
+  }
+
+  .money-kpi:hover {
+    box-shadow: var(--shadow-2);
+    transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-2px);
+  }
+
+  .summary-card.summary-filter:hover:not(:disabled) .kpi-icon {
+    transform: rotate(-12deg) scale(1.15);
+  }
+
+  .upload-card:hover .upload-icon .ui-icon {
+    transform: translateY(-3px);
+  }
+
+  .upload-card.dragging .upload-icon .ui-icon {
+    animation: nudge-up .9s ease-in-out infinite;
+  }
+}
+
+@keyframes nudge-up {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-4px); }
+}
+
+.upload-card:hover:not(.dragging) {
+  border-color: var(--focus);
+}
+
+/* Arrastando um arquivo: tracejado que corre em volta da área de soltar. */
+.upload-card.dragging,
+.shell.dragging-file::after {
+  border-color: transparent;
+  background-image:
+    linear-gradient(90deg, var(--focus) 50%, transparent 0),
+    linear-gradient(90deg, var(--focus) 50%, transparent 0),
+    linear-gradient(0deg, var(--focus) 50%, transparent 0),
+    linear-gradient(0deg, var(--focus) 50%, transparent 0);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 14px 2px, 14px 2px, 2px 14px, 2px 14px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  background-origin: border-box;
+  animation: march .6s linear infinite;
+}
+
+@keyframes march {
+  to { background-position: 14px 0, -14px 100%, 0 -14px, 100% 14px; }
 }

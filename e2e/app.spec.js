@@ -145,6 +145,52 @@ test.describe('tema e zebrado', () => {
   });
 });
 
+test('hover: cartões inclinam com o cursor, gráfico destaca a faixa e arrastar anima a borda', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const header = 'Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio;Vl Saldo';
+  const rows = Array.from({ length: 40 }, (_, i) => `Peça ${i};${1000 + i};${i % 5 === 0 ? 298 : 7};${i % 4};2;6;${(i * 37) % 500};Acima de 90;;${i % 3 ? 'Desbloqueado' : 'Bloqueado'};${(i * 13.5).toFixed(2).replace('.', ',')}`);
+  await page.goto('./');
+  const dataTransfer = await page.evaluateHandle(() => { const data = new DataTransfer(); data.items.add(new File(['x'], 'a.csv')); return data; });
+  await page.dispatchEvent('.shell', 'dragover', { dataTransfer });
+  await expect(page.locator('#upload-card')).toHaveCSS('animation-name', 'march');
+  expect(await page.locator('.shell').evaluate(shell => getComputedStyle(shell, '::after').animationName)).toBe('march');
+  await page.dispatchEvent('.shell', 'dragleave');
+  await expect(page.locator('#upload-card')).not.toHaveClass(/dragging/);
+  await upload(page, [header, ...rows].join('\n'));
+  await expect(page.locator('.shell')).not.toHaveClass(/is-entering/);
+
+  const card = page.locator('.summary-card[data-summary-action]').first();
+  const box = await card.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.25);
+  await expect.poll(() => card.evaluate(node => [node.style.getPropertyValue('--rx'), node.style.getPropertyValue('--ry')])).toEqual(['2.00deg', '-2.00deg']);
+  await expect.poll(() => card.evaluate(node => getComputedStyle(node).transform)).toMatch(/^matrix3d/);
+  await expect.poll(() => card.evaluate(node => getComputedStyle(node, '::after').opacity)).toBe('1');
+  await expect.poll(() => card.locator('.kpi-icon').evaluate(node => getComputedStyle(node).transform)).not.toBe('none');
+
+  const kpi = page.locator('#idle-value');
+  const kpiBox = await kpi.boundingBox();
+  await page.mouse.move(kpiBox.x + kpiBox.width * 0.9, kpiBox.y + kpiBox.height * 0.5);
+  await expect.poll(() => card.evaluate(node => node.style.getPropertyValue('--rx'))).toBe('');
+  await expect.poll(() => kpi.evaluate(node => node.style.getPropertyValue('--ry'))).toBe('3.20deg');
+
+  const bars = page.locator('#aging-chart-bars .chart-row:not([disabled])');
+  await bars.first().hover();
+  await expect.poll(() => bars.nth(1).locator('.chart-bar').evaluate(node => getComputedStyle(node).opacity)).toBe('0.35');
+  await expect.poll(() => bars.first().locator('.chart-bar').evaluate(node => getComputedStyle(node).opacity)).toBe('1');
+
+  const row = page.locator('#result-rows tr:not(.urgent-row):not(.group-row)').first();
+  await row.hover();
+  await expect(row.locator('td').first()).toHaveCSS('box-shadow', /inset/);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const other = page.locator('.summary-card[data-summary-action]').nth(1);
+  const otherBox = await other.boundingBox();
+  await page.mouse.move(otherBox.x + otherBox.width * 0.2, otherBox.y + otherBox.height * 0.2);
+  await page.waitForTimeout(100);
+  expect(await other.evaluate(node => node.style.getPropertyValue('--rx'))).toBe('');
+  expect(await other.evaluate(node => getComputedStyle(node).transform)).not.toMatch(/^matrix3d/);
+});
+
 test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {
   await page.goto('./');
   await upload(page);

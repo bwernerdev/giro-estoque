@@ -238,6 +238,11 @@ html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-ite
   cursor: pointer;
 }
 
+/* Linha sob o mouse ganha uma faixa da cor de destaque (a vermelha das urgentes fica). */
+#result-table tbody tr:not(.group-row):not(.urgent-row):hover > td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
 #result-table .urgent-row > td:first-child {
   box-shadow: inset 3px 0 0 var(--danger-line);
 }
@@ -442,4 +447,9 @@ td .badge + .badge {
   height: 100%;
   border-radius: 2px;
   background: color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: background var(--dur) ease;
+}
+
+#result-table tbody tr:hover .value-bar > span {
+  background: var(--accent);
 }

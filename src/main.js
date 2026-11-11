@@ -235,6 +235,41 @@ if (typeof document !== 'undefined') {
     shell.classList.add('is-entering');
     setTimeout(() => shell.classList.remove('is-entering'), 1400);
   }
+  // Cartões inclinam na direção do cursor e um brilho acompanha o mouse. O script só
+  // informa a posição (--rx, --ry, --mx, --my); o efeito e o hover ficam no CSS.
+  const tiltSelector = '.summary-card:not(:disabled), .money-kpi';
+  let tiltCard = null;
+  let tiltEvent = null;
+  let tiltFrame = 0;
+  function resetTilt() {
+    if (!tiltCard) return;
+    ['--rx', '--ry', '--mx', '--my'].forEach(name => tiltCard.style.removeProperty(name));
+    tiltCard = null;
+  }
+  function applyTilt() {
+    tiltFrame = 0;
+    const event = tiltEvent;
+    const card = event.target instanceof Element ? event.target.closest(tiltSelector) : null;
+    if (card !== tiltCard) resetTilt();
+    if (!card) return;
+    tiltCard = card;
+    const box = card.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const x = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - box.top) / box.height));
+    card.style.setProperty('--rx', `${((0.5 - y) * 8).toFixed(2)}deg`);
+    card.style.setProperty('--ry', `${((x - 0.5) * 8).toFixed(2)}deg`);
+    card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
+  }
+  document.addEventListener('pointermove', event => {
+    if (event.pointerType !== 'mouse' || reducedMotion()) return;
+    tiltEvent = event;
+    if (!tiltFrame) tiltFrame = requestAnimationFrame(applyTilt);
+  });
+  document.addEventListener('pointerout', event => {
+    if (!event.relatedTarget) resetTilt();
+  });
   function setTheme(theme) {
     const dark = theme === 'dark';
     document.documentElement.classList.add('theme-switching');
