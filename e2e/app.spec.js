@@ -159,6 +159,17 @@ test('hover: cartões inclinam com o cursor, gráfico destaca a faixa e arrastar
   await upload(page, [header, ...rows].join('\n'));
   await expect(page.locator('.shell')).not.toHaveClass(/is-entering/);
 
+  // Fora dos cartões, mover o mouse não roda script nem pede quadro novo (evita cursor travando).
+  await page.evaluate(() => {
+    window.frameRequests = 0;
+    const original = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = callback => { window.frameRequests += 1; return original(callback); };
+  });
+  const tableBox = await page.locator('.table-panel').boundingBox();
+  for (let step = 0; step < 30; step += 1) await page.mouse.move(tableBox.x + 20 + step * 25, tableBox.y + 40 + step * 4);
+  for (let step = 0; step < 15; step += 1) await page.mouse.move(20 + step * 40, 10);
+  expect(await page.evaluate(() => window.frameRequests)).toBe(0);
+
   const card = page.locator('.summary-card[data-summary-action]').first();
   const box = await card.boundingBox();
   await page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.25);

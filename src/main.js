@@ -202,7 +202,9 @@ if (typeof document !== 'undefined') {
     setInstallButton(false);
   });
 
-  const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  // Consulta criada uma vez: .matches acompanha a mudança da preferência sem recriar a consulta.
+  const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const reducedMotion = () => motionQuery?.matches ?? false;
   // Troca animada (View Transitions) nos filtros; sem suporte ou com movimento reduzido, troca direto.
   function withTransition(update) {
     if (typeof document.startViewTransition !== 'function' || reducedMotion()) return update();
@@ -237,38 +239,50 @@ if (typeof document !== 'undefined') {
   }
   // Cartões inclinam na direção do cursor e um brilho acompanha o mouse. O script só
   // informa a posição (--rx, --ry, --mx, --my); o efeito e o hover ficam no CSS.
+  // O movimento só é escutado enquanto o cursor está sobre um cartão: no resto da página,
+  // mover o mouse não roda nenhum script nem pede quadro novo ao navegador.
   const tiltSelector = '.summary-card:not(:disabled), .money-kpi';
   let tiltCard = null;
   let tiltEvent = null;
   let tiltFrame = 0;
-  function resetTilt() {
-    if (!tiltCard) return;
-    ['--rx', '--ry', '--mx', '--my'].forEach(name => tiltCard.style.removeProperty(name));
-    tiltCard = null;
-  }
   function applyTilt() {
     tiltFrame = 0;
-    const event = tiltEvent;
-    const card = event.target instanceof Element ? event.target.closest(tiltSelector) : null;
-    if (card !== tiltCard) resetTilt();
-    if (!card) return;
-    tiltCard = card;
+    const card = tiltCard;
+    if (!card || !tiltEvent) return;
     const box = card.getBoundingClientRect();
     if (!box.width || !box.height) return;
-    const x = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - box.top) / box.height));
+    const x = Math.min(1, Math.max(0, (tiltEvent.clientX - box.left) / box.width));
+    const y = Math.min(1, Math.max(0, (tiltEvent.clientY - box.top) / box.height));
     card.style.setProperty('--rx', `${((0.5 - y) * 8).toFixed(2)}deg`);
     card.style.setProperty('--ry', `${((x - 0.5) * 8).toFixed(2)}deg`);
     card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`);
     card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`);
   }
-  document.addEventListener('pointermove', event => {
-    if (event.pointerType !== 'mouse' || reducedMotion()) return;
+  function trackTilt(event) {
     tiltEvent = event;
     if (!tiltFrame) tiltFrame = requestAnimationFrame(applyTilt);
+  }
+  function resetTilt() {
+    if (tiltFrame) cancelAnimationFrame(tiltFrame);
+    tiltFrame = 0;
+    tiltEvent = null;
+    if (!tiltCard) return;
+    tiltCard.removeEventListener('pointermove', trackTilt);
+    ['--rx', '--ry', '--mx', '--my'].forEach(name => tiltCard.style.removeProperty(name));
+    tiltCard = null;
+  }
+  const overviewArea = el('#overview');
+  overviewArea.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse' || reducedMotion()) return;
+    const card = event.target instanceof Element ? event.target.closest(tiltSelector) : null;
+    if (!card || card === tiltCard) return;
+    resetTilt();
+    tiltCard = card;
+    card.addEventListener('pointermove', trackTilt);
+    trackTilt(event);
   });
-  document.addEventListener('pointerout', event => {
-    if (!event.relatedTarget) resetTilt();
+  overviewArea.addEventListener('pointerout', event => {
+    if (tiltCard && !tiltCard.contains(event.relatedTarget)) resetTilt();
   });
   function setTheme(theme) {
     const dark = theme === 'dark';
