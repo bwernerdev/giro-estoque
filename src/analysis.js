@@ -183,6 +183,11 @@ export function purchaseInProgress(request) {
   return true;
 }
 
+// SC encerrada com a OF sem saldo a entregar (já entregue): não interessa mais para a compra.
+export function purchaseDelivered(request) {
+  return Boolean(request && !purchaseInProgress(request) && (request.order || request.invoice) && !(request.orderBalance > 0));
+}
+
 // SC que vale para o item no local: só SCs do mesmo local ou sem local informado; entre
 // elas, a mais recente em andamento, ou a mais recente de todas se nenhuma estiver ativa.
 export function pickPurchaseRequest(requests, localNumber) {
@@ -316,12 +321,15 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
       toBuy = target - stock;
       const quantities = `sugestão de compra ${formatNumber(toBuy)} para chegar ao ${target === maximum ? 'máximo' : 'mínimo'} (${formatNumber(target)})`;
       purchase = purchases ? pickPurchaseRequest(purchases.get(itemKey(sku)), localNumber) : null;
+      // Última SC já entregue (saldo da OF zerado): não aparece.
+      const delivered = purchaseDelivered(purchase);
+      if (delivered) purchase = null;
       if (purchase?.inProgress) {
         actions.push('COMPRA EM ANDAMENTO');
         why.push(`Compra em andamento: saldo abaixo do mínimo (${quantities}); ${purchaseRequestText(purchase)}.`);
       } else {
         actions.push('COMPRAR');
-        const last = purchase ? ` Última SC: ${purchaseRequestText(purchase)}.` : purchases ? ' Sem SC no SNAC0540 para o item.' : ' Importe o SNAC0540 para conferir SCs em andamento.';
+        const last = purchase ? ` Última SC: ${purchaseRequestText(purchase)}.` : delivered ? ' Sem SC em andamento no SNAC0540.' : purchases ? ' Sem SC no SNAC0540 para o item.' : ' Importe o SNAC0540 para conferir SCs em andamento.';
         why.push(`Comprar: saldo abaixo do mínimo; ${quantities}.${last}`);
       }
     }
