@@ -37,8 +37,8 @@ export function renderApp() {
               <input id="file-input" type="file" accept=".xlsx,.csv">
             </label>
             <label class="attach-field" id="purchase-field">
-              <span class="attach-head"><span class="attach-icon" aria-hidden="true">${svgIcon('clock')}</span><span class="attach-title">SNAC0540</span><span class="attach-tag">Opcional</span></span>
-              <span class="attach-hint">Follow-up de compras (.csv ou .xlsx), exportado sem mexer nas colunas.</span>
+              <span class="attach-head"><span class="attach-icon" aria-hidden="true">${svgIcon('clock')}</span><span class="attach-title">SNAC0540</span><span class="attach-tag">Obrigatório</span></span>
+              <span class="attach-hint">Follow-up de compras (.csv ou .xlsx), exportado sem mexer nas colunas. O painel do Analítico só abre com ele.</span>
               <span class="attach-status" id="purchase-status" aria-live="polite">Escolha ou arraste o arquivo</span>
               <input id="purchase-input" type="file" accept=".csv,.xlsx">
             </label>

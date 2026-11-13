@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { attach, attachSnac } from './helpers.js';
 import { readFile } from 'node:fs/promises';
 import ExcelJS from 'exceljs';
 
 const generic = 'Produto;Codigo;Estoque;Vendas;Valor do estoque\nA;001;50;30;1.234,56\n;002;5;30;20\nTotal;;55;60;1.254,56';
 async function upload(page, csv = generic) {
-  await page.locator('#file-input').setInputFiles({ name: 'dados.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await attach(page, { name: 'dados.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await expect(page.locator('#upload-card')).not.toHaveAttribute('aria-busy');
   await expect(page.locator('#results-section')).toBeVisible();
 }
@@ -80,7 +81,7 @@ test('leitura Excel, filtros, paginação e impressão incluem todos os resultad
   sheet.addRow(['Cd Item', 'Nm Item', 'Qtde Atual', 'Qnt Min', 'Qnt Max', 'Dif Dias', 'Itens Acima de 90 dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Cd Local Estoque']);
   for (let i = 0; i < 61; i++) sheet.addRow([i + 1, `Peça ${i}`, 2, 0, 0, 100, 'Item com Giro', 'Desbloqueado', 'Desbloqueado', 7]);
   await page.goto('./');
-  await page.locator('#file-input').setInputFiles({ name: 'dados.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await workbook.xlsx.writeBuffer()) });
+  await attach(page, { name: 'dados.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await workbook.xlsx.writeBuffer()) });
   await expect(page.locator('#filtered-count')).toHaveText('61 de 61 itens');
   await expect(page.locator('#result-rows tr')).toHaveCount(50);
   await page.locator('#page-next').click();
@@ -202,14 +203,17 @@ test('hover: cartões inclinam com o cursor, gráfico destaca a faixa e arrastar
   expect(await other.evaluate(node => getComputedStyle(node).transform)).not.toMatch(/^matrix3d/);
 });
 
-test('SNAC0540 em ANSI pelo botão da barra: COMPRA EM ANDAMENTO e SC na tabela', async ({ page }) => {
+test('SNAC0540 em ANSI obrigatório: Analítico espera, painel abre com o SNAC0540 e mostra COMPRA EM ANDAMENTO', async ({ page }) => {
   const analitico = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado';
   const snac = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;5;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
   await page.goto('./');
-  await upload(page, analitico);
-  await expect(page.locator('#purchase-file')).toHaveText('Importar SNAC0540');
-  await page.locator('#purchase-input').setInputFiles({ name: 'REL_SNAC0540.CSV', mimeType: 'text/csv', buffer: Buffer.from(snac, 'latin1') });
-  await expect(page.locator('#message')).toContainText('SNAC0540 importado: 2 linhas de SC');
+  await page.locator('#file-input').setInputFiles({ name: 'estoque.csv', mimeType: 'text/csv', buffer: Buffer.from(analitico) });
+  await expect(page.locator('#message')).toContainText('Agora importe o SNAC0540 para gerar o painel');
+  await expect(page.locator('#workspace')).toBeHidden();
+  await expect(page.locator('#stock-field')).toHaveAttribute('data-state', 'ok');
+  await attachSnac(page, snac, 'latin1');
+  await expect(page.locator('#message')).toContainText('Analítico e SNAC0540 importados: 1 item para comprar e 1 com compra em andamento');
+  await expect(page.locator('#results-section')).toBeVisible();
   await expect(page.locator('#purchase-file')).toHaveClass(/is-loaded/);
   await expect(page.locator('[data-summary-action="COMPRA EM ANDAMENTO"]')).toBeVisible();
   await expect(page.locator('#result-rows')).toContainText('SC 7609604 · Compra confirmada');

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { attach, attachSnac } from './helpers.js';
 
 const longName = 'AAA CALCA MOD SOCIAL TIPO MASCULINO MATERIAL TERBRIM COR AZ MARI 519 FORRO SFORRO BOLSO 2 FRONTAIS2 TRASEIROS LOGO SEARA BARRA SELASTICO COR AZ MARI 519 FECH BOTZIP TAMANHO EG CONFECCAO ESPECIAL NAO APLICAVEL';
 const headers = 'Nm Item;Cd Item;Cd Local Estoque;Cd Prateleira;Cd Reparticao;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio';
@@ -7,7 +8,7 @@ const csv = [headers, ...Array.from({ length: 61 }, (_, i) =>
 )].join('\n');
 
 async function upload(page) {
-  await page.locator('#file-input').setInputFiles({ name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await attach(page, { name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await expect(page.locator('#result-rows tr')).toHaveCount(50);
   await page.evaluate(() => document.fonts.ready);
 }
@@ -169,7 +170,7 @@ test('pesquisa expande ao clicar, recolhe vazia e mantém buscas ativas após pe
   await expect(search).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await page.reload();
-  await page.locator('#file-input').setInputFiles({ name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await attach(page, { name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await expect(page.locator('#result-rows tr')).toHaveCount(1);
   await expect(search).toHaveValue('Item 60');
   await expect(search).toBeVisible();
@@ -184,7 +185,7 @@ test('combina filtros de localização, exporta todos os filtrados e lembra o ta
   const positions = [headers + ';Vl Saldo', ...Array.from({ length: 61 }, (_, i) =>
     `Item ${i};00${i};${i === 60 ? 7 : 4};${i < 30 ? 'A' : 'B'};${i % 2 ? 'I' : 'II'};8;0;0;200;Acima de 90;Desbloqueado;Desbloqueado;10`
   )].join('\n');
-  const load = () => page.locator('#file-input').setInputFiles({ name: 'posicoes.csv', mimeType: 'text/csv', buffer: Buffer.from(positions) });
+  const load = () => attach(page, { name: 'posicoes.csv', mimeType: 'text/csv', buffer: Buffer.from(positions) });
   await page.goto('./');
   await load();
   await expect(page.locator('#result-rows tr')).toHaveCount(50);
@@ -237,7 +238,7 @@ test('desktop: pesquisa sempre visível, atalho "/" e Esc não a recolhem', asyn
 test('desktop: densidade compacta por padrão em 1366 px e linha com duas linhas no modo padrão', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
-  await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas\nA;001;50;30\nB;002;5;30') });
+  await attach(page, { name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from('Produto;Codigo;Estoque;Vendas\nA;001;50;30\nB;002;5;30') });
   await expect(page.locator('#result-rows tr')).toHaveCount(2);
   await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
   const cell = page.locator('#result-rows td.col-descricao').first();
@@ -255,7 +256,7 @@ test('desktop: visão geral com indicadores em reais, cartões de ação e gráf
     'Parado;002;7;5;0;10;200;Acima de 90;Desbloqueado;Desbloqueado;300',
     'Antigo;003;298;5;0;10;400;Acima de 90;Bloqueado;Bloqueado;700',
   ].join('\n');
-  await page.locator('#file-input').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from(rows) });
+  await attach(page, { name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from(rows) });
   await expect(page.locator('#summary .summary-card').first()).toContainText(/itens com ação/i);
   await expect(page.locator('.overview #total-value')).toContainText('Valor total do estoque');
   await expect(page.locator('#idle-value')).toContainText('Parado há 180 dias ou mais');
@@ -367,7 +368,7 @@ test('agrupa por ação com cabeçalhos recolhíveis, exporta o grupo e lembra a
   await header.locator('[data-group-export]').click();
   expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);
   await page.reload();
-  await page.locator('#file-input').setInputFiles({ name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await attach(page, { name: 'layout.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await expect(page.locator('#result-rows tr.group-row')).toHaveCount(1);
   await expect(page.locator('#group-toggle')).toHaveAttribute('aria-pressed', 'true');
 });
@@ -411,7 +412,7 @@ test('itens ocultos ganham aviso que desliga com um clique e não são lembrados
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('./');
   const rows = [headers, 'Com ação;001;4;A;B;8;0;0;200;Acima de 90;Desbloqueado;Desbloqueado', 'Sem ação;002;4;A;B;5;0;10;10;Item com Giro;Desbloqueado;Desbloqueado'].join('\n');
-  const load = () => page.locator('#file-input').setInputFiles({ name: 'ocultos.csv', mimeType: 'text/csv', buffer: Buffer.from(rows) });
+  const load = () => attach(page, { name: 'ocultos.csv', mimeType: 'text/csv', buffer: Buffer.from(rows) });
   await load();
   await expect(page.locator('#result-rows tr')).toHaveCount(1);
   await expect(page.locator('#hidden-chip')).toBeHidden();

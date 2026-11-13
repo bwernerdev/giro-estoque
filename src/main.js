@@ -488,7 +488,8 @@ if (typeof document !== 'undefined') {
     if (!state.fileName || !currentSheet()) { el('#topbar-file').hidden = true; return; }
     const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
     el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span title="Importado às ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : ''}`;
-    el('#topbar-file').hidden = false;
+    // Só com o painel aberto (Analítico esperando o SNAC0540 fica só no campo da tela inicial).
+    el('#topbar-file').hidden = !el('.shell').classList.contains('has-data');
     setAttachState('#stock-field', 'ok', `${state.fileName} · ${currentSheet().name}${importedAt ? ` · importado às ${importedAt}` : ''}`);
     renderPurchaseContext();
   }
@@ -1150,12 +1151,24 @@ if (typeof document !== 'undefined') {
     state.pendingActionFilter = typeof savedFilters.action === 'string' ? savedFilters.action : '';
     state.fileName = file.name;
     state.importedAt = new Date();
+    // Analítico sem SNAC0540: fica guardado na tela inicial; o painel só abre com os dois.
+    if (isAnaliticoMode() && !state.purchases) {
+      el('.shell').classList.remove('has-data');
+      el('#workspace').hidden = true;
+      renderImportContext();
+      return false;
+    }
+    await openPanel();
+    return true;
+  }
+  async function openPanel() {
     setConfigExpanded(false);
     el('#workspace').hidden = false;
     el('.shell').classList.add('has-data');
     state.animateRows = true;
     renderImportContext(); renderMapping(); renderSettings(); await refresh();
   }
+  const waitingPanel = () => !el('.shell').classList.contains('has-data');
 
   // Aceita um ou dois arquivos de uma vez (seleção múltipla ou arrastar), em qualquer ordem:
   // no máximo uma planilha de estoque e um SNAC0540. O SNAC0540 sozinho fica guardado até
@@ -1184,13 +1197,20 @@ if (typeof document !== 'undefined') {
       if (stockFiles.length > 1 || purchaseFiles.length > 1) throw new Error('Selecione no máximo uma planilha de estoque (Analítico) e um SNAC0540 por vez.');
       if (purchaseFiles.length) setPurchases(purchaseFiles[0].file, purchaseFiles[0].sheets);
       if (stockFiles.length) {
-        await loadStock(stockFiles[0].file, stockFiles[0].sheets);
-        loaded = run === importRun;
-        if (loaded && state.purchases && isAnaliticoMode()) {
+        const opened = await loadStock(stockFiles[0].file, stockFiles[0].sheets);
+        if (run !== importRun) return;
+        loaded = opened;
+        if (!opened) {
+          message(`Analítico carregado (${stockFiles[0].file.name}). Agora importe o SNAC0540 para gerar o painel.`);
+        } else if (state.purchases && isAnaliticoMode()) {
           message(`${purchaseFiles.length ? 'Analítico e SNAC0540 importados' : `Analítico importado com o SNAC0540 de ${state.purchases.importedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}: ${purchaseSummary()}`);
-        } else if (loaded && purchaseFiles.length) {
+        } else if (purchaseFiles.length) {
           message('SNAC0540 guardado. As compras aparecem quando o relatório Analítico for importado.', 'warning');
         }
+      } else if (state.sheets.length && isAnaliticoMode() && waitingPanel()) {
+        await openPanel();
+        loaded = run === importRun;
+        message(`Analítico e SNAC0540 importados: ${purchaseSummary()}`);
       } else if (state.sheets.length && isAnaliticoMode()) {
         await refresh();
         message(`SNAC0540 importado: ${state.purchases.requests.length.toLocaleString('pt-BR')} linhas de SC. ${purchaseSummary()}`);

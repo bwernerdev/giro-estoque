@@ -31,10 +31,15 @@ async function boot(t) {
   await import(`../src/main.js?test=${++instance}`);
   const el = selector => dom.window.document.querySelector(selector);
   const change = (selector, value, event = 'change') => { const target = el(selector); target.value = value; target.dispatchEvent(new dom.window.Event(event, { bubbles: true })); };
-  async function load(file) {
-    Object.defineProperty(el('#file-input'), 'files', { configurable: true, value: [file] });
-    el('#file-input').dispatchEvent(new dom.window.Event('change'));
+  async function load(file, input = '#file-input') {
+    Object.defineProperty(el(input), 'files', { configurable: true, value: [file] });
+    el(input).dispatchEvent(new dom.window.Event('change'));
     await waitFor(() => !el('#upload-card').hasAttribute('aria-busy'));
+  }
+  // O painel do Analítico só abre com o SNAC0540: carrega um mínimo (SC de outro item) antes.
+  async function csv(text, name = 'dados.csv', { snac = true } = {}) {
+    if (snac && /Qnt Min/.test(text) && el('#purchase-field').dataset.state !== 'ok') await load({ name: 'REL_SNAC0540.CSV', text: async () => SNAC_MIN }, '#purchase-input');
+    await load({ name, text: async () => text });
   }
   async function exportFile(format) {
     const count = downloads.length;
@@ -42,7 +47,7 @@ async function boot(t) {
     await waitFor(() => downloads.length > count);
     return downloads.at(-1);
   }
-  return { el, change, load, exportFile, csv: (text, name = 'dados.csv') => load({ name, text: async () => text }) };
+  return { el, change, load, exportFile, csv };
 }
 
 test('importação mantém itens sem nome, número original da linha e aviso de revisão', async t => {
@@ -281,6 +286,8 @@ test('agrupa por ação, recolhe grupos, mostra cartões com ícone e o arquivo 
   assert.ok(app.el('#result-rows').querySelector('tr[data-row]').className.length > 0, 'a linha leva a classe da ação');
 });
 
+const SNAC_HEADER = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n';
+const SNAC_MIN = `${SNAC_HEADER}7000001;Compra confirmada;10/10/2026;1;999999;;;;;`;
 const SNAC = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;5;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
 const ANALITICO = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado\n1003;Pino;298;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado';
 
@@ -300,19 +307,40 @@ test('tela inicial: dois campos de anexo; SNAC0540 primeiro fica guardado até o
   await waitFor(() => app.el('#purchase-field').dataset.state === 'error');
   assert.match(app.el('#purchase-status').textContent, /não é o relatório SNAC0540/);
 
-  await app.csv(ANALITICO, 'estoque.csv');
+  await app.csv(ANALITICO, 'estoque.csv', { snac: false });
   assert.match(app.el('#message').textContent, /Analítico importado com o SNAC0540 de \d\d:\d\d: 1 item para comprar e 1 com compra em andamento\./);
   assert.equal(app.el('#stock-field').dataset.state, 'ok');
   assert.equal(app.el('#purchase-field').dataset.state, 'ok', 'erro anterior some ao importar com sucesso');
   assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO']);
 });
 
+test('SNAC0540 é obrigatório: Analítico sozinho espera na tela inicial e o painel abre quando o SNAC0540 chega', async t => {
+  const app = await boot(t);
+  await app.csv(ANALITICO, 'estoque.csv', { snac: false });
+  assert.match(app.el('#message').textContent, /Analítico carregado \(estoque\.csv\)\. Agora importe o SNAC0540 para gerar o painel\./);
+  assert.equal(app.el('.shell').classList.contains('has-data'), false);
+  assert.equal(app.el('#workspace').hidden, true);
+  assert.equal(app.el('#stock-field').dataset.state, 'ok');
+  assert.equal(app.el('#purchase-field').dataset.state, undefined);
+  await app.load({ name: 'REL_SNAC0540.CSV', text: async () => SNAC }, '#purchase-input');
+  assert.match(app.el('#message').textContent, /Analítico e SNAC0540 importados: 1 item para comprar e 1 com compra em andamento\./);
+  assert.equal(app.el('.shell').classList.contains('has-data'), true);
+  assert.equal(app.el('#workspace').hidden, false);
+});
+
+test('estoque e vendas não depende do SNAC0540', async t => {
+  const app = await boot(t);
+  await app.csv('Produto;Codigo;Estoque;Vendas\nA;1;5;30', 'giro.csv');
+  assert.equal(app.el('.shell').classList.contains('has-data'), true);
+});
+
 test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela e colunas de compra na exportação', async t => {
   const app = await boot(t);
   const snac = SNAC;
+  await app.load({ name: 'REL_SNAC0540.CSV', text: async () => `${SNAC_HEADER}7609605;Cancelada;11/10/2026;1;1002;;;;;` }, '#purchase-input');
   await app.csv(ANALITICO, 'estoque.csv');
   assert.equal(app.el('#purchase-file').hidden, false);
-  assert.match(app.el('#purchase-file').textContent, /Importar SNAC0540/);
+  assert.match(app.el('#purchase-file').textContent, /SNAC0540 · \d\d:\d\d/);
   const cards = () => [...app.el('#summary').querySelectorAll('[data-summary-action]')].map(card => card.dataset.summaryAction);
   assert.deepEqual(cards(), ['COMPRAR']);
   assert.match(app.el('#result-rows').textContent, /comprar 7 até o máx\./);
