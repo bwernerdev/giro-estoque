@@ -454,12 +454,15 @@ td .badge + .badge {
   background: var(--accent);
 }
 
-/* Quanto comprar e SC do SNAC0540, em texto pequeno abaixo do valor da célula. */
+/* Quanto comprar e SC do SNAC0540, em texto pequeno abaixo do valor da célula.
+   Quebra linha dentro da coluna estreita em vez de invadir a coluna vizinha. */
 .cell-hint {
   display: block;
   margin-top: 2px;
   color: var(--text-muted);
   font-size: var(--fs-xs);
   line-height: 1.3;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
