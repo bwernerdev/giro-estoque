@@ -1,3 +1,5 @@
+import { purchaseStage } from './analysis.js';
+
 function formatCurrency(value, fractionDigits = 2) {
   if (value === null || value === undefined) return '';
   const numericValue = Number(value);
@@ -37,8 +39,16 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
     const headers = includeDaysSince
       ? [...baseHeaders.slice(0, 6), 'Dias desde a última movimentação', ...baseHeaders.slice(6)]
       : baseHeaders;
+    // Colunas de compra só quando algum item exportado tem COMPRAR ou COMPRA EM ANDAMENTO.
+    const withPurchase = rows.some(row => row.toMinimum !== null && row.toMinimum !== undefined);
+    const purchaseHeaders = withPurchase ? ['Comprar até o mínimo', 'Comprar até o máximo', 'SC', 'Data da SC', 'Situação da SC', 'OF', 'Situação da OF', 'Andamento da SC'] : [];
+    const purchaseCells = row => {
+      if (!withPurchase) return [];
+      const request = row.purchase;
+      return [row.toMinimum ?? '', row.toMaximum ?? '', request?.request ?? '', request?.createdAt ? request.createdAt.toLocaleDateString('pt-BR') : '', request?.status ?? '', request?.order ?? '', request?.orderStatus ?? '', purchaseStage(request)];
+    };
     return {
-      headers: [...headers, 'Classificação', 'Ações', 'Motivo', 'Linha na planilha'],
+      headers: [...headers, 'Classificação', 'Ações', ...purchaseHeaders, 'Motivo', 'Linha na planilha'],
       rows: rows.map(row => [
         row.sku,
         row.item,
@@ -51,6 +61,7 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
         formatCurrency(row.stockValue),
         row.classification ?? '',
         row.action ?? '',
+        ...purchaseCells(row),
         row.reason ?? '',
         row.row ?? '',
       ]),

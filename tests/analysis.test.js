@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
+import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, itemKey, pickPurchaseRequest, purchaseInProgress, purchaseStage, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
 
 test('reconhece cabeçalhos comuns e recomenda ações distintas', () => {
   const mapping = suggestMapping(['Produto', 'Estoque Atual', 'Vendas 30 dias', 'Prazo de reposição']);
@@ -36,7 +36,7 @@ test('preserva a classificação informada na planilha Analítico', () => {
     [5, 'Acima', 9, 4, 8, 120, 'Item de Giro Baixo/Sem Saida'],
   ], mapping);
   assert.deepEqual(results.map(row => row.classification), ['Sem Saldo', 'Item com Giro', 'Item com Giro', 'Item com Giro', 'Item de Giro Baixo/Sem Saida']);
-  assert.ok(results.every(row => row.action === 'Sem ação definida'));
+  assert.deepEqual(results.map(row => row.action), ['COMPRAR', 'COMPRAR', 'Sem ação definida', 'Sem ação definida', 'Sem ação definida']);
 });
 
 test('aplica as condições de ação e ocultação informadas', () => {
@@ -72,7 +72,7 @@ test('aplica as condições de ação e ocultação informadas', () => {
     ['Sem ação definida'], ['BLOQUEAR'], ['BLOQUEAR'], ['BLOQUEAR'],
     ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'], ['Sem ação definida'],
     ['Verificar dados'], ['TRANSFERIR OBSOLETO'], ['DESBLOQUEAR'],
-    ['Sem ação definida'], ['Sem ação definida'], ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['TRANSFERIR OBSOLETO'], ['Sem ação definida'], ['BLOQUEAR'],
+    ['Sem ação definida'], ['COMPRAR'], ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['TRANSFERIR OBSOLETO'], ['Sem ação definida'], ['BLOQUEAR'],
     ['BLOQUEAR E TRANSFERIR OBSOLETO'], ['BLOQUEAR'], ['Verificar dados'],
     ['ZERAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
     ['DESBLOQUEAR'], ['Verificar dados'],
@@ -82,13 +82,13 @@ test('aplica as condições de ação e ocultação informadas', () => {
   assert.equal(results[9].hidden, false);
   assert.equal(results[7].hidden, false);
   assert.equal(results[10].hidden, true);
-  assert.equal(results[11].hidden, true);
+  assert.equal(results[11].hidden, false);
   assert.equal(results[14].hidden, true);
   assert.equal(results[19].hidden, false);
   assert.equal(results[1].hidden, false);
 });
 
-test('recomenda AJUSTAR MIN/MAX com saldo fora dos limites e Dif Dias abaixo de 90', () => {
+test('recomenda AJUSTAR MIN/MAX só acima do máximo; abaixo do mínimo vira COMPRAR', () => {
   const mapping = suggestMapping(['Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
   const results = analyzeAnalitico([
     ['Abaixo do mínimo', 2, 10, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Item com Giro', 7],
@@ -101,12 +101,13 @@ test('recomenda AJUSTAR MIN/MAX com saldo fora dos limites e Dif Dias abaixo de 
   ], mapping);
 
   assert.deepEqual(results.map(row => row.actions), [
-    ['AJUSTAR MIN/MAX'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
-    ['Sem ação definida'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'],
+    ['COMPRAR'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'], ['BLOQUEAR'],
+    ['COMPRAR'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'],
   ]);
   assert.equal(results[0].hidden, false);
-  assert.match(results[0].reason, /10 dias desde a última requisição \(abaixo de 90\) e saldo abaixo do mínimo/);
-  assert.match(results[1].reason, /saldo acima do máximo/);
+  assert.deepEqual([results[0].toMinimum, results[0].toMaximum], [2, 6]);
+  assert.match(results[0].reason, /Comprar: saldo abaixo do mínimo; faltam 2 para o mínimo e 6 para o máximo\. Importe o SNAC0540/);
+  assert.match(results[1].reason, /89 dias desde a última requisição \(abaixo de 90\) e saldo acima do máximo/);
 });
 
 test('status contraditórios exigem revisão antes de recomendar bloqueio ou transferência', () => {
@@ -214,3 +215,69 @@ test('soma o total do local de estoque selecionado em valor de saldo', () => {
   assert.equal(summarizeLocationTotal(rows, '298'), 40);
   assert.equal(summarizeLocationTotal(rows, ''), 235.5);
 });
+
+const request = (overrides = {}) => ({
+  request: '100', status: 'Compra confirmada', createdAt: new Date(2026, 9, 1), product: '6470', sequence: '1',
+  canceled: '', local: null, order: '900', orderStatus: 'Compra confirmada', orderBalance: 5, invoice: '', ...overrides,
+});
+
+test('SC em andamento: ativa, não cancelada e ainda não recebida', () => {
+  assert.equal(purchaseInProgress(request()), true);
+  assert.equal(purchaseInProgress(request({ status: 'Usuario preenchendo', order: '', orderStatus: '' })), true);
+  assert.equal(purchaseInProgress(request({ status: 'Aguardando autorização' })), true);
+  assert.equal(purchaseInProgress(request({ status: 'Cancelada' })), false);
+  assert.equal(purchaseInProgress(request({ canceled: 'S' })), false);
+  assert.equal(purchaseInProgress(request({ orderStatus: 'Cancelada' })), false);
+  assert.equal(purchaseInProgress(request({ orderStatus: 'Fechada' })), false);
+  assert.equal(purchaseInProgress(request({ invoice: '175865', orderBalance: 0 })), false, 'recebida');
+  assert.equal(purchaseInProgress(request({ invoice: '175865', orderBalance: 3 })), true, 'entrega parcial');
+  assert.deepEqual([request(), request({ invoice: '175865', orderBalance: 0, orderStatus: 'Fechada' }), request({ status: 'Cancelada' }), request({ orderStatus: 'Fechada' }), request({ orderStatus: 'Cancelada' })].map(purchaseStage),
+    ['Compra confirmada', 'Recebida (NF 175865)', 'Cancelada', 'OF fechada sem entrega', 'OF cancelada']);
+  assert.equal(purchaseStage(null), '');
+});
+
+test('SC do item: mesmo local ou sem local, a mais recente em andamento antes das encerradas', () => {
+  const requests = [
+    request({ request: '1', createdAt: new Date(2026, 8, 1), local: 4 }),
+    request({ request: '2', createdAt: new Date(2026, 9, 1), local: 7, status: 'Cancelada' }),
+    request({ request: '3', createdAt: new Date(2026, 9, 5), local: 4, status: 'Cancelada' }),
+    request({ request: '4', createdAt: new Date(2026, 9, 9), local: 625 }),
+  ];
+  assert.deepEqual([pickPurchaseRequest(requests, 4).request, pickPurchaseRequest(requests, 4).inProgress], ['1', true]);
+  assert.deepEqual([pickPurchaseRequest(requests, 7).request, pickPurchaseRequest(requests, 7).inProgress], ['2', false]);
+  assert.equal(pickPurchaseRequest(requests, 3), null);
+  assert.equal(pickPurchaseRequest([request({ request: '5', local: null })], 3).request, '5', 'SC sem local vale para qualquer local');
+  assert.equal(pickPurchaseRequest(undefined, 4), null);
+  assert.equal(itemKey('6.470'), '6470');
+  assert.equal(itemKey('006470'), '6470');
+});
+
+test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de local obsoleto e bloqueio', () => {
+  const mapping = suggestMapping(['Cd Item', 'Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  const rows = [
+    ['6.470', 'Com SC ativa', 1, 10, 'Desbloqueado', 'Desbloqueado', 4, 8, 'Item com Giro', 4],
+    ['7001', 'SC cancelada', 0, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
+    ['7002', 'Sem SC', 0, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
+    ['7003', 'Obsoleto', 0, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 298],
+    ['7004', 'Bloqueado', 0, 10, 'Bloqueado por saldo', 'Bloqueado por saldo', 2, 5, 'Sem Saldo', 4],
+    ['7005', 'Vai bloquear', 1, 120, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Item com Giro', 4],
+    ['7006', 'No mínimo', 2, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Item com Giro', 4],
+  ];
+  const purchases = new Map([
+    ['6470', [request({ request: '7609604', local: 4 })]],
+    ['7001', [request({ request: '7609700', status: 'Cancelada', local: 4 })]],
+  ]);
+  const results = analyzeAnalitico(rows, mapping, 2, { purchases });
+  assert.deepEqual(results.map(row => row.actions), [
+    ['COMPRA EM ANDAMENTO'], ['COMPRAR'], ['COMPRAR'], ['Sem ação definida'], ['DESBLOQUEAR'], ['BLOQUEAR'], ['Sem ação definida'],
+  ]);
+  assert.equal(results[0].purchase.request, '7609604');
+  assert.match(results[0].reason, /Compra em andamento: saldo abaixo do mínimo \(faltam 3 para o mínimo e 7 para o máximo\); SC 7609604 de 01\/10\/2026 \(Compra confirmada\), OF 900/);
+  assert.match(results[1].reason, /Última SC: SC 7609700 .*\(Cancelada\)/);
+  assert.match(results[2].reason, /Sem SC no SNAC0540 para o item/);
+  assert.equal(results[3].toMinimum, null);
+  const withoutReport = analyzeAnalitico(rows.slice(0, 1), mapping);
+  assert.deepEqual(withoutReport[0].actions, ['COMPRAR']);
+  assert.equal(withoutReport[0].purchase, null);
+});
+

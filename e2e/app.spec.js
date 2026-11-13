@@ -202,6 +202,21 @@ test('hover: cartões inclinam com o cursor, gráfico destaca a faixa e arrastar
   expect(await other.evaluate(node => getComputedStyle(node).transform)).not.toMatch(/^matrix3d/);
 });
 
+test('SNAC0540 em ANSI pelo botão da barra: COMPRA EM ANDAMENTO e SC na tabela', async ({ page }) => {
+  const analitico = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado';
+  const snac = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;5;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
+  await page.goto('./');
+  await upload(page, analitico);
+  await expect(page.locator('#purchase-file')).toHaveText('Importar SNAC0540');
+  await page.locator('#purchase-input').setInputFiles({ name: 'REL_SNAC0540.CSV', mimeType: 'text/csv', buffer: Buffer.from(snac, 'latin1') });
+  await expect(page.locator('#message')).toContainText('SNAC0540 importado: 2 linhas de SC');
+  await expect(page.locator('#purchase-file')).toHaveClass(/is-loaded/);
+  await expect(page.locator('[data-summary-action="COMPRA EM ANDAMENTO"]')).toBeVisible();
+  await expect(page.locator('#result-rows')).toContainText('SC 7609604 · Compra confirmada');
+  await expect(page.locator('#result-rows')).toContainText('SC 7609605 · Cancelada');
+  await expect(page.locator('#result-rows')).toContainText('comprar 3 · até máx. 7');
+});
+
 test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {
   await page.goto('./');
   await upload(page);

@@ -75,6 +75,7 @@ const ACTION_PRIORITY = [
   'Confirmar saldo',
   'Investigar sem consumo',
   'Comprar',
+  'COMPRA EM ANDAMENTO',
   'Planejar reposição',
   'DESBLOQUEAR',
   'ZERAR MIN/MAX',

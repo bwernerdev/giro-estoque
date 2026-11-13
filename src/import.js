@@ -26,9 +26,15 @@ function cellValue(value) {
   return value;
 }
 
+// CSV exportado pelo sistema (ex.: SNAC0540) vem em ANSI (Windows-1252); os demais em UTF-8.
+export function decodeText(buffer) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buffer); }
+  catch { return new TextDecoder('windows-1252').decode(buffer); }
+}
+
 export async function importFile(file) {
   if (/\.csv$/i.test(file.name)) {
-    const content = await file.text();
+    const content = typeof file.arrayBuffer === 'function' ? decodeText(await file.arrayBuffer()) : await file.text();
     const firstLine = content.split(/\r?\n/, 1)[0];
     const separator = (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length ? ';' : ',';
     return [{ name: 'CSV', rows: parseCsv(content.replace(/^\uFEFF/, ''), separator) }];
@@ -49,18 +55,22 @@ export async function importFile(file) {
   });
 }
 
+// Aspas só delimitam o campo quando abrem a célula; no meio do texto (ex.: TIPO "Y")
+// ficam como estão.
 export function parseCsv(content, separator) {
   const rows = [];
-  let row = [], cell = '', quoted = false;
+  let row = [], cell = '', quoted = false, cellStart = true;
   for (let i = 0; i < content.length; i++) {
     const char = content[i];
-    if (char === '"') {
+    const startsCell = cellStart;
+    cellStart = false;
+    if (char === '"' && (quoted || startsCell)) {
       if (quoted && content[i + 1] === '"') { cell += '"'; i++; }
       else quoted = !quoted;
-    } else if (char === separator && !quoted) { row.push(cell); cell = ''; }
+    } else if (char === separator && !quoted) { row.push(cell); cell = ''; cellStart = true; }
     else if ((char === '\n' || char === '\r') && !quoted) {
       if (char === '\r' && content[i + 1] === '\n') i++;
-      row.push(cell); rows.push(row); row = []; cell = '';
+      row.push(cell); rows.push(row); row = []; cell = ''; cellStart = true;
     } else cell += char;
   }
   if (quoted) throw new Error('O CSV contém aspas sem fechamento.');

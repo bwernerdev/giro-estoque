@@ -292,6 +292,12 @@ main {
   min-width: 0;
 }
 
+/* SNAC0540 importado: o botão ganha o tom de selecionado. */
+.purchase-file.is-loaded {
+  border-color: var(--ring);
+  color: var(--text-strong);
+}
+
 /* Valores em reais e o botão de recolher o resumo. */
 .overview-top {
   display: flex;

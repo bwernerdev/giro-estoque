@@ -19,6 +19,7 @@ const paths = {
   transfer: '<path d="M5 8h13m-4-4 4 4-4 4M19 16H6m4 4-4-4 4-4"/>',
   block: '<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   minus: '<path d="M5 12h14"/>',
   dot: '<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',

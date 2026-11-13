@@ -11,6 +11,8 @@ export function renderApp() {
         <div id="topbar-file" class="topbar-file" hidden></div>
         <div class="topbar-actions">
           <button id="replace-file" class="topbar-button topbar-data" type="button" title="Trocar arquivo">${svgIcon('upload')}<span>Trocar arquivo</span></button>
+          <button id="purchase-file" class="topbar-button topbar-data purchase-file" type="button" hidden>${svgIcon('clock')}<span>Importar SNAC0540</span></button>
+          <input id="purchase-input" type="file" accept=".csv,.xlsx" hidden>
           <button id="config-toggle" class="topbar-button topbar-data config-toggle" type="button" aria-controls="config-grid" aria-expanded="false" title="Abrir configuração">${svgIcon('adjust')}<span>Abrir configuração</span></button>
           <button id="install-app" class="topbar-button install-button" type="button" hidden>${svgIcon('download')}<span>Instalar app</span></button>
           <button id="theme-toggle" class="topbar-button theme-toggle" type="button" aria-pressed="false">${svgIcon('moon')}<span>Modo escuro</span></button>

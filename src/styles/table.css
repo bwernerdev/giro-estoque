@@ -453,3 +453,13 @@ td .badge + .badge {
 #result-table tbody tr:hover .value-bar > span {
   background: var(--accent);
 }
+
+/* Quanto comprar e SC do SNAC0540, em texto pequeno abaixo do valor da célula. */
+.cell-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}

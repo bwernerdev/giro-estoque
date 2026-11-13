@@ -1,5 +1,6 @@
 import { importFile, selectDataRows } from './import.js';
-import { AGING_BUCKETS, ANALITICO_REQUIRED_KEYS, agingBucket, agingSummary, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, stockHealth, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { AGING_BUCKETS, ANALITICO_REQUIRED_KEYS, agingBucket, agingSummary, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, purchaseRequestText, purchaseStage, stockHealth, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { isPurchaseReport, parsePurchaseReport } from './purchases.js';
 import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
@@ -9,6 +10,8 @@ const app = typeof document !== 'undefined' ? document.querySelector('#app') : n
 const state = {
   sheets: [], sheet: 0, mapping: {}, allResults: [], results: [],
   page: 1, locationFilter: '', hiddenOnly: false, fileName: '', importedAt: null,
+  // SNAC0540 importado: { fileName, importedAt, requests, byItem } ou null.
+  purchases: null,
   shelfFilter: '', partitionFilter: '', pageSize: PAGE_SIZE,
   mode: 'auto',
   numberFormat: 'pt-BR',
@@ -27,7 +30,7 @@ const state = {
     giro: { shortDays: '30', excessDays: '90', longDays: '365' },
   },
 };
-export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'ZERAR MIN/MAX', 'AJUSTAR MIN/MAX', 'Sem ação definida', 'Verificar dados'];
+export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'COMPRAR', 'COMPRA EM ANDAMENTO', 'ZERAR MIN/MAX', 'AJUSTAR MIN/MAX', 'Sem ação definida', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -46,6 +49,7 @@ function actionIcon(action) {
   if (normalized.includes('AJUSTAR')) return 'adjust';
   if (normalized.includes('TRANSFERIR')) return 'transfer';
   if (normalized.includes('BLOQUEAR')) return 'block';
+  if (normalized.includes('ANDAMENTO')) return 'clock';
   if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return 'plus';
   if (normalized.includes('REDUZIR')) return 'minus';
   if (normalized.includes('MANTER')) return 'check';
@@ -485,6 +489,19 @@ if (typeof document !== 'undefined') {
     const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
     el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span title="Importado às ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : ''}`;
     el('#topbar-file').hidden = false;
+    renderPurchaseContext();
+  }
+  // Botão do SNAC0540: só no modo Analítico; depois de importado mostra a hora e o resumo.
+  function renderPurchaseContext() {
+    const button = el('#purchase-file');
+    button.hidden = !isAnaliticoMode();
+    const loaded = state.purchases;
+    const time = loaded?.importedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
+    button.querySelector('span').textContent = loaded ? `SNAC0540 · ${time}` : 'Importar SNAC0540';
+    button.title = loaded
+      ? `${loaded.fileName}: ${loaded.requests.length.toLocaleString('pt-BR')} linhas de SC de ${loaded.byItem.size.toLocaleString('pt-BR')} itens. Clique para trocar.`
+      : 'Importar o follow-up de compras (SNAC0540) para conferir SCs em andamento';
+    button.classList.toggle('is-loaded', Boolean(loaded));
   }
   function dataRows() { return selectDataRows(currentSheet().rows, state.mapping, currentSheet().headerRow + 1); }
 
@@ -572,7 +589,7 @@ if (typeof document !== 'undefined') {
     if (reanalyze) {
       const rows = dataRows();
       const mapping = { ...state.mapping };
-      const settings = { ...state.settings[currentMode()], numberFormat: state.numberFormat };
+      const settings = { ...state.settings[currentMode()], numberFormat: state.numberFormat, purchases: state.purchases?.byItem ?? null };
       const analyzeChunk = chunk => {
         const cells = chunk.map(entry => entry.cells);
         const results = analitico ? analyzeAnalitico(cells, mapping, 2, settings)
@@ -715,6 +732,8 @@ if (typeof document !== 'undefined') {
       add('Ação recomendada', row.actions?.length ? row.actions.map(badgeHtml).join(' ') : '', true);
       add(reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Por que', notes);
       add('Saldo', limitsText(row));
+      add('Comprar', filled(row.toMinimum) ? `${formatNumber(row.toMinimum)} para o mínimo · ${formatNumber(row.toMaximum)} para o máximo` : '');
+      add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
       add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
       add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
       add('Giro do estoque', filled(row.coverage) ? `${formatNumber(row.coverage)} dias` : '');
@@ -884,6 +903,15 @@ if (typeof document !== 'undefined') {
     el('#active-filters').hidden = parts.length === 0;
     el('#active-filters-text').textContent = parts.length ? `${parts.join(' · ')} · ${filteredCount} ${filteredCount === 1 ? 'item' : 'itens'}` : '';
   }
+  // Quanto comprar (até o mínimo e até o máximo) e a SC do SNAC0540, abaixo da célula.
+  function buyHint(row) {
+    if (row.toMinimum === null || row.toMinimum === undefined) return '';
+    return `<small class="cell-hint" title="Comprar ${formatNumber(row.toMinimum)} para chegar ao mínimo ou ${formatNumber(row.toMaximum)} para chegar ao máximo">comprar ${formatNumber(row.toMinimum)} · até máx. ${formatNumber(row.toMaximum)}</small>`;
+  }
+  function purchaseHint(row) {
+    if (!row.purchase) return '';
+    return `<small class="cell-hint" title="${escapeHtml(purchaseRequestText(row.purchase))}">SC ${escapeHtml(row.purchase.request)} · ${escapeHtml(purchaseStage(row.purchase))}</small>`;
+  }
   function renderResults() {
     rememberExpansions();
     const query = el('#search').value.trim().toLowerCase();
@@ -924,7 +952,7 @@ if (typeof document !== 'undefined') {
       if (state.grouped && state.collapsedGroups.has(group)) continue;
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}</td><td>${valueCell(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}${buyHint(row)}</td><td>${valueCell(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}${purchaseHint(row)}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
       } else {
         rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? valueCell(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
       }
@@ -1068,7 +1096,24 @@ if (typeof document !== 'undefined') {
     window.print();
   }
 
-  async function loadFile(file) {
+  // SNAC0540: completa o Analítico já importado com as SCs; não troca a planilha.
+  async function loadPurchaseFile(file, sheets) {
+    if (!state.sheets.length || !isAnaliticoMode()) {
+      message('Importe primeiro o relatório Analítico; depois importe o SNAC0540 para conferir as compras.', 'error');
+      return false;
+    }
+    const sheet = sheets.find(entry => isPurchaseReport(entry.rows));
+    const { requests, byItem } = parsePurchaseReport(sheet.rows);
+    state.purchases = { fileName: file.name, importedAt: new Date(), requests, byItem };
+    renderPurchaseContext();
+    await refresh();
+    const buying = state.allResults.filter(row => row.actions?.includes('COMPRAR')).length;
+    const ongoing = state.allResults.filter(row => row.actions?.includes('COMPRA EM ANDAMENTO')).length;
+    message(`SNAC0540 importado: ${requests.length.toLocaleString('pt-BR')} linhas de SC. ${buying.toLocaleString('pt-BR')} ${buying === 1 ? 'item para comprar' : 'itens para comprar'} e ${ongoing.toLocaleString('pt-BR')} com compra em andamento.`);
+    return true;
+  }
+
+  async function loadFile(file, { purchase = false } = {}) {
     if (!file) return;
     const run = ++importRun;
     let loaded = false;
@@ -1079,8 +1124,14 @@ if (typeof document !== 'undefined') {
     upload.setAttribute('aria-busy', 'true');
     upload.classList.add('loading');
     try {
-      const sheets = (await importFile(file)).map(sheet => ({ ...sheet, headerRow: findHeaderRow(sheet.rows) }));
+      const imported = await importFile(file);
       if (run !== importRun) return;
+      if (purchase || imported.some(sheet => isPurchaseReport(sheet.rows))) {
+        if (purchase && !imported.some(sheet => isPurchaseReport(sheet.rows))) throw new Error('Este arquivo não é o relatório SNAC0540. Exporte o follow-up de compras sem mexer nas colunas.');
+        await loadPurchaseFile(file, imported);
+        return;
+      }
+      const sheets = imported.map(sheet => ({ ...sheet, headerRow: findHeaderRow(sheet.rows) }));
       if (!sheets.length || !sheets.some(sheet => sheet.rows.length > sheet.headerRow + 1)) throw new Error('Não encontrei linhas de dados na planilha.');
       state.sheets = sheets;
       shownNumbers.clear();
@@ -1126,6 +1177,8 @@ if (typeof document !== 'undefined') {
 
   el('#replace-file').addEventListener('click', () => el('#file-input').click());
   el('#file-input').addEventListener('change', event => { const file = event.target.files[0]; event.target.value = ''; loadFile(file); });
+  el('#purchase-file').addEventListener('click', () => el('#purchase-input').click());
+  el('#purchase-input').addEventListener('change', event => { const file = event.target.files[0]; event.target.value = ''; loadFile(file, { purchase: true }); });
   const upload = el('#upload-card');
   const fileButton = upload.querySelector('.primary-button');
   fileButton.addEventListener('keydown', event => {

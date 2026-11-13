@@ -280,3 +280,40 @@ test('agrupa por ação, recolhe grupos, mostra cartões com ícone e o arquivo 
   assert.ok(app.el('#result-rows').querySelectorAll('tr[data-row]').length < rowsBefore);
   assert.ok(app.el('#result-rows').querySelector('tr[data-row]').className.length > 0, 'a linha leva a classe da ação');
 });
+
+test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela e colunas de compra na exportação', async t => {
+  const app = await boot(t);
+  const snac = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;5;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
+  await app.csv(snac, 'REL_SNAC0540.CSV');
+  assert.match(app.el('#message').textContent, /Importe primeiro o relatório Analítico/);
+  assert.equal(app.el('.shell').classList.contains('has-data'), false);
+
+  await app.csv('Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado\n1003;Pino;298;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado', 'estoque.csv');
+  assert.equal(app.el('#purchase-file').hidden, false);
+  assert.match(app.el('#purchase-file').textContent, /Importar SNAC0540/);
+  const cards = () => [...app.el('#summary').querySelectorAll('[data-summary-action]')].map(card => card.dataset.summaryAction);
+  assert.deepEqual(cards(), ['COMPRAR']);
+  assert.match(app.el('#result-rows').textContent, /comprar 3 · até máx\. 7/);
+
+  await app.csv(snac, 'REL_SNAC0540.CSV');
+  assert.match(app.el('#message').textContent, /SNAC0540 importado: 2 linhas de SC\. 1 item para comprar e 1 com compra em andamento/);
+  assert.match(app.el('#purchase-file').textContent, /SNAC0540 · \d\d:\d\d/);
+  assert.equal(app.el('#topbar-file').textContent.includes('estoque.csv'), true, 'o Analítico continua carregado');
+  assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO']);
+  assert.match(app.el('#result-rows').textContent, /SC 7609604 · Compra confirmada/);
+  assert.match(app.el('#result-rows').textContent, /SC 7609605 · Cancelada/);
+
+  const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^\uFEFF/, ''), ';');
+  const column = name => csv[0].indexOf(name);
+  assert.ok(column('Comprar até o mínimo') > column('Ações'));
+  const luva = csv.find(row => row[0] === '1001');
+  assert.deepEqual([luva[column('Comprar até o mínimo')], luva[column('Comprar até o máximo')], luva[column('SC')], luva[column('Data da SC')], luva[column('Situação da SC')], luva[column('OF')]],
+    ['3', '7', '7609604', '10/10/2026', 'Compra confirmada', '7222987']);
+  const broca = csv.find(row => row[0] === '1002');
+  assert.equal(broca[column('Andamento da SC')], 'Cancelada');
+
+  Object.defineProperty(app.el('#purchase-input'), 'files', { configurable: true, value: [{ name: 'estoque.csv', text: async () => 'Cd Item;Nm Item\n1;A' }] });
+  app.el('#purchase-input').dispatchEvent(new window.Event('change'));
+  await waitFor(() => /não é o relatório SNAC0540/.test(app.el('#message').textContent));
+  assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO'], 'arquivo errado no botão do SNAC não troca nada');
+});

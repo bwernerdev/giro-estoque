@@ -164,7 +164,63 @@ export function analyzeGiro(rows, mapping, settings, firstRow = 2) {
   });
 }
 
-export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = 'pt-BR' } = {}) {
+// ── Compras (SNAC0540) ───────────────────────────────────────────────────────────
+// Código do item comparável entre relatórios: só dígitos, sem zeros à esquerda
+// ("6.470" no Analítico e "006470" viram "6470").
+export function itemKey(value) {
+  return String(value ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+}
+
+const ACTIVE_REQUEST_STATUSES = new Set(['compra confirmada', 'usuario preenchendo', 'comprador negociando', 'aguardando autorizacao']);
+
+// SC em andamento: situação ativa, não cancelada, OF não cancelada nem fechada e ainda
+// não recebida (sem nota fiscal, ou com nota e saldo a entregar na OF).
+export function purchaseInProgress(request) {
+  if (!request || !ACTIVE_REQUEST_STATUSES.has(normalize(request.status))) return false;
+  if (normalize(request.canceled) === 's') return false;
+  if (['cancelada', 'fechada'].includes(normalize(request.orderStatus))) return false;
+  if (request.invoice && !(request.orderBalance > 0)) return false;
+  return true;
+}
+
+// SC que vale para o item no local: só SCs do mesmo local ou sem local informado; entre
+// elas, a mais recente em andamento, ou a mais recente de todas se nenhuma estiver ativa.
+export function pickPurchaseRequest(requests, localNumber) {
+  const candidates = (requests ?? []).filter(request => request.local === null || request.local === undefined || localNumber === null || request.local === localNumber);
+  if (!candidates.length) return null;
+  const newestFirst = [...candidates].sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
+    || Number(b.request) - Number(a.request) || Number(a.sequence) - Number(b.sequence));
+  const active = newestFirst.find(purchaseInProgress);
+  const chosen = active ?? newestFirst[0];
+  return { ...chosen, inProgress: Boolean(active) };
+}
+
+function requestDate(date) {
+  return date ? date.toLocaleDateString('pt-BR') : '';
+}
+
+// Andamento da SC em poucas palavras: a situação, se ainda está em andamento; senão o
+// motivo de ter encerrado (recebida, cancelada ou OF fechada sem entrega).
+export function purchaseStage(request) {
+  if (!request) return '';
+  if (purchaseInProgress(request)) return request.status;
+  if (request.invoice) return `Recebida (NF ${request.invoice})`;
+  if (normalize(request.status) === 'cancelada' || normalize(request.canceled) === 's') return 'Cancelada';
+  if (normalize(request.orderStatus) === 'cancelada') return 'OF cancelada';
+  if (normalize(request.orderStatus) === 'fechada') return 'OF fechada sem entrega';
+  return request.status;
+}
+
+export function purchaseRequestText(request) {
+  if (!request) return '';
+  const parts = [`SC ${request.request}`, requestDate(request.createdAt) && `de ${requestDate(request.createdAt)}`, request.status && `(${request.status})`].filter(Boolean).join(' ');
+  const order = request.order ? `, OF ${request.order}${request.orderStatus ? ` (${request.orderStatus})` : ''}` : '';
+  const invoice = request.invoice ? `, NF ${request.invoice}` : '';
+  return `${parts}${order}${invoice}`;
+}
+
+// purchases: SCs do SNAC0540 por item (itemKey), ou null quando o relatório não foi importado.
+export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = 'pt-BR', purchases = null } = {}) {
   const parse = value => parseNumber(value, numberFormat);
   const parseQuantity = value => parseAnaliticoNumber(value, numberFormat);
   return rows.map((cells, index) => {
@@ -248,15 +304,36 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
       actions.push('DESBLOQUEAR');
       why.push('Desbloquear: saldo zerado e item bloqueado por saldo.');
     }
+    // Comprar: saldo abaixo do mínimo, fora dos locais obsoletos, item não bloqueado e sem
+    // recomendação de bloqueio nesta análise. Com SC em andamento no SNAC0540, a ação vira
+    // COMPRA EM ANDAMENTO.
+    let purchase = null;
+    let toMinimum = null;
+    let toMaximum = null;
+    const willBlock = actions.some(action => action.startsWith('BLOQUEAR'));
+    if (minimum !== null && stock < minimum && !isObsoleteLocation && !alreadyBlocked && !willBlock) {
+      toMinimum = minimum - stock;
+      toMaximum = maximum !== null && maximum > stock ? maximum - stock : toMinimum;
+      const quantities = `${toMinimum === 1 ? 'falta' : 'faltam'} ${formatNumber(toMinimum)} para o mínimo e ${formatNumber(toMaximum)} para o máximo`;
+      purchase = purchases ? pickPurchaseRequest(purchases.get(itemKey(sku)), localNumber) : null;
+      if (purchase?.inProgress) {
+        actions.push('COMPRA EM ANDAMENTO');
+        why.push(`Compra em andamento: saldo abaixo do mínimo (${quantities}); ${purchaseRequestText(purchase)}.`);
+      } else {
+        actions.push('COMPRAR');
+        const last = purchase ? ` Última SC: ${purchaseRequestText(purchase)}.` : purchases ? ' Sem SC no SNAC0540 para o item.' : ' Importe o SNAC0540 para conferir SCs em andamento.';
+        why.push(`Comprar: saldo abaixo do mínimo; ${quantities}.${last}`);
+      }
+    }
     details.push(...why);
     if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && isObsoleteLocation && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
-    else if (stock > 0 && daysSince !== null && daysSince < 90 && minimum !== null && maximum !== null && (stock < minimum || stock > maximum) && !(isObsoleteLocation && minimum === 0 && maximum === 0)) actions.push('AJUSTAR MIN/MAX');
+    else if (stock > 0 && daysSince !== null && daysSince < 90 && minimum !== null && maximum !== null && stock > maximum && !(isObsoleteLocation && minimum === 0 && maximum === 0)) actions.push('AJUSTAR MIN/MAX');
     if (!actions.length) actions.push('Sem ação definida');
     const hidden = hiddenByStatus || actions.includes('Sem ação definida');
     if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local obsoleto (1 ou 298), ao menos 180 dias sem requisição e item bloqueado.');
-    if (actions.includes('AJUSTAR MIN/MAX')) details.push(`Ajustar mín./máx.: saldo positivo, ${formatNumber(daysSince)} dias desde a última requisição (abaixo de 90) e saldo ${stock < minimum ? 'abaixo do mínimo' : 'acima do máximo'}.`);
+    if (actions.includes('AJUSTAR MIN/MAX')) details.push(`Ajustar mín./máx.: saldo positivo, ${formatNumber(daysSince)} dias desde a última requisição (abaixo de 90) e saldo acima do máximo.`);
     if (hidden) details.push(hiddenByStatus ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
-    return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · ') };
+    return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · '), toMinimum, toMaximum, purchase };
   });
 }
 
