@@ -1644,3 +1644,134 @@ html[data-summary="collapsed"] .table-tools .filter-action {
 @keyframes march {
   to { background-position: 14px 0, -14px 100%, 0 -14px, 100% 14px; }
 }
+
+/* ── Campos de anexo da tela inicial (Analítico e SNAC0540) ─────────────────
+   Cada campo é um <label> com o <input type=file> invisível dentro: clicar ou
+   soltar o arquivo no campo carrega aquele tipo. data-state: reading, ok, error. */
+.upload-card {
+  flex-wrap: wrap;
+}
+
+.attach-fields {
+  display: grid;
+  flex: 1 1 100%;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s4);
+  width: 100%;
+  max-width: 760px;
+  text-align: left;
+}
+
+.attach-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--dur) ease, background var(--dur) ease;
+}
+
+.attach-field:hover,
+.attach-field.is-over {
+  border-color: var(--focus);
+  background: var(--surface-selected);
+}
+
+.attach-field.is-over {
+  border-style: solid;
+}
+
+.attach-field:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.attach-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.attach-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.attach-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--info-bg);
+  color: var(--accent-text);
+}
+
+.attach-icon .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.attach-title {
+  flex: 1 1 auto;
+  color: var(--text-strong);
+  font: 600 var(--fs-lg) var(--font-display);
+}
+
+.attach-tag {
+  flex: none;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.attach-hint {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.attach-status {
+  margin-top: var(--s1);
+  overflow-wrap: anywhere;
+  font-size: var(--fs-sm);
+}
+
+.attach-field[data-state="reading"] .attach-status {
+  color: var(--accent-text);
+}
+
+.attach-field[data-state="ok"] {
+  border-style: solid;
+  border-color: var(--success-line);
+  background: var(--success-bg);
+}
+
+.attach-field[data-state="ok"] .attach-status {
+  color: var(--success-fg);
+}
+
+.attach-field[data-state="error"] {
+  border-color: var(--danger-fg);
+}
+
+.attach-field[data-state="error"] .attach-status {
+  color: var(--danger-fg);
+}
+
+.upload-card .upload-note {
+  flex: 1 1 100%;
+  margin-top: 0;
+}
+
+/* Tela inicial: os campos já são a área de soltar; sem a camada que cobre a janela. */
+.shell:not(.has-data).dragging-file::after {
+  display: none;
+}

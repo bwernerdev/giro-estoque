@@ -306,15 +306,15 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     }
     // Comprar: saldo abaixo do mínimo, fora dos locais obsoletos, item não bloqueado e sem
     // recomendação de bloqueio nesta análise. Com SC em andamento no SNAC0540, a ação vira
-    // COMPRA EM ANDAMENTO.
+    // COMPRA EM ANDAMENTO. Sugestão de compra: o que falta para chegar ao máximo
+    // (Qnt Max − Qtde Atual); sem máximo acima do saldo, o que falta para o mínimo.
     let purchase = null;
-    let toMinimum = null;
-    let toMaximum = null;
+    let toBuy = null;
     const willBlock = actions.some(action => action.startsWith('BLOQUEAR'));
     if (minimum !== null && stock < minimum && !isObsoleteLocation && !alreadyBlocked && !willBlock) {
-      toMinimum = minimum - stock;
-      toMaximum = maximum !== null && maximum > stock ? maximum - stock : toMinimum;
-      const quantities = `${toMinimum === 1 ? 'falta' : 'faltam'} ${formatNumber(toMinimum)} para o mínimo e ${formatNumber(toMaximum)} para o máximo`;
+      const target = maximum !== null && maximum > stock ? maximum : minimum;
+      toBuy = target - stock;
+      const quantities = `sugestão de compra ${formatNumber(toBuy)} para chegar ao ${target === maximum ? 'máximo' : 'mínimo'} (${formatNumber(target)})`;
       purchase = purchases ? pickPurchaseRequest(purchases.get(itemKey(sku)), localNumber) : null;
       if (purchase?.inProgress) {
         actions.push('COMPRA EM ANDAMENTO');
@@ -333,7 +333,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local obsoleto (1 ou 298), ao menos 180 dias sem requisição e item bloqueado.');
     if (actions.includes('AJUSTAR MIN/MAX')) details.push(`Ajustar mín./máx.: saldo positivo, ${formatNumber(daysSince)} dias desde a última requisição (abaixo de 90) e saldo acima do máximo.`);
     if (hidden) details.push(hiddenByStatus ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
-    return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · '), toMinimum, toMaximum, purchase };
+    return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · '), toBuy, purchase };
   });
 }
 

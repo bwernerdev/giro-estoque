@@ -12,7 +12,6 @@ export function renderApp() {
         <div class="topbar-actions">
           <button id="replace-file" class="topbar-button topbar-data" type="button" title="Trocar arquivo">${svgIcon('upload')}<span>Trocar arquivo</span></button>
           <button id="purchase-file" class="topbar-button topbar-data purchase-file" type="button" hidden>${svgIcon('clock')}<span>Importar SNAC0540</span></button>
-          <input id="purchase-input" type="file" accept=".csv,.xlsx" hidden>
           <button id="config-toggle" class="topbar-button topbar-data config-toggle" type="button" aria-controls="config-grid" aria-expanded="false" title="Abrir configuração">${svgIcon('adjust')}<span>Abrir configuração</span></button>
           <button id="install-app" class="topbar-button install-button" type="button" hidden>${svgIcon('download')}<span>Instalar app</span></button>
           <button id="theme-toggle" class="topbar-button theme-toggle" type="button" aria-pressed="false">${svgIcon('moon')}<span>Modo escuro</span></button>
@@ -27,14 +26,24 @@ export function renderApp() {
         <section class="upload-card" id="upload-card">
           <div class="upload-icon" aria-hidden="true">${svgIcon('upload')}</div>
           <div class="upload-copy">
-            <h2>Importar planilha</h2>
-            <p>Arraste o arquivo para cá ou selecione no computador.</p>
-            <small>Relatório Analítico, BBOG6656 ou estoque e vendas (.xlsx ou .csv). Os dados não saem do seu computador.</small>
+            <h2>Importar planilhas</h2>
+            <p>Anexe cada planilha no seu campo: clique para escolher ou arraste o arquivo.</p>
           </div>
-          <div class="upload-actions">
-            <label class="primary-button" for="file-input" role="button" tabindex="0"><span>Selecionar arquivo</span>${svgIcon('arrowRight')}</label>
-            <input id="file-input" type="file" accept=".xlsx,.csv" hidden>
+          <div class="attach-fields" role="group" aria-label="Planilhas do processo">
+            <label class="attach-field" id="stock-field">
+              <span class="attach-head"><span class="attach-icon" aria-hidden="true">${svgIcon('list')}</span><span class="attach-title">Relatório Analítico</span><span class="attach-tag">Obrigatório</span></span>
+              <span class="attach-hint">Analítico do estoque (.xlsx ou .csv). Também aceita BBOG6656 ou estoque e vendas.</span>
+              <span class="attach-status" id="stock-status" aria-live="polite">Escolha ou arraste o arquivo</span>
+              <input id="file-input" type="file" accept=".xlsx,.csv">
+            </label>
+            <label class="attach-field" id="purchase-field">
+              <span class="attach-head"><span class="attach-icon" aria-hidden="true">${svgIcon('clock')}</span><span class="attach-title">SNAC0540</span><span class="attach-tag">Opcional</span></span>
+              <span class="attach-hint">Follow-up de compras (.csv ou .xlsx), exportado sem mexer nas colunas.</span>
+              <span class="attach-status" id="purchase-status" aria-live="polite">Escolha ou arraste o arquivo</span>
+              <input id="purchase-input" type="file" accept=".csv,.xlsx">
+            </label>
           </div>
+          <small class="upload-note">Os dados não saem do seu computador.</small>
         </section>
         <div id="message" role="status" aria-live="polite"></div>
         <section id="loading-skeleton" class="loading-skeleton" aria-hidden="true">

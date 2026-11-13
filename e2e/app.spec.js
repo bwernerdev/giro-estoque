@@ -214,7 +214,7 @@ test('SNAC0540 em ANSI pelo botão da barra: COMPRA EM ANDAMENTO e SC na tabela'
   await expect(page.locator('[data-summary-action="COMPRA EM ANDAMENTO"]')).toBeVisible();
   await expect(page.locator('#result-rows')).toContainText('SC 7609604 · Compra confirmada');
   await expect(page.locator('#result-rows')).toContainText('SC 7609605 · Cancelada');
-  await expect(page.locator('#result-rows')).toContainText('comprar 3 · até máx. 7');
+  await expect(page.locator('#result-rows')).toContainText('comprar 7 até o máx.');
 });
 
 test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {

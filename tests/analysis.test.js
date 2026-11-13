@@ -105,8 +105,8 @@ test('recomenda AJUSTAR MIN/MAX só acima do máximo; abaixo do mínimo vira COM
     ['COMPRAR'], ['AJUSTAR MIN/MAX'], ['Sem ação definida'],
   ]);
   assert.equal(results[0].hidden, false);
-  assert.deepEqual([results[0].toMinimum, results[0].toMaximum], [2, 6]);
-  assert.match(results[0].reason, /Comprar: saldo abaixo do mínimo; faltam 2 para o mínimo e 6 para o máximo\. Importe o SNAC0540/);
+  assert.equal(results[0].toBuy, 6, 'sugestão de compra: até o máximo');
+  assert.match(results[0].reason, /Comprar: saldo abaixo do mínimo; sugestão de compra 6 para chegar ao máximo \(8\)\. Importe o SNAC0540/);
   assert.match(results[1].reason, /89 dias desde a última requisição \(abaixo de 90\) e saldo acima do máximo/);
 });
 
@@ -272,10 +272,10 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
     ['COMPRA EM ANDAMENTO'], ['COMPRAR'], ['COMPRAR'], ['Sem ação definida'], ['DESBLOQUEAR'], ['BLOQUEAR'], ['Sem ação definida'],
   ]);
   assert.equal(results[0].purchase.request, '7609604');
-  assert.match(results[0].reason, /Compra em andamento: saldo abaixo do mínimo \(faltam 3 para o mínimo e 7 para o máximo\); SC 7609604 de 01\/10\/2026 \(Compra confirmada\), OF 900/);
+  assert.match(results[0].reason, /Compra em andamento: saldo abaixo do mínimo \(sugestão de compra 7 para chegar ao máximo \(8\)\); SC 7609604 de 01\/10\/2026 \(Compra confirmada\), OF 900/);
   assert.match(results[1].reason, /Última SC: SC 7609700 .*\(Cancelada\)/);
   assert.match(results[2].reason, /Sem SC no SNAC0540 para o item/);
-  assert.equal(results[3].toMinimum, null);
+  assert.equal(results[3].toBuy, null);
   const withoutReport = analyzeAnalitico(rows.slice(0, 1), mapping);
   assert.deepEqual(withoutReport[0].actions, ['COMPRAR']);
   assert.equal(withoutReport[0].purchase, null);

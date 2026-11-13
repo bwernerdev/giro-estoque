@@ -40,12 +40,12 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
       ? [...baseHeaders.slice(0, 6), 'Dias desde a última movimentação', ...baseHeaders.slice(6)]
       : baseHeaders;
     // Colunas de compra só quando algum item exportado tem COMPRAR ou COMPRA EM ANDAMENTO.
-    const withPurchase = rows.some(row => row.toMinimum !== null && row.toMinimum !== undefined);
-    const purchaseHeaders = withPurchase ? ['Comprar até o mínimo', 'Comprar até o máximo', 'SC', 'Data da SC', 'Situação da SC', 'OF', 'Situação da OF', 'Andamento da SC'] : [];
+    const withPurchase = rows.some(row => row.toBuy !== null && row.toBuy !== undefined);
+    const purchaseHeaders = withPurchase ? ['Sugestão de compra (até o máximo)', 'SC', 'Data da SC', 'Situação da SC', 'OF', 'Situação da OF', 'Andamento da SC'] : [];
     const purchaseCells = row => {
       if (!withPurchase) return [];
       const request = row.purchase;
-      return [row.toMinimum ?? '', row.toMaximum ?? '', request?.request ?? '', request?.createdAt ? request.createdAt.toLocaleDateString('pt-BR') : '', request?.status ?? '', request?.order ?? '', request?.orderStatus ?? '', purchaseStage(request)];
+      return [row.toBuy ?? '', request?.request ?? '', request?.createdAt ? request.createdAt.toLocaleDateString('pt-BR') : '', request?.status ?? '', request?.order ?? '', request?.orderStatus ?? '', purchaseStage(request)];
     };
     return {
       headers: [...headers, 'Classificação', 'Ações', ...purchaseHeaders, 'Motivo', 'Linha na planilha'],

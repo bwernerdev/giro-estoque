@@ -18,7 +18,9 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   const document = dom.window.document;
   assert.equal(document.querySelector('#search').placeholder, 'Buscar item ou código');
   assert.match(document.querySelector('.brand-mark img').src, /favicon\.webp/);
-  assert.equal(document.querySelector('.primary-button').getAttribute('tabindex'), '0');
+  assert.equal(document.querySelector('#stock-field #file-input').type, 'file', 'campo do Analítico com o input dentro do label');
+  assert.equal(document.querySelector('#purchase-field #purchase-input').type, 'file', 'campo do SNAC0540 com o input dentro do label');
+  assert.deepEqual([...document.querySelectorAll('.attach-title')].map(title => title.textContent), ['Relatório Analítico', 'SNAC0540']);
   assert.equal(document.querySelector('#result-table caption').textContent, 'Resultados da análise de estoque');
   assert.equal(document.querySelectorAll('[data-export]').length, 4);
   assert.equal(document.querySelector('[data-export="summary"]').textContent, 'PDF de resumo (1 página)');
@@ -36,7 +38,8 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.match(document.querySelector('.brand').textContent, /GIRO DE ESTOQUE/);
   assert.match(document.querySelector('.eyebrow').textContent, /ANÁLISE DE ESTOQUE/);
   assert.match(document.querySelector('.hero p').textContent, /quanto valor está parado/);
-  assert.match(document.querySelector('.upload-copy small').textContent, /Analítico, BBOG6656 ou estoque e vendas.*não saem do seu computador/);
+  assert.match(document.querySelector('#stock-field .attach-hint').textContent, /Analítico.*BBOG6656 ou estoque e vendas/);
+  assert.match(document.querySelector('.upload-note').textContent, /não saem do seu computador/);
   assert.equal(document.querySelector('.upload-icon path').getAttribute('d'), document.querySelector('#replace-file path').getAttribute('d'), 'importar e trocar arquivo usam o mesmo ícone de envio');
   assert.ok(document.querySelector('#filtered-count'));
   assert.equal(document.querySelector('.results-counter').getAttribute('aria-live'), 'polite');
