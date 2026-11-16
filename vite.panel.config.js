@@ -1,9 +1,10 @@
 // Build do modelo do painel publicado ("Gerar painel"): empacota src/panel/entry.js (o app
 // inteiro, JS + CSS + fontes) num script único e encaixa tudo em src/panel/template.html.
-// Resultado: src/panel/template.generated.html, que o app importa (?raw) e completa com os
-// dados na hora de gerar. Roda antes do dev e do build (package.json: predev, prebuild).
-// O gerado é versionado: o GitHub Pages serve o código-fonte sem build. Mudou algo em src/?
-// Rode `npm run build:panel` e commite o modelo junto (tests/panel.test.js confere o hash).
+// Resultado: src/panel/template.generated.html, que o app busca (fetch, generate.js) e completa
+// com os dados na hora de gerar. Roda antes do dev e do build (package.json: predev, prebuild).
+// O gerado é versionado: o app também roda servindo o código-fonte sem build (Go Live).
+// Mudou algo em src/? Rode `npm run build:panel` e commite o modelo junto (tests/panel.test.js
+// confere o hash).
 import { defineConfig } from 'vite';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

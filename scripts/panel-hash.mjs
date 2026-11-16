@@ -1,6 +1,6 @@
 // Impressão digital do que entra no modelo do painel (src/panel/template.generated.html).
-// O GitHub Pages deste repositório serve o código-fonte direto (sem build), então o modelo
-// gerado é versionado; vite.panel.config.js grava este hash nele e tests/panel.test.js
+// O app também roda servindo o código-fonte sem build (Go Live), então o modelo gerado é
+// versionado; vite.panel.config.js grava este hash nele e tests/panel.test.js
 // confere que o modelo commitado corresponde às fontes atuais.
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';

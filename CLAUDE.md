@@ -5,7 +5,7 @@ App web local (Vite, JS puro, sem framework) que importa `.xlsx`/`.csv` de estoq
 ## Comandos (PowerShell: use `npm.cmd` se scripts estiverem bloqueados)
 - `npm run dev`: servidor Vite.
 - `npm test`: testes unitários (`node --test tests/*.test.js`, usa jsdom).
-- `npm run build`: `vite build` + `scripts/copy-vendor.mjs` (gera `dist/` e o service worker). `prebuild`/`predev` rodam `npm run build:panel` (`vite.panel.config.js`: app inteiro em IIFE dentro de `src/panel/template.generated.html`). **O GitHub Pages serve o código-fonte da `main` sem build** (modo legacy): nada que dependa do Vite (`?raw`, imports sem caminho) funciona no site. O modelo do painel é versionado; mexeu em `src/`, rode `npm run build:panel` e commite o modelo (`tests/panel.test.js` compara o hash de `scripts/panel-hash.mjs`).
+- `npm run build`: `vite build` + `scripts/copy-vendor.mjs` (gera `dist/` e o service worker). `prebuild`/`predev` rodam `npm run build:panel` (`vite.panel.config.js`: app inteiro em IIFE dentro de `src/panel/template.generated.html`). O GitHub Pages publica o `dist/` pelo workflow (origem **GitHub Actions** desde 16/11/2026; antes servia o fonte da `main`). O app também roda sem build (Go Live servindo o fonte): nada que dependa do Vite em runtime (`?raw`, imports sem caminho). O modelo do painel é versionado; mexeu em `src/`, rode `npm run build:panel` e commite o modelo (`tests/panel.test.js` compara o hash de `scripts/panel-hash.mjs`).
 - `npm run test:e2e`: build + Playwright (Chrome instalado) em `127.0.0.1:4186/giro-estoque/`.
 
 ## Pastas

@@ -44,7 +44,7 @@ test('modelo do painel: dados embutidos sem fechar a tag e lidos de volta com da
   assert.throws(() => readPanelData('{"version":99}'), /outra versão/);
 });
 
-test('modelo do painel versionado corresponde às fontes atuais (o Pages serve o código-fonte)', async () => {
+test('modelo do painel versionado corresponde às fontes atuais (o app roda sem build)', async () => {
   const { readFile } = await import('node:fs/promises');
   const { panelSourceHash, PANEL_HASH_PATTERN } = await import('../scripts/panel-hash.mjs');
   const template = await readFile(new URL('../src/panel/template.generated.html', import.meta.url), 'utf8');
