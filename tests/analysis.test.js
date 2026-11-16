@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, itemKey, pickPurchaseRequest, purchaseInProgress, openPurchaseQuantity, openPurchaseRequests, purchaseStage, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
+import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, itemKey, pickPurchaseRequest, purchaseInProgress, openPurchaseQuantity, openPurchaseRequests, scCoverageText, purchaseStage, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
 
 test('reconhece cabeçalhos comuns e recomenda ações distintas', () => {
   const mapping = suggestMapping(['Produto', 'Estoque Atual', 'Vendas 30 dias', 'Prazo de reposição']);
@@ -314,7 +314,17 @@ test('SC aberta: desconta da sugestão, compra o restante e pede revisão quando
   const results = analyzeAnalitico(rows, mapping, 2, { purchases });
   assert.deepEqual(results.map(row => row.actions), [['COMPRAR'], ['REVISAR SC'], ['REVISAR SC'], ['REVISAR SC'], ['COMPRA EM ANDAMENTO']]);
   assert.deepEqual([results[0].toBuy, results[0].onOrder, results[0].purchase.request], [4, 5, '2'], 'máximo 10 − saldo 1 − 5 a receber; SC mais recente');
-  assert.match(results[0].reason, /sugestão de compra 4 para chegar ao máximo \(10\), já descontado o que está em 2 SCs abertas \(5 a receber\)/);
+  assert.match(results[0].reason, /Comprar: SC insuficiente\. Saldo 1 abaixo do mínimo \(4\); para chegar ao máximo \(10\) são necessários 9, mas 2 SCs abertas \(5 a receber\).*As SCs cobrem só 5 de 9: com elas o saldo vai a 6, sem chegar ao máximo \(10\)\. Sugestão de compra: mais 4\./);
+  const { needed, onOrder, missing, after, sufficient, belowMinimum } = results[0].scCoverage;
+  assert.deepEqual({ needed, onOrder, missing, after, sufficient, belowMinimum }, { needed: 9, onOrder: 5, missing: 4, after: 6, sufficient: false, belowMinimum: false });
+  assert.equal(scCoverageText(results[0].scCoverage, { short: true }), 'SC insuficiente: cobre 5 de 9');
+  assert.equal(scCoverageText(results[0].scCoverage), 'Insuficiente: as SCs abertas trazem 5 de 9 necessários para o máximo (10); faltam 4. Com elas o saldo vai a 6 (mínimo 4 / máximo 10).');
+  assert.equal(results[4].scCoverage.sufficient, true);
+  assert.equal(scCoverageText(results[4].scCoverage, { short: true }), 'SC cobre o máx.');
+  assert.equal(results[1].scCoverage, null, 'REVISAR SC não tem cobertura (item não precisa de compra)');
+  const low = { ...results[0].scCoverage, onOrder: 2, missing: 7, after: 3, belowMinimum: true };
+  assert.equal(scCoverageText(low, { short: true }), 'SC insuficiente: cobre 2 de 9, não chega ao mín.');
+  assert.match(scCoverageText(low), /faltam 7\. Com elas o saldo vai a 3 \(mínimo 4 \/ máximo 10\), ainda abaixo do mínimo\.$/);
   assert.equal(results[1].actions.includes('AJUSTAR MIN/MAX'), false, 'SC aberta tira o AJUSTAR MIN/MAX');
   assert.match(results[1].reason, /Revisar SC: SC aberta \(5 a receber\): SC 3 .*mas o item não precisa de compra \(saldo 12 no mínimo \(2\) ou acima\)/);
   assert.match(results[2].reason, /120 dias sem requisição \(90 ou mais\)/);

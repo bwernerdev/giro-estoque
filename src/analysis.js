@@ -343,6 +343,8 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     // SC aberta em item que não precisa de compra: REVISAR SC (e não AJUSTAR MIN/MAX).
     let purchase = null;
     let toBuy = null;
+    // Quanto as SCs abertas cobrem do necessário (só item abaixo do mínimo com SC aberta).
+    let scCoverage = null;
     const willBlock = actions.some(action => action.startsWith('BLOQUEAR'));
     const stale = daysSince !== null && daysSince >= 90;
     const requests = purchases ? purchases.get(itemKey(sku)) : null;
@@ -358,9 +360,15 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
       toBuy = Math.max(0, target - stock - onOrder);
       if (open.length) {
         purchase = open[0];
+        const needed = target - stock;
+        const after = stock + onOrder;
+        scCoverage = { requests: open.length, needed, onOrder, missing: toBuy, target, targetKind: target === maximum ? 'máximo' : 'mínimo', after, minimum, maximum, sufficient: toBuy === 0, belowMinimum: after < minimum };
         if (toBuy > 0) {
           actions.push('COMPRAR');
-          why.push(`Comprar: saldo abaixo do mínimo; sugestão de compra ${formatNumber(toBuy)} para chegar ao ${targetText}, já descontado o que está em ${openText}.`);
+          const reach = scCoverage.belowMinimum
+            ? `ainda abaixo do mínimo (${formatNumber(minimum)})`
+            : `sem chegar ao ${targetText}`;
+          why.push(`Comprar: SC insuficiente. Saldo ${formatNumber(stock)} abaixo do mínimo (${formatNumber(minimum)}); para chegar ao ${targetText} são necessários ${formatNumber(needed)}, mas ${openText}. ${open.length === 1 ? 'A SC cobre' : 'As SCs cobrem'} só ${formatNumber(onOrder)} de ${formatNumber(needed)}: com ${open.length === 1 ? 'ela' : 'elas'} o saldo vai a ${formatNumber(after)}, ${reach}. Sugestão de compra: mais ${formatNumber(toBuy)}.`);
         } else {
           actions.push('COMPRA EM ANDAMENTO');
           why.push(`Compra em andamento: saldo abaixo do mínimo e ${openText}, o que cobre até o ${targetText}.`);
@@ -396,7 +404,7 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local obsoleto (1 ou 298), ao menos 180 dias sem requisição e item bloqueado.');
     if (actions.includes('AJUSTAR MIN/MAX')) details.push(`Ajustar mín./máx.: saldo positivo, ${formatNumber(daysSince)} dias desde a última requisição (abaixo de 90) e saldo acima do máximo.`);
     if (hidden) details.push(ongoingOnly ? 'Oculto por padrão: compra em andamento, nada a fazer até a entrega.' : hiddenByStatus && !actions.includes('Sem ação definida') ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
-    return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · '), toBuy, onOrder: open.length ? onOrder : null, purchase };
+    return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · '), toBuy, onOrder: open.length ? onOrder : null, purchase, scCoverage };
   });
 }
 
@@ -463,4 +471,18 @@ export function summarizeLocationTotal(rows, localFilter) {
 
 export function formatNumber(value) {
   return value === null || value === undefined ? '—' : new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value);
+}
+
+// Cobertura das SCs abertas para a tela e a exportação: curto (tabela) ou completo (detalhes).
+export function scCoverageText(coverage, { short = false } = {}) {
+  if (!coverage) return '';
+  const { requests = 1, needed, onOrder, missing, target, targetKind, after, minimum, maximum, sufficient, belowMinimum } = coverage;
+  const [scs, bring, them] = requests === 1 ? ['a SC aberta', 'traz', 'ela'] : ['as SCs abertas', 'trazem', 'elas'];
+  if (short) {
+    if (sufficient) return 'SC cobre o máx.';
+    return `SC insuficiente: cobre ${formatNumber(onOrder)} de ${formatNumber(needed)}${belowMinimum ? ', não chega ao mín.' : ''}`;
+  }
+  const limits = maximum === null ? `mínimo ${formatNumber(minimum)}` : `mínimo ${formatNumber(minimum)} / máximo ${formatNumber(maximum)}`;
+  if (sufficient) return `Cobre: ${scs} ${bring} ${formatNumber(onOrder)}, e o necessário para o ${targetKind} (${formatNumber(target)}) é ${formatNumber(needed)}. Com ${them} o saldo vai a ${formatNumber(after)} (${limits}).`;
+  return `Insuficiente: ${scs} ${bring} ${formatNumber(onOrder)} de ${formatNumber(needed)} necessários para o ${targetKind} (${formatNumber(target)}); faltam ${formatNumber(missing)}. Com ${them} o saldo vai a ${formatNumber(after)} (${limits})${belowMinimum ? ', ainda abaixo do mínimo' : ''}.`;
 }

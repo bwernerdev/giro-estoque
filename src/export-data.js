@@ -1,4 +1,4 @@
-import { purchaseStage } from './analysis.js';
+import { purchaseStage, scCoverageText } from './analysis.js';
 
 function formatCurrency(value, fractionDigits = 2) {
   if (value === null || value === undefined) return '';
@@ -41,11 +41,11 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
       : baseHeaders;
     // Colunas de compra só quando algum item exportado tem COMPRAR ou COMPRA EM ANDAMENTO.
     const withPurchase = rows.some(row => (row.toBuy !== null && row.toBuy !== undefined) || row.purchase);
-    const purchaseHeaders = withPurchase ? ['Sugestão de compra (até o máximo)', 'Em SC aberta', 'SC', 'Data da SC', 'Situação da SC', 'OF', 'Situação da OF', 'Andamento da SC'] : [];
+    const purchaseHeaders = withPurchase ? ['Sugestão de compra (até o máximo)', 'Em SC aberta', 'Cobertura da SC', 'SC', 'Data da SC', 'Situação da SC', 'OF', 'Situação da OF', 'Andamento da SC'] : [];
     const purchaseCells = row => {
       if (!withPurchase) return [];
       const request = row.purchase;
-      return [row.toBuy ?? '', row.onOrder ?? '', request?.request ?? '', request?.createdAt ? request.createdAt.toLocaleDateString('pt-BR') : '', request?.status ?? '', request?.order ?? '', request?.orderStatus ?? '', purchaseStage(request)];
+      return [row.toBuy ?? '', row.onOrder ?? '', scCoverageText(row.scCoverage), request?.request ?? '', request?.createdAt ? request.createdAt.toLocaleDateString('pt-BR') : '', request?.status ?? '', request?.order ?? '', request?.orderStatus ?? '', purchaseStage(request)];
     };
     return {
       headers: [...headers, 'Classificação', 'Ações', ...purchaseHeaders, 'Motivo', 'Linha na planilha'],

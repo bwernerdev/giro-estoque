@@ -456,6 +456,12 @@ td .badge + .badge {
 
 /* Quanto comprar e SC do SNAC0540, em texto pequeno abaixo do valor da célula.
    Quebra linha dentro da coluna estreita em vez de invadir a coluna vizinha. */
+/* SC aberta que não cobre o necessário: aviso no tom de atenção. */
+.cell-hint.is-alert {
+  color: var(--warning-fg);
+  font-weight: 600;
+}
+
 .cell-hint {
   display: block;
   margin-top: 2px;

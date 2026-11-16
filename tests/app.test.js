@@ -367,6 +367,7 @@ test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela
   const luva = csv.find(row => row[0] === '1001');
   assert.deepEqual([luva[column('Sugestão de compra (até o máximo)')], luva[column('Em SC aberta')], luva[column('SC')], luva[column('Data da SC')], luva[column('Situação da SC')], luva[column('OF')]],
     ['0', '7', '7609604', '10/10/2026', 'Compra confirmada', '7222987']);
+  assert.match(luva[column('Cobertura da SC')], /^Cobre: a SC aberta traz 7, e o necessário para o máximo \(8\) é 7\./);
   const broca = csv.find(row => row[0] === '1002');
   assert.equal(broca[column('Andamento da SC')], 'Cancelada');
 
@@ -407,4 +408,20 @@ test('painel publicado com dados de outra versão avisa em vez de abrir', async 
   await waitFor(() => app.el('#message').textContent);
   assert.match(app.el('#message').textContent, /Não foi possível abrir os dados do painel \(painel de outra versão do app\)/);
   assert.equal(app.el('.shell').classList.contains('has-data'), false);
+});
+
+test('SC aberta que não cobre o necessário: aviso explícito na tabela, nos detalhes e na exportação', async t => {
+  const app = await boot(t);
+  await app.load({ name: 'REL_SNAC0540.CSV', text: async () => `${SNAC_HEADER}7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;3;Compra confirmada;` }, '#purchase-input');
+  await app.csv(ANALITICO, 'estoque.csv');
+  const luva = app.el('#result-rows tr[data-row="2"]');
+  assert.equal(luva.querySelector('.cell-hint.is-alert').textContent, 'SC insuficiente: cobre 3 de 7');
+  assert.match(luva.querySelector('.cell-hint.is-alert').title, /Insuficiente: a SC aberta traz 3 de 7 necessários para o máximo \(8\); faltam 4\. Com ela o saldo vai a 4/);
+  assert.match(luva.textContent, /comprar 4 até o máx\./);
+  luva.querySelector('[data-detail-row]').click();
+  const details = [...app.el('#item-panel-content').querySelectorAll('.detail-fields div')].map(entry => [entry.querySelector('dt').textContent, entry.querySelector('dd').textContent]);
+  assert.match(Object.fromEntries(details)['SC insuficiente'], /^Insuficiente: a SC aberta traz 3 de 7/);
+  assert.match(Object.fromEntries(details)['Por que'], /Comprar: SC insuficiente\. .*A SC cobre só 3 de 7: com ela o saldo vai a 4, sem chegar ao máximo \(8\)\. Sugestão de compra: mais 4\./);
+  const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^\uFEFF/, ''), ';');
+  assert.match(csv.find(row => row[0] === '1001')[csv[0].indexOf('Cobertura da SC')], /^Insuficiente: a SC aberta traz 3 de 7 necessários para o máximo \(8\); faltam 4\./);
 });

@@ -1,5 +1,5 @@
 import { importFile, selectDataRows } from './import.js';
-import { AGING_BUCKETS, ANALITICO_REQUIRED_KEYS, agingBucket, agingSummary, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, purchaseRequestText, purchaseStage, stockHealth, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
+import { AGING_BUCKETS, ANALITICO_REQUIRED_KEYS, scCoverageText, agingBucket, agingSummary, analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, fields, findHeaderRow, formatNumber, normalizeLocalKey, purchaseRequestText, purchaseStage, stockHealth, stockLocation, suggestMapping, summarizeLocationTotal } from './analysis.js';
 import { isPurchaseReport, parsePurchaseReport } from './purchases.js';
 import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
@@ -771,6 +771,7 @@ if (typeof document !== 'undefined') {
       add('Saldo', limitsText(row));
       add('Sugestão de compra', filled(row.toBuy) ? `${formatNumber(row.toBuy)} (até o máximo${filled(row.onOrder) ? `, descontado o que está em SC aberta` : ''})` : '');
       add('Em SC aberta', filled(row.onOrder) ? `${formatNumber(row.onOrder)} a receber` : '');
+      add(row.scCoverage && !row.scCoverage.sufficient ? 'SC insuficiente' : 'Cobertura da SC', scCoverageText(row.scCoverage));
       add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
       add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
       add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
@@ -944,9 +945,12 @@ if (typeof document !== 'undefined') {
   // Sugestão de compra (até o máximo) e a SC do SNAC0540, abaixo da célula.
   function buyHint(row) {
     if (row.toBuy === null || row.toBuy === undefined) return '';
-    if (row.toBuy === 0) return `<small class="cell-hint" title="As SCs abertas trazem ${formatNumber(row.onOrder)}, o que cobre até o máximo">SC cobre o máx.</small>`;
-    const onOrder = row.onOrder !== null && row.onOrder !== undefined ? ` (+${formatNumber(row.onOrder)} em SC)` : '';
-    return `<small class="cell-hint" title="Sugestão de compra: ${formatNumber(row.toBuy)} para chegar ao máximo${onOrder ? `, já descontados ${formatNumber(row.onOrder)} em SC aberta` : ''}">comprar ${formatNumber(row.toBuy)} até o máx.${onOrder}</small>`;
+    const coverage = row.scCoverage;
+    const full = escapeHtml(scCoverageText(coverage));
+    if (coverage?.sufficient) return `<small class="cell-hint" title="${full}">${escapeHtml(scCoverageText(coverage, { short: true }))}</small>`;
+    // SC aberta que não cobre o necessário: aviso explícito acima da sugestão de compra.
+    const alert = coverage ? `<small class="cell-hint is-alert" title="${full}">${escapeHtml(scCoverageText(coverage, { short: true }))}</small>` : '';
+    return `${alert}<small class="cell-hint" title="Sugestão de compra: ${formatNumber(row.toBuy)} para chegar ao máximo${coverage ? `, já descontados ${formatNumber(row.onOrder)} em SC aberta` : ''}">comprar ${formatNumber(row.toBuy)} até o máx.</small>`;
   }
   function purchaseHint(row) {
     if (!row.purchase) return '';
