@@ -30,7 +30,7 @@ const state = {
     giro: { shortDays: '30', excessDays: '90', longDays: '365' },
   },
 };
-export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'COMPRAR', 'COMPRA EM ANDAMENTO', 'ZERAR MIN/MAX', 'AJUSTAR MIN/MAX', 'Sem ação definida', 'Verificar dados'];
+export const ANALITICO_ACTIONS = ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'TRANSFERIR OBSOLETO', 'DESBLOQUEAR', 'COMPRAR', 'COMPRA EM ANDAMENTO', 'REVISAR SC', 'ZERAR MIN/MAX', 'AJUSTAR MIN/MAX', 'Sem ação definida', 'Verificar dados'];
 const GIRO_ACTIONS = ['Planejar reposição', 'Manter', 'Reduzir compras', 'Avaliar transferência', 'Investigar sem consumo', 'Confirmar saldo', 'Verificar dados'];
 const GENERIC_ACTIONS = ['Comprar', 'Manter', 'Avaliar excesso', 'Avaliar sem giro', 'Sem movimento', 'Verificar dados'];
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -41,6 +41,11 @@ let importRun = 0;
 
 function slug(text) { return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
+// Rótulo de ação em HTML: siglas (SC) num span que escapa do text-transform: lowercase.
+function actionLabelHtml(action) {
+  return escapeHtml(action).replace(/\bSC\b/g, '<span class="acronym">SC</span>');
+}
+
 function actionIcon(action) {
   const normalized = String(action).toUpperCase();
   if (normalized.includes('VERIFICAR') || normalized.includes('CONFIRMAR') || normalized.includes('INVESTIGAR')) return 'alert';
@@ -50,6 +55,7 @@ function actionIcon(action) {
   if (normalized.includes('TRANSFERIR')) return 'transfer';
   if (normalized.includes('BLOQUEAR')) return 'block';
   if (normalized.includes('ANDAMENTO')) return 'clock';
+  if (normalized.includes('REVISAR')) return 'alert';
   if (normalized.includes('COMPRAR') || normalized.includes('REPOSIÇÃO')) return 'plus';
   if (normalized.includes('REDUZIR')) return 'minus';
   if (normalized.includes('MANTER')) return 'check';
@@ -66,7 +72,7 @@ export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions,
     ...summaryCounts.filter(({ action, count }) => action !== 'Itens ocultos' && count > 0).map(({ action, count }) => {
       const percentage = summaryResults.length ? Math.round((count / summaryResults.length) * 100) : 0;
       const amount = money(action);
-      return `<button type="button" class="summary-card summary-filter ${slug(action)}" data-summary-action="${escapeHtml(action)}" aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'kpi-svg')}</span><span class="kpi-label">${escapeHtml(action.toUpperCase())}</span></span><div class="summary-value"><strong>${count}</strong><small>${amount ? `${amount} · ${percentage}%` : `${percentage}% do total`}</small></div></button>`;
+      return `<button type="button" class="summary-card summary-filter ${slug(action)}" data-summary-action="${escapeHtml(action)}" aria-pressed="false"><span class="kpi-head"><span class="kpi-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'kpi-svg')}</span><span class="kpi-label">${actionLabelHtml(action.toUpperCase())}</span></span><div class="summary-value"><strong>${count}</strong><small>${amount ? `${amount} · ${percentage}%` : `${percentage}% do total`}</small></div></button>`;
     }),
     // Itens sem ação não são indicador: viram um atalho discreto abaixo dos cartões.
     hidden?.count ? `<button type="button" class="summary-filter hidden-shortcut" data-summary-hidden aria-pressed="false">${svgIcon('eyeOff')}<span>Ver ${hidden.count.toLocaleString('pt-BR')} ${hidden.count === 1 ? 'item sem ação' : 'itens sem ação'}</span></button>` : '',
@@ -109,7 +115,8 @@ export function buildTotalMarkup({ summaryAllResults, locationFilter, locationTo
 // Ação em caixa de frase, como nos badges ("AJUSTAR MIN/MAX" vira "Ajustar min/max").
 function actionText(action) {
   const text = String(action ?? '');
-  return text === text.toUpperCase() ? text.charAt(0) + text.slice(1).toLowerCase() : text;
+  // Siglas (SC) continuam em maiúsculas: "REVISAR SC" vira "Revisar SC".
+  return text === text.toUpperCase() ? (text.charAt(0) + text.slice(1).toLowerCase()).replace(/\bsc\b/g, 'SC') : text;
 }
 
 // Resumo de uma página para reunião ou e-mail: indicadores em reais, ações e tempo sem
@@ -693,7 +700,7 @@ if (typeof document !== 'undefined') {
     return ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'VERIFICAR DADOS'].includes(String(action).toUpperCase());
   }
   function badgeHtml(action) {
-    return `<span class="badge ${slug(action)}${urgentAction(action) ? ' urgent-action' : ''}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span><span class="badge-label">${escapeHtml(action)}</span></span>`;
+    return `<span class="badge ${slug(action)}${urgentAction(action) ? ' urgent-action' : ''}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span><span class="badge-label">${actionLabelHtml(action)}</span></span>`;
   }
   const expandedRows = new Set();
   let expansionVersion = 0;
@@ -746,7 +753,8 @@ if (typeof document !== 'undefined') {
       add('Ação recomendada', row.actions?.length ? row.actions.map(badgeHtml).join(' ') : '', true);
       add(reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Por que', notes);
       add('Saldo', limitsText(row));
-      add('Sugestão de compra', filled(row.toBuy) ? `${formatNumber(row.toBuy)} (até o máximo)` : '');
+      add('Sugestão de compra', filled(row.toBuy) ? `${formatNumber(row.toBuy)} (até o máximo${filled(row.onOrder) ? `, descontado o que está em SC aberta` : ''})` : '');
+      add('Em SC aberta', filled(row.onOrder) ? `${formatNumber(row.onOrder)} a receber` : '');
       add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
       add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
       add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
@@ -920,7 +928,9 @@ if (typeof document !== 'undefined') {
   // Sugestão de compra (até o máximo) e a SC do SNAC0540, abaixo da célula.
   function buyHint(row) {
     if (row.toBuy === null || row.toBuy === undefined) return '';
-    return `<small class="cell-hint" title="Sugestão de compra: ${formatNumber(row.toBuy)} para chegar ao máximo">comprar ${formatNumber(row.toBuy)} até o máx.</small>`;
+    if (row.toBuy === 0) return `<small class="cell-hint" title="As SCs abertas trazem ${formatNumber(row.onOrder)}, o que cobre até o máximo">SC cobre o máx.</small>`;
+    const onOrder = row.onOrder !== null && row.onOrder !== undefined ? ` (+${formatNumber(row.onOrder)} em SC)` : '';
+    return `<small class="cell-hint" title="Sugestão de compra: ${formatNumber(row.toBuy)} para chegar ao máximo${onOrder ? `, já descontados ${formatNumber(row.onOrder)} em SC aberta` : ''}">comprar ${formatNumber(row.toBuy)} até o máx.${onOrder}</small>`;
   }
   function purchaseHint(row) {
     if (!row.purchase) return '';

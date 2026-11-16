@@ -205,7 +205,7 @@ test('hover: cartões inclinam com o cursor, gráfico destaca a faixa e arrastar
 
 test('SNAC0540 em ANSI obrigatório: Analítico espera, painel abre com o SNAC0540 e mostra COMPRA EM ANDAMENTO', async ({ page }) => {
   const analitico = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado';
-  const snac = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;5;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
+  const snac = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;7;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
   await page.goto('./');
   await page.locator('#file-input').setInputFiles({ name: 'estoque.csv', mimeType: 'text/csv', buffer: Buffer.from(analitico) });
   await expect(page.locator('#message')).toContainText('Agora importe o SNAC0540 para gerar o painel');
@@ -218,7 +218,8 @@ test('SNAC0540 em ANSI obrigatório: Analítico espera, painel abre com o SNAC05
   await expect(page.locator('[data-summary-action="COMPRA EM ANDAMENTO"]')).toBeVisible();
   await expect(page.locator('#result-rows')).toContainText('SC 7609604 · Compra confirmada');
   await expect(page.locator('#result-rows')).toContainText('SC 7609605 · Cancelada');
-  await expect(page.locator('#result-rows')).toContainText('comprar 7 até o máx.');
+  await expect(page.locator('#result-rows')).toContainText('comprar 5 até o máx.');
+  await expect(page.locator('#result-rows')).toContainText('SC cobre o máx.');
 });
 
 test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {

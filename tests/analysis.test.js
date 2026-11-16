@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, itemKey, pickPurchaseRequest, purchaseInProgress, purchaseStage, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
+import { analyze, analyzeAnalitico, analyzeGiro, findHeaderRow, itemKey, pickPurchaseRequest, purchaseInProgress, openPurchaseQuantity, openPurchaseRequests, purchaseStage, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
 
 test('reconhece cabeçalhos comuns e recomenda ações distintas', () => {
   const mapping = suggestMapping(['Produto', 'Estoque Atual', 'Vendas 30 dias', 'Prazo de reposição']);
@@ -267,7 +267,7 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
     ['7009', 'Parado 89 dias', 0, 89, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
   ];
   const purchases = new Map([
-    ['6470', [request({ request: '7609604', local: 4 })]],
+    ['6470', [request({ request: '7609604', local: 4, orderBalance: 7 })]],
     ['7001', [request({ request: '7609700', status: 'Cancelada', local: 4 })]],
     ['7007', [request({ request: '7705771', invoice: '125578', orderBalance: 0, local: 4 })]],
   ]);
@@ -281,7 +281,8 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
   assert.equal(results[7].purchase, null, 'SC já entregue (OF sem saldo) não aparece');
   assert.match(results[7].reason, /Sem SC em andamento no SNAC0540\./);
   assert.doesNotMatch(results[7].reason, /7705771/);
-  assert.match(results[0].reason, /Compra em andamento: saldo abaixo do mínimo \(sugestão de compra 7 para chegar ao máximo \(8\)\); SC 7609604 de 01\/10\/2026 \(Compra confirmada\), OF 900/);
+  assert.match(results[0].reason, /Compra em andamento: saldo abaixo do mínimo e SC aberta \(7 a receber\): SC 7609604 de 01\/10\/2026 \(Compra confirmada\), OF 900.*cobre até o máximo \(8\)/);
+  assert.deepEqual([results[0].toBuy, results[0].onOrder], [0, 7]);
   assert.match(results[1].reason, /Última SC: SC 7609700 .*\(Cancelada\)/);
   assert.match(results[2].reason, /Sem SC no SNAC0540 para o item/);
   assert.equal(results[3].toBuy, null);
@@ -290,3 +291,33 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
   assert.equal(withoutReport[0].purchase, null);
 });
 
+test('SC aberta: desconta da sugestão, compra o restante e pede revisão quando o item não precisa de compra', () => {
+  const mapping = suggestMapping(['Cd Item', 'Nm Item', 'Qtde Atual', 'Dif Dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Qnt Min', 'Qnt Max', 'Itens Acima de 90 dias', 'Cd Local Estoque']);
+  const rows = [
+    ['8001', 'Cobre em parte', 1, 10, 'Desbloqueado', 'Desbloqueado', 4, 10, 'Item com Giro', 4],
+    ['8002', 'Acima do máximo', 12, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Item com Giro', 4],
+    ['8003', 'Parado', 0, 120, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
+    ['8004', 'Obsoleto', 0, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 298],
+    ['8005', 'Sem OF', 0, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
+  ];
+  const purchases = new Map([
+    // Duas linhas da mesma SC (recebimento parcial) contam uma vez; mais outra SC aberta.
+    ['8001', [request({ request: '1', orderBalance: 3 }), request({ request: '1', orderBalance: 3 }), request({ request: '2', createdAt: new Date(2026, 9, 9), orderBalance: 2 })]],
+    ['8002', [request({ request: '3' })]],
+    ['8003', [request({ request: '4' })]],
+    ['8004', [request({ request: '5' })]],
+    ['8005', [request({ request: '6', status: 'Usuario preenchendo', order: '', orderStatus: '', orderBalance: null, quantity: 5 })]],
+  ]);
+  const results = analyzeAnalitico(rows, mapping, 2, { purchases });
+  assert.deepEqual(results.map(row => row.actions), [['COMPRAR'], ['REVISAR SC'], ['REVISAR SC'], ['REVISAR SC'], ['COMPRA EM ANDAMENTO']]);
+  assert.deepEqual([results[0].toBuy, results[0].onOrder, results[0].purchase.request], [4, 5, '2'], 'máximo 10 − saldo 1 − 5 a receber; SC mais recente');
+  assert.match(results[0].reason, /sugestão de compra 4 para chegar ao máximo \(10\), já descontado o que está em 2 SCs abertas \(5 a receber\)/);
+  assert.equal(results[1].actions.includes('AJUSTAR MIN/MAX'), false, 'SC aberta tira o AJUSTAR MIN/MAX');
+  assert.match(results[1].reason, /Revisar SC: SC aberta \(5 a receber\): SC 3 .*mas o item não precisa de compra \(saldo 12 no mínimo \(2\) ou acima\)/);
+  assert.match(results[2].reason, /120 dias sem requisição \(90 ou mais\)/);
+  assert.match(results[3].reason, /local obsoleto \(1 ou 298\)/);
+  assert.equal(results[1].toBuy, null);
+  assert.deepEqual([results[4].toBuy, results[4].onOrder], [0, 5], 'sem OF, vale a quantidade da SC');
+  assert.equal(openPurchaseQuantity(request({ orderBalance: 0, quantity: 4 })), 4);
+  assert.equal(openPurchaseRequests(purchases.get('8001'), 4).length, 2);
+});

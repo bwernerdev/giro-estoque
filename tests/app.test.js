@@ -288,7 +288,7 @@ test('agrupa por ação, recolhe grupos, mostra cartões com ícone e o arquivo 
 
 const SNAC_HEADER = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n';
 const SNAC_MIN = `${SNAC_HEADER}7000001;Compra confirmada;10/10/2026;1;999999;;;;;`;
-const SNAC = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;5;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
+const SNAC = 'SC;SC;SC;SC;SC;SC;OF;OF;OF;REC\nCódigo;Situação;Data Criação;Seq.;Cód. Produto;Local Estoque;Codigo;Saldo;Situação OF;Nr NF\n7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;7;Compra confirmada;\n7609605;Cancelada;11/10/2026;1;1002;;;;;';
 const ANALITICO = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado\n1003;Pino;298;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado';
 
 test('tela inicial: dois campos de anexo; SNAC0540 primeiro fica guardado até o Analítico', async t => {
@@ -358,8 +358,8 @@ test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela
   assert.ok(column('Sugestão de compra (até o máximo)') > column('Ações'));
   assert.equal(column('Comprar até o mínimo'), -1);
   const luva = csv.find(row => row[0] === '1001');
-  assert.deepEqual([luva[column('Sugestão de compra (até o máximo)')], luva[column('SC')], luva[column('Data da SC')], luva[column('Situação da SC')], luva[column('OF')]],
-    ['7', '7609604', '10/10/2026', 'Compra confirmada', '7222987']);
+  assert.deepEqual([luva[column('Sugestão de compra (até o máximo)')], luva[column('Em SC aberta')], luva[column('SC')], luva[column('Data da SC')], luva[column('Situação da SC')], luva[column('OF')]],
+    ['0', '7', '7609604', '10/10/2026', 'Compra confirmada', '7222987']);
   const broca = csv.find(row => row[0] === '1002');
   assert.equal(broca[column('Andamento da SC')], 'Cancelada');
 

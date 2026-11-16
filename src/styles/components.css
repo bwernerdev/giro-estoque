@@ -250,6 +250,7 @@ input[type="checkbox"] {
 }
 
 .ajustar-min-max,
+.revisar-sc,
 .avaliar-excesso,
 .avaliar-sem-giro,
 .avaliar-transferencia {
@@ -592,4 +593,9 @@ body:has(.item-panel[open]) {
   font-size: var(--fs-sm);
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+/* Sigla dentro de rótulo em caixa de frase ("Revisar SC"): não vira minúscula. */
+.acronym {
+  text-transform: none;
 }

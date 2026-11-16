@@ -333,3 +333,9 @@ test('agrupa o valor com saldo por tempo sem requisição e separa parado de obs
   assert.match(chart, /R\$\s?1\.000,50/);
   assert.equal(buildAgingChartMarkup(agingSummary([])), '');
 });
+
+test('cartão REVISAR SC mantém a sigla em maiúsculas', () => {
+  const rows = [{ item: 'Luva', sku: '1', action: 'REVISAR SC', actions: ['REVISAR SC'], hidden: false }];
+  const markup = buildSummaryMarkup({ summaryResults: rows, summaryAllResults: rows, actions: ANALITICO_ACTIONS, analitico: true });
+  assert.match(markup, /REVISAR <span class="acronym">SC<\/span>/);
+});
