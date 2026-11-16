@@ -119,6 +119,23 @@ for (const width of [1024, 1366, 1920]) {
   });
 }
 
+// Modo Analítico tem mais botões na barra superior (SNAC0540, Gerar painel) e no navegador
+// real aparece "Instalar app": nada disso pode empurrar a página para os lados.
+for (const width of [1180, 1272, 1366]) {
+  test(`barra superior completa não cria rolagem lateral em ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto('./');
+    const analitico = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado';
+    await attach(page, { name: 'estoque-analitico-do-mes-de-novembro-completo.csv', mimeType: 'text/csv', buffer: Buffer.from(analitico) });
+    await expect(page.locator('#results-section')).toBeVisible();
+    await page.evaluate(() => { document.querySelector('#install-app').hidden = false; });
+    await expect(page.locator('#generate-panel')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    const actions = await page.locator('.topbar-actions').boundingBox();
+    expect(actions.x + actions.width).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
+  });
+}
+
 for (const width of [390, 768]) {
   test(`interface permanece utilizável em ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
