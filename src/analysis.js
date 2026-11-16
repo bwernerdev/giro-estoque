@@ -309,14 +309,16 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
       actions.push('DESBLOQUEAR');
       why.push('Desbloquear: saldo zerado e item bloqueado por saldo.');
     }
-    // Comprar: saldo abaixo do mínimo, fora dos locais obsoletos, item não bloqueado e sem
-    // recomendação de bloqueio nesta análise. Com SC em andamento no SNAC0540, a ação vira
+    // Comprar: saldo abaixo do mínimo, fora dos locais obsoletos, item não bloqueado, sem
+    // recomendação de bloqueio nesta análise e com requisição há menos de 90 dias (item
+    // parado há 90 dias ou mais não se compra; sem Dif Dias, não bloqueia a compra). Com SC em andamento no SNAC0540, a ação vira
     // COMPRA EM ANDAMENTO. Sugestão de compra: o que falta para chegar ao máximo
     // (Qnt Max − Qtde Atual); sem máximo acima do saldo, o que falta para o mínimo.
     let purchase = null;
     let toBuy = null;
     const willBlock = actions.some(action => action.startsWith('BLOQUEAR'));
-    if (minimum !== null && stock < minimum && !isObsoleteLocation && !alreadyBlocked && !willBlock) {
+    const stale = daysSince !== null && daysSince >= 90;
+    if (minimum !== null && stock < minimum && !isObsoleteLocation && !alreadyBlocked && !willBlock && !stale) {
       const target = maximum !== null && maximum > stock ? maximum : minimum;
       toBuy = target - stock;
       const quantities = `sugestão de compra ${formatNumber(toBuy)} para chegar ao ${target === maximum ? 'máximo' : 'mínimo'} (${formatNumber(target)})`;

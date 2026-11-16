@@ -54,7 +54,7 @@ test('aplica as condições de ação e ocultação informadas', () => {
     ['I', 5, 180, 'Bloqueado por saldo', 'Bloqueado por saldo', 1, 2, 'Item com Giro', 7],
     ['J', 0, 180, 'Bloqueado por saldo', 'Bloqueado por saldo', 1, 2, 'Sem Saldo', 7],
     ['K', 5, 100, 'Bloqueado por saldo', 'Bloqueado por saldo', 1, 2, 'Item com Giro', 7],
-    ['L', 0, 575, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 7],
+    ['L', 0, 30, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 7],
     ['M', 5, 180, 'Desbloqueado', 'Desbloqueado', 0, 0, 'Item com Giro', 8],
     ['N', 5, 180, 'Bloqueado por saldo', 'Bloqueado por saldo', 0, 0, 'Item com Giro', 8],
     ['O', 30, 883, 'Bloqueado por saldo', 'Bloqueado por saldo', 0, 0, 'Item de Giro Baixo/Sem Saida', 298],
@@ -263,6 +263,8 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
     ['7005', 'Vai bloquear', 1, 120, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Item com Giro', 4],
     ['7006', 'No mínimo', 2, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Item com Giro', 4],
     ['7007', 'SC entregue', 0, 10, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
+    ['7008', 'Parado 90 dias', 0, 90, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
+    ['7009', 'Parado 89 dias', 0, 89, 'Desbloqueado', 'Desbloqueado', 2, 5, 'Sem Saldo', 4],
   ];
   const purchases = new Map([
     ['6470', [request({ request: '7609604', local: 4 })]],
@@ -272,7 +274,9 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
   const results = analyzeAnalitico(rows, mapping, 2, { purchases });
   assert.deepEqual(results.map(row => row.actions), [
     ['COMPRA EM ANDAMENTO'], ['COMPRAR'], ['COMPRAR'], ['Sem ação definida'], ['DESBLOQUEAR'], ['BLOQUEAR'], ['Sem ação definida'], ['COMPRAR'],
+    ['Sem ação definida'], ['COMPRAR'],
   ]);
+  assert.equal(results[8].toBuy, null, '90 dias ou mais sem requisição: não sugere compra');
   assert.equal(results[0].purchase.request, '7609604');
   assert.equal(results[7].purchase, null, 'SC já entregue (OF sem saldo) não aparece');
   assert.match(results[7].reason, /Sem SC em andamento no SNAC0540\./);

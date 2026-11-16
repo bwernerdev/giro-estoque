@@ -43,7 +43,7 @@ Regras de ação fornecidas pelo usuário:
 - `Dif Dias >= 0`, `Qtde Atual = 0` e `Ds Motivo Bloqueio = Bloqueado por saldo`: **DESBLOQUEAR**.
 - `Qtde Atual > 0`, pelo menos um entre `Qnt Min` e `Qnt Max` diferente de zero, `Cd Local Estoque = 1` ou `298`, `Dif Dias >= 180` e `Id Bloqueio` começa por **Bloqueado**: **ZERAR MIN/MAX**.
 - `Qtde Atual > 0`, `Dif Dias < 90` e `Qtde Atual` maior que `Qnt Max`: **AJUSTAR MIN/MAX**. Não é aplicada nos locais **1** e **298** com `Qnt Min` e `Qnt Max` zerados (limite zero é o esperado no obsoleto). Saldo abaixo do mínimo não gera mais ajuste: vira **COMPRAR** (regra abaixo).
-- `Qtde Atual` menor que `Qnt Min`, fora dos locais **1** e **298**, `Id Bloqueio` sem bloqueio e sem **BLOQUEAR** ou **BLOQUEAR E TRANSFERIR OBSOLETO** na mesma análise: **COMPRAR**. Se o SNAC0540 importado tiver uma SC em andamento para o item, a ação vira **COMPRA EM ANDAMENTO**. A sugestão de compra é a quantidade para chegar ao máximo (`Qnt Max − Qtde Atual`); se o máximo estiver vazio ou não passar do saldo, vale o que falta para o mínimo.
+- `Qtde Atual` menor que `Qnt Min`, fora dos locais **1** e **298**, `Id Bloqueio` sem bloqueio e sem **BLOQUEAR** ou **BLOQUEAR E TRANSFERIR OBSOLETO** na mesma análise e `Dif Dias` menor que 90 (item há 90 dias ou mais sem requisição não recebe sugestão de compra; sem `Dif Dias`, a compra não é barrada): **COMPRAR**. Se o SNAC0540 importado tiver uma SC em andamento para o item, a ação vira **COMPRA EM ANDAMENTO**. A sugestão de compra é a quantidade para chegar ao máximo (`Qnt Max − Qtde Atual`); se o máximo estiver vazio ou não passar do saldo, vale o que falta para o mínimo.
 
 ### Compras: SNAC0540
 
