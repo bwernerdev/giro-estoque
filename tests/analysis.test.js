@@ -283,6 +283,9 @@ test('COMPRAR abaixo do mínimo; COMPRA EM ANDAMENTO com SC ativa; exceções de
   assert.doesNotMatch(results[7].reason, /7705771/);
   assert.match(results[0].reason, /Compra em andamento: saldo abaixo do mínimo e SC aberta \(7 a receber\): SC 7609604 de 01\/10\/2026 \(Compra confirmada\), OF 900.*cobre até o máximo \(8\)/);
   assert.deepEqual([results[0].toBuy, results[0].onOrder], [0, 7]);
+  assert.equal(results[0].hidden, true, 'compra em andamento fica oculta');
+  assert.match(results[0].reason, /Oculto por padrão: compra em andamento/);
+  assert.equal(results[1].hidden, false);
   assert.match(results[1].reason, /Última SC: SC 7609700 .*\(Cancelada\)/);
   assert.match(results[2].reason, /Sem SC no SNAC0540 para o item/);
   assert.equal(results[3].toBuy, null);
@@ -318,6 +321,7 @@ test('SC aberta: desconta da sugestão, compra o restante e pede revisão quando
   assert.match(results[3].reason, /local obsoleto \(1 ou 298\)/);
   assert.equal(results[1].toBuy, null);
   assert.deepEqual([results[4].toBuy, results[4].onOrder], [0, 5], 'sem OF, vale a quantidade da SC');
+  assert.deepEqual(results.map(row => row.hidden), [false, false, false, false, true], 'REVISAR SC aparece; compra em andamento fica oculta');
   assert.equal(openPurchaseQuantity(request({ orderBalance: 0, quantity: 4 })), 4);
   assert.equal(openPurchaseRequests(purchases.get('8001'), 4).length, 2);
 });

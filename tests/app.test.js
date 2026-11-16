@@ -314,7 +314,7 @@ test('tela inicial: dois campos de anexo; SNAC0540 primeiro fica guardado até o
   assert.match(app.el('#message').textContent, /Analítico importado com o SNAC0540 de \d\d:\d\d: 1 item para comprar e 1 com compra em andamento\./);
   assert.equal(app.el('#stock-field').dataset.state, 'ok');
   assert.equal(app.el('#purchase-field').dataset.state, 'ok', 'erro anterior some ao importar com sucesso');
-  assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO']);
+  assert.deepEqual(cards(), ['COMPRAR'], 'compra em andamento fica oculta, sem cartão');
 });
 
 test('SNAC0540 é obrigatório: Analítico sozinho espera na tela inicial e o painel abre quando o SNAC0540 chega', async t => {
@@ -352,9 +352,13 @@ test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela
   assert.match(app.el('#message').textContent, /SNAC0540 importado: 2 linhas de SC\. 1 item para comprar e 1 com compra em andamento/);
   assert.match(app.el('#purchase-file').textContent, /SNAC0540 · \d\d:\d\d/);
   assert.equal(app.el('#topbar-file').textContent.includes('estoque.csv'), true, 'o Analítico continua carregado');
-  assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO']);
-  assert.match(app.el('#result-rows').textContent, /SC 7609604 · Compra confirmada/);
+  assert.deepEqual(cards(), ['COMPRAR'], 'compra em andamento fica oculta, sem cartão');
+  assert.doesNotMatch(app.el('#result-rows').textContent, /SC 7609604/);
   assert.match(app.el('#result-rows').textContent, /SC 7609605 · Cancelada/);
+  assert.match(app.el('#summary').textContent, /Ver 2 itens sem ação/);
+  app.el('#show-hidden').checked = true;
+  app.el('#show-hidden').dispatchEvent(new window.Event('change'));
+  await waitFor(() => /SC 7609604 · Compra confirmada/.test(app.el('#result-rows').textContent));
 
   const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^\uFEFF/, ''), ';');
   const column = name => csv[0].indexOf(name);
@@ -369,7 +373,7 @@ test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela
   Object.defineProperty(app.el('#purchase-input'), 'files', { configurable: true, value: [{ name: 'estoque.csv', text: async () => 'Cd Item;Nm Item\n1;A' }] });
   app.el('#purchase-input').dispatchEvent(new window.Event('change'));
   await waitFor(() => /não é o relatório SNAC0540/.test(app.el('#message').textContent));
-  assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO'], 'arquivo errado no botão do SNAC não troca nada');
+  assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO', 'Sem ação definida'], 'arquivo errado no botão do SNAC não troca nada (itens ocultos ligados)');
 });
 
 test('painel publicado: abre direto com os dados embutidos, sem importar, com a data em que foi gerado', async t => {
@@ -391,11 +395,11 @@ test('painel publicado: abre direto com os dados embutidos, sem importar, com a 
   assert.equal(window.document.documentElement.dataset.panel, 'true');
   assert.equal(window.document.documentElement.dataset.frame, undefined, 'aberto como arquivo, fora de quadro');
   assert.equal(app.el('#frame-notice').hidden, true);
-  assert.deepEqual([...app.el('#summary').querySelectorAll('[data-summary-action]')].map(card => card.dataset.summaryAction), ['COMPRAR', 'COMPRA EM ANDAMENTO']);
-  assert.match(app.el('#result-rows').textContent, /SC 7609604 · Compra confirmada/);
+  assert.deepEqual([...app.el('#summary').querySelectorAll('[data-summary-action]')].map(card => card.dataset.summaryAction), ['COMPRAR']);
+  assert.match(app.el('#result-rows').textContent, /SC 7609605 · Cancelada/);
   assert.match(app.el('#topbar-file').textContent, /estoque\.csv.*Dados de 16\/11\/2026, 10:05/);
-  const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^﻿/, ''), ';');
-  assert.equal(csv.length, 3, 'CSV continua funcionando no painel');
+  const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^\uFEFF/, ''), ';');
+  assert.equal(csv.length, 2, 'CSV continua funcionando no painel (só a Broca: Luva em compra em andamento fica oculta)');
 });
 
 test('painel publicado com dados de outra versão avisa em vez de abrir', async t => {

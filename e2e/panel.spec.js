@@ -42,8 +42,8 @@ test('painel aberto como arquivo: mesmas ações, só consulta, tudo embutido', 
   panel.on('request', request => { if (!/^(file|data|blob):/.test(request.url())) external.push(request.url()); });
   await panel.goto(pathToFileURL(path).href);
   await expect(panel.locator('#results-section')).toBeVisible();
-  await expect(cards(panel)).toHaveText([/comprar/i, /compra em andamento/i]);
-  await expect(panel.locator('#result-rows')).toContainText('SC 7609604 · Compra confirmada');
+  await expect(cards(panel)).toHaveText([/comprar/i]);
+  await expect(panel.locator('#result-rows')).toContainText('SC 7609605 · Cancelada');
   await expect(panel.locator('#topbar-file')).toContainText('Dados de');
   for (const selector of ['.upload-card', '#replace-file', '#purchase-file', '#config-toggle', '#generate-panel', '#frame-notice']) {
     await expect(panel.locator(selector), selector).toBeHidden();
@@ -69,7 +69,7 @@ test('painel dentro de quadro isolado (SharePoint): aviso e sem exportar', async
   await host.locator('iframe').evaluate((frame, srcdoc) => { frame.srcdoc = srcdoc; }, html);
   const frame = host.frameLocator('iframe');
   await expect(frame.locator('#results-section')).toBeVisible();
-  await expect(cards(frame)).toHaveCount(2);
+  await expect(cards(frame)).toHaveCount(1);
   await expect(frame.locator('#frame-notice')).toBeVisible();
   await expect(frame.locator('#export-menu')).toBeHidden();
   await frame.locator('#result-rows tr[data-row]').first().click();

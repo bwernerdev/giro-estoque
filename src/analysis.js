@@ -390,10 +390,12 @@ export function analyzeAnalitico(rows, mapping, firstRow = 2, { numberFormat = '
     if (stock > 0 && minimum !== null && maximum !== null && (minimum !== 0 || maximum !== 0) && isObsoleteLocation && daysSince !== null && daysSince >= 180 && alreadyBlocked) actions.push('ZERAR MIN/MAX');
     else if (!open.length && stock > 0 && daysSince !== null && daysSince < 90 && minimum !== null && maximum !== null && stock > maximum && !(isObsoleteLocation && minimum === 0 && maximum === 0)) actions.push('AJUSTAR MIN/MAX');
     if (!actions.length) actions.push('Sem ação definida');
-    const hidden = (hiddenByStatus && !actions.includes('REVISAR SC')) || actions.includes('Sem ação definida');
+    // Compra em andamento (SCs abertas cobrem até o máximo) não pede nada: fica oculta como sem ação.
+    const ongoingOnly = actions.every(action => action === 'COMPRA EM ANDAMENTO');
+    const hidden = (hiddenByStatus && !actions.includes('REVISAR SC')) || actions.includes('Sem ação definida') || ongoingOnly;
     if (actions.includes('ZERAR MIN/MAX')) details.push('Zerar mín./máx.: saldo positivo, limite não zerado, local obsoleto (1 ou 298), ao menos 180 dias sem requisição e item bloqueado.');
     if (actions.includes('AJUSTAR MIN/MAX')) details.push(`Ajustar mín./máx.: saldo positivo, ${formatNumber(daysSince)} dias desde a última requisição (abaixo de 90) e saldo acima do máximo.`);
-    if (hidden) details.push(hiddenByStatus && !actions.includes('Sem ação definida') ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
+    if (hidden) details.push(ongoingOnly ? 'Oculto por padrão: compra em andamento, nada a fazer até a entrega.' : hiddenByStatus && !actions.includes('Sem ação definida') ? 'Oculto por padrão: saldo, mínimo e máximo zerados; Desbloqueado.' : 'Oculto por padrão: sem ação definida.');
     return { ...base, hidden, actions, action: actions.join(' + '), reason: details.join(' · '), toBuy, onOrder: open.length ? onOrder : null, purchase };
   });
 }
