@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import ExcelJS from 'exceljs';
 import { parseCsv } from '../src/import.js';
+import { findHeaderRow, suggestMapping } from '../src/analysis.js';
+import { parsePurchaseReport } from '../src/purchases.js';
+import { buildPanelData, serializePanelData } from '../src/panel/data.js';
 
 let instance = 0;
 async function waitFor(predicate) {
@@ -13,8 +16,8 @@ async function waitFor(predicate) {
   assert.fail('A interface não concluiu a operação.');
 }
 
-async function boot(t) {
-  const dom = new JSDOM('<html><head><meta name="theme-color"></head><body><div id="app"></div></body></html>', { url: 'http://localhost/', pretendToBeVisual: true });
+async function boot(t, { body = '' } = {}) {
+  const dom = new JSDOM(`<html><head><meta name="theme-color"></head><body><div id="app"></div>${body}</body></html>`, { url: 'http://localhost/', pretendToBeVisual: true });
   const globals = { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage, ExcelJS,
     requestAnimationFrame: dom.window.requestAnimationFrame.bind(dom.window), cancelAnimationFrame: dom.window.cancelAnimationFrame.bind(dom.window) };
   for (const [key, value] of Object.entries(globals)) {
@@ -367,4 +370,37 @@ test('SNAC0540 completa o Analítico: COMPRAR, COMPRA EM ANDAMENTO, SC na tabela
   app.el('#purchase-input').dispatchEvent(new window.Event('change'));
   await waitFor(() => /não é o relatório SNAC0540/.test(app.el('#message').textContent));
   assert.deepEqual(cards(), ['COMPRAR', 'COMPRA EM ANDAMENTO'], 'arquivo errado no botão do SNAC não troca nada');
+});
+
+test('painel publicado: abre direto com os dados embutidos, sem importar, com a data em que foi gerado', async t => {
+  const rows = parseCsv(ANALITICO, ';');
+  const headerRow = findHeaderRow(rows);
+  const data = buildPanelData({
+    sheet: { name: 'CSV', rows, headerRow },
+    mapping: suggestMapping(rows[headerRow]),
+    mode: 'analitico',
+    numberFormat: 'pt-BR',
+    settings: { generic: { safetyDays: '7', excessDays: '90', defaultLead: '7' }, giro: { shortDays: '30', excessDays: '90', longDays: '365' } },
+    fileName: 'estoque.csv',
+    importedAt: new Date(2026, 10, 16, 9, 30),
+    purchases: { fileName: 'REL_SNAC0540.CSV', importedAt: new Date(2026, 10, 16, 9, 31), ...parsePurchaseReport(parseCsv(SNAC, ';')) },
+    generatedAt: new Date(2026, 10, 16, 10, 5),
+  });
+  const app = await boot(t, { body: `<script id="panel-data" type="application/json">${serializePanelData(data)}</script>` });
+  await waitFor(() => app.el('.shell').classList.contains('has-data'));
+  assert.equal(window.document.documentElement.dataset.panel, 'true');
+  assert.equal(window.document.documentElement.dataset.frame, undefined, 'aberto como arquivo, fora de quadro');
+  assert.equal(app.el('#frame-notice').hidden, true);
+  assert.deepEqual([...app.el('#summary').querySelectorAll('[data-summary-action]')].map(card => card.dataset.summaryAction), ['COMPRAR', 'COMPRA EM ANDAMENTO']);
+  assert.match(app.el('#result-rows').textContent, /SC 7609604 · Compra confirmada/);
+  assert.match(app.el('#topbar-file').textContent, /estoque\.csv.*Dados de 16\/11\/2026, 10:05/);
+  const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^﻿/, ''), ';');
+  assert.equal(csv.length, 3, 'CSV continua funcionando no painel');
+});
+
+test('painel publicado com dados de outra versão avisa em vez de abrir', async t => {
+  const app = await boot(t, { body: '<script id="panel-data" type="application/json">{"version":0}</script>' });
+  await waitFor(() => app.el('#message').textContent);
+  assert.match(app.el('#message').textContent, /Não foi possível abrir os dados do painel \(painel de outra versão do app\)/);
+  assert.equal(app.el('.shell').classList.contains('has-data'), false);
 });

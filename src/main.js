@@ -4,6 +4,7 @@ import { isPurchaseReport, parsePurchaseReport } from './purchases.js';
 import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOptions, matchesLocation, matchesPosition, paginate, PAGE_SIZE, prioritizeActionCounts, processInChunks, resetDashboardState, sortResults } from './dashboard.js';
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from './export-data.js';
 import { renderApp } from './template.js';
+import { buildPanelData, PANEL_FILE_NAME, readPanelData } from './panel/data.js';
 import { svgIcon } from './icons.js';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
@@ -165,6 +166,16 @@ if (app) app.innerHTML = renderApp();
 
 const el = typeof document !== 'undefined' ? selector => document.querySelector(selector) : () => null;
 if (typeof document !== 'undefined') {
+  // Painel publicado (painel-giro-estoque.html, src/panel/): dados embutidos, só consulta.
+  const panelSource = document.getElementById('panel-data');
+  const panelMode = Boolean(panelSource);
+  // Dentro de um quadro (pré-visualização do SharePoint): download, imprimir e armazenamento bloqueados.
+  const inFrame = (() => { try { return window.top !== window; } catch { return true; } })();
+  if (panelMode) {
+    document.documentElement.dataset.panel = 'true';
+    if (inFrame) document.documentElement.dataset.frame = 'true';
+    el('#frame-notice').hidden = !inFrame;
+  }
   let deferredInstallPrompt = null;
   const installButton = el('#install-app');
 
@@ -178,7 +189,7 @@ if (typeof document !== 'undefined') {
 
   setInstallButton(false);
 
-  if ('serviceWorker' in navigator) {
+  if (!panelMode && 'serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
         const registration = await navigator.serviceWorker.register('./service-worker.js');
@@ -494,7 +505,12 @@ if (typeof document !== 'undefined') {
   function renderImportContext() {
     if (!state.fileName || !currentSheet()) { el('#topbar-file').hidden = true; return; }
     const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
-    el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${importedAt ? `<span title="Importado às ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : ''}`;
+    // No painel publicado vale a data em que ele foi gerado (pode ser aberto dias depois).
+    const generatedAt = panelMode ? state.panelGeneratedAt?.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) ?? '' : '';
+    const stamp = generatedAt
+      ? `<span title="Painel gerado em ${escapeHtml(generatedAt)}${state.purchases ? `, com o SNAC0540 ${escapeHtml(state.purchases.fileName)}` : ''}">Dados de ${escapeHtml(generatedAt)}</span>`
+      : importedAt ? `<span title="Importado às ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : '';
+    el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${stamp}`;
     // Só com o painel aberto (Analítico esperando o SNAC0540 fica só no campo da tela inicial).
     el('#topbar-file').hidden = !el('.shell').classList.contains('has-data');
     setAttachState('#stock-field', 'ok', `${state.fileName} · ${currentSheet().name}${importedAt ? ` · importado às ${importedAt}` : ''}`);
@@ -1120,6 +1136,58 @@ if (typeof document !== 'undefined') {
     window.print();
   }
 
+  // "Gerar painel": o app num .html único com os dados atuais (src/panel/), para publicar no SharePoint.
+  const fileSize = bytes => (bytes >= 1048576
+    ? `${(bytes / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+    : `${Math.ceil(bytes / 1024).toLocaleString('pt-BR')} KB`);
+  async function generatePanel() {
+    const button = el('#generate-panel');
+    if (waitingPanel() || !currentSheet() || !state.allResults.length) { message('Importe as planilhas antes de gerar o painel.', 'error'); return; }
+    button.disabled = true;
+    try {
+      const { generatePanelHtml } = await import('./panel/generate.js');
+      const html = generatePanelHtml(buildPanelData({
+        sheet: currentSheet(),
+        mapping: state.mapping,
+        mode: currentMode(),
+        numberFormat: state.numberFormat,
+        settings: state.settings,
+        fileName: state.fileName,
+        importedAt: state.importedAt,
+        purchases: state.purchases,
+      }));
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      saveBlob(blob, PANEL_FILE_NAME);
+      message(`Painel gerado: ${PANEL_FILE_NAME} (${fileSize(blob.size)}). Para publicar, envie o arquivo para a pasta do SharePoint e escolha "Substituir" (mesmo nome): o link continua o mesmo e quem abrir vê os dados de agora.`);
+    } catch (error) {
+      message(error.message || 'Não foi possível gerar o painel.', 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+  // Painel publicado: abre direto com os dados embutidos, sem importar nada.
+  async function openEmbeddedPanel() {
+    let data;
+    try { data = readPanelData(panelSource.textContent); }
+    catch (error) {
+      message(`Não foi possível abrir os dados do painel (${error.message}). Gere o painel de novo no app.`, 'error');
+      return;
+    }
+    state.sheets = [data.sheet];
+    state.sheet = 0;
+    state.mapping = data.mapping;
+    state.mode = data.mode;
+    state.numberFormat = data.numberFormat;
+    for (const key of ['generic', 'giro']) Object.assign(state.settings[key], data.settings?.[key]);
+    state.fileName = data.fileName;
+    state.importedAt = data.importedAt;
+    state.panelGeneratedAt = data.generatedAt;
+    state.purchases = data.purchases;
+    resetDashboardState(state);
+    await openPanel();
+    playEntrance();
+  }
+
   // SNAC0540 lido: fica guardado em state.purchases e vale para o Analítico atual ou o próximo.
   function setPurchases(file, sheets) {
     const sheet = sheets.find(entry => isPurchaseReport(entry.rows));
@@ -1246,6 +1314,7 @@ if (typeof document !== 'undefined') {
   }
 
   el('#replace-file').addEventListener('click', () => el('#file-input').click());
+  el('#generate-panel').addEventListener('click', generatePanel);
   el('#file-input').addEventListener('change', event => { const files = [...event.target.files]; event.target.value = ''; loadFiles(files); });
   el('#purchase-file').addEventListener('click', () => el('#purchase-input').click());
   el('#purchase-input').addEventListener('change', event => { const files = [...event.target.files]; event.target.value = ''; loadFiles(files, { purchase: true }); });
@@ -1523,4 +1592,5 @@ if (typeof document !== 'undefined') {
     el(menu).open = false;
     el(`${menu} summary`).focus();
   });
+  if (panelMode) openEmbeddedPanel();
 }

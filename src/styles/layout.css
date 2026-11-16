@@ -1225,6 +1225,7 @@ html[data-summary="collapsed"] .table-tools .filter-action {
   }
 
   .shell:not(.has-data) #message,
+  .shell:not(.has-data) #frame-notice,
   .shell:not(.has-data) #workspace {
     grid-column: 1 / -1;
   }
@@ -1774,4 +1775,20 @@ html[data-summary="collapsed"] .table-tools .filter-action {
 /* Tela inicial: os campos já são a área de soltar; sem a camada que cobre a janela. */
 .shell:not(.has-data).dragging-file::after {
   display: none;
+}
+
+/* ── Painel publicado ("Gerar painel", src/panel/) ───────────────────────────────
+   Só consulta: sem importar, configurar, gerar outro painel nem Excel (a biblioteca não vai
+   no arquivo). Dentro do quadro do SharePoint também sem exportar nem imprimir.          */
+html[data-panel] .hero,
+html[data-panel] .upload-card,
+html[data-panel] #replace-file,
+html[data-panel] #purchase-file,
+html[data-panel] #config-toggle,
+html[data-panel] #generate-panel,
+html[data-panel] #install-app,
+html[data-panel] [data-export="xlsx"],
+html[data-panel] .group-export,
+html[data-frame] #export-menu {
+  display: none !important;
 }

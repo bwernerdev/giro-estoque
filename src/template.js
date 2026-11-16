@@ -13,6 +13,7 @@ export function renderApp() {
           <button id="replace-file" class="topbar-button topbar-data" type="button" title="Trocar arquivo">${svgIcon('upload')}<span>Trocar arquivo</span></button>
           <button id="purchase-file" class="topbar-button topbar-data purchase-file" type="button" hidden>${svgIcon('clock')}<span>Importar SNAC0540</span></button>
           <button id="config-toggle" class="topbar-button topbar-data config-toggle" type="button" aria-controls="config-grid" aria-expanded="false" title="Abrir configuração">${svgIcon('adjust')}<span>Abrir configuração</span></button>
+          <button id="generate-panel" class="topbar-button topbar-data generate-panel" type="button" title="Baixa o painel-giro-estoque.html com os dados atuais, para publicar no SharePoint">${svgIcon('download')}<span>Gerar painel</span></button>
           <button id="install-app" class="topbar-button install-button" type="button" hidden>${svgIcon('download')}<span>Instalar app</span></button>
           <button id="theme-toggle" class="topbar-button theme-toggle" type="button" aria-pressed="false">${svgIcon('moon')}<span>Modo escuro</span></button>
         </div>
@@ -45,6 +46,7 @@ export function renderApp() {
           </div>
           <small class="upload-note">Os dados não saem do seu computador.</small>
         </section>
+        <p id="frame-notice" class="message warning" hidden>Aberto dentro do SharePoint: aqui dá para consultar, filtrar e copiar códigos. Para exportar ou imprimir, use ⋯ › Baixar e abra o arquivo baixado.</p>
         <div id="message" role="status" aria-live="polite"></div>
         <section id="loading-skeleton" class="loading-skeleton" aria-hidden="true">
           <div class="skeleton-kpis">${'<span class="skeleton-block skeleton-kpi"></span>'.repeat(3)}</div>

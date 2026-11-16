@@ -14,6 +14,8 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 | `template.js` | ~80 | `renderApp()`: HTML da interface |
 | `icons.js` | ~25 | `svgIcon(name)`: ícones SVG inline |
 
+`main.js` também tem **Gerar painel** (`generatePanel`, carrega `panel/generate.js` sob demanda) e o modo painel publicado (`panelMode`, `openEmbeddedPanel`).
+
 ## CSS (`styles/index.css` importa as camadas nesta ordem)
 - `fonts.css`: @font-face (arquivos em `fonts/`).
 - `tokens.css`: cores, tipografia, espaçamento (4 px), raios, sombras, alturas. O tema escuro só redefine tokens aqui; componentes não têm regras por tema.
@@ -24,6 +26,7 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 - `print.css`: relatório de impressão/PDF (tabela em A4 deitado; resumo de uma página em A4 em pé, `.summary-report`).
 
 ## Subpasta
+- `panel/`: "Gerar painel" (painel publicado no SharePoint). Ver `panel/README.md`.
 - `fonts/`: DM Sans e Manrope em woff2, com licenças (declaradas em `fonts.css`; o app usa Manrope em títulos e números e Segoe UI no texto).
 
 ## Onde mexer

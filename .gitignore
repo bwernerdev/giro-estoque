@@ -5,3 +5,5 @@ review-*.png
 .chrome-*/
 test-results/
 playwright-report/
+.panel-build/
+src/panel/template.generated.html
