@@ -2,10 +2,12 @@
 // inteiro, JS + CSS + fontes) num script único e encaixa tudo em src/panel/template.html.
 // Resultado: src/panel/template.generated.html, que o app importa (?raw) e completa com os
 // dados na hora de gerar. Roda antes do dev e do build (package.json: predev, prebuild).
-// Não versionar o gerado.
+// O gerado é versionado: o GitHub Pages serve o código-fonte sem build. Mudou algo em src/?
+// Rode `npm run build:panel` e commite o modelo junto (tests/panel.test.js confere o hash).
 import { defineConfig } from 'vite';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { panelSourceHash } from './scripts/panel-hash.mjs';
 
 const folder = fileURLToPath(new URL('./src/panel/', import.meta.url));
 
@@ -27,6 +29,7 @@ function buildTemplate() {
         }
         // Texto "</script" ou "</style" dentro do código fecharia a tag antes da hora.
         const html = template
+          .replace('<!doctype html>', () => `<!doctype html>\n<!-- fontes do painel: ${panelSourceHash()} -->`)
           .replace('/*CSS*/', () => css.replace(/<\/style/gi, '<\\/style'))
           .replace('/*JS*/', () => js.replace(/<\/script/gi, '<\\/script'));
         writeFileSync(`${folder}template.generated.html`, html);

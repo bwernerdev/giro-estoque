@@ -6,4 +6,3 @@ review-*.png
 test-results/
 playwright-report/
 .panel-build/
-src/panel/template.generated.html

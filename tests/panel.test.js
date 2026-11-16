@@ -43,3 +43,11 @@ test('modelo do painel: dados embutidos sem fechar a tag e lidos de volta com da
   assert.throws(() => fillPanelTemplate('<html></html>', sample()), /npm run build:panel/);
   assert.throws(() => readPanelData('{"version":99}'), /outra versão/);
 });
+
+test('modelo do painel versionado corresponde às fontes atuais (o Pages serve o código-fonte)', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { panelSourceHash, PANEL_HASH_PATTERN } = await import('../scripts/panel-hash.mjs');
+  const template = await readFile(new URL('../src/panel/template.generated.html', import.meta.url), 'utf8');
+  assert.equal(template.split(PANEL_MARKER).length, 2);
+  assert.equal(template.match(PANEL_HASH_PATTERN)?.[1], panelSourceHash(), 'Modelo do painel desatualizado: rode npm run build:panel e commite src/panel/template.generated.html.');
+});

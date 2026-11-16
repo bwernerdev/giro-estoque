@@ -1146,7 +1146,7 @@ if (typeof document !== 'undefined') {
     button.disabled = true;
     try {
       const { generatePanelHtml } = await import('./panel/generate.js');
-      const html = generatePanelHtml(buildPanelData({
+      const html = await generatePanelHtml(buildPanelData({
         sheet: currentSheet(),
         mapping: state.mapping,
         mode: currentMode(),
