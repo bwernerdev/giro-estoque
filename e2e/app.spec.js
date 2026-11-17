@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { attach, attachSnac } from './helpers.js';
+import { attach, attachSnac, SNAC_HEADER } from './helpers.js';
 import { readFile } from 'node:fs/promises';
 import ExcelJS from 'exceljs';
 
@@ -240,6 +240,32 @@ test('SNAC0540 em ANSI obrigatório: Analítico espera, painel abre com o SNAC05
   await page.locator('[data-summary-hidden]').click();
   await expect(page.locator('#result-rows')).toContainText('SC 7609604 · Compra confirmada');
   await expect(page.locator('#result-rows')).toContainText('SC cobre o máx.');
+});
+
+test('última importação fica no navegador: atualizar reabre o painel e o × limpa', async ({ page }) => {
+  const analitico = 'Cd Item;Nm Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n1001;Luva;4;1;4;8;10;Item com Giro;Desbloqueado;Desbloqueado\n1002;Broca;4;0;2;5;10;Sem Saldo;Desbloqueado;Desbloqueado';
+  const snac = `${SNAC_HEADER}7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;3;Compra confirmada;`;
+  await page.goto('./');
+  await attachSnac(page, snac);
+  await page.locator('#file-input').setInputFiles({ name: 'estoque.csv', mimeType: 'text/csv', buffer: Buffer.from(analitico) });
+  await expect(page.locator('#results-section')).toBeVisible();
+  await expect(page.locator('#result-rows')).toContainText('SC insuficiente: cobre 3 de 7');
+  const count = await page.locator('#filtered-count').textContent();
+  await page.reload();
+  await expect(page.locator('#results-section')).toBeVisible();
+  await expect(page.locator('#message')).toContainText('Planilhas da última importação reabertas');
+  await expect(page.locator('#topbar-file')).toContainText('estoque.csv');
+  await expect(page.locator('#purchase-file')).toHaveClass(/is-loaded/);
+  await expect(page.locator('#filtered-count')).toHaveText(count);
+  await expect(page.locator('#result-rows')).toContainText('SC insuficiente: cobre 3 de 7');
+  await page.locator('#clear-data').click();
+  await expect(page.locator('#upload-card')).toBeVisible();
+  await expect(page.locator('#workspace')).toBeHidden();
+  await expect(page.locator('#stock-field')).not.toHaveAttribute('data-state', 'ok');
+  await page.reload();
+  await expect(page.locator('#upload-card')).toBeVisible();
+  await expect(page.locator('#workspace')).toBeHidden();
+  await expect(page.locator('#purchase-field')).not.toHaveAttribute('data-state', 'ok');
 });
 
 test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {

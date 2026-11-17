@@ -6,6 +6,7 @@ import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } fro
 import { renderApp } from './template.js';
 import { buildPanelData, PANEL_FILE_NAME, readPanelData } from './panel/data.js';
 import { svgIcon } from './icons.js';
+import { clearSavedImport, loadSavedImport, saveImport } from './saved-import.js';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
 const state = {
@@ -502,18 +503,27 @@ if (typeof document !== 'undefined') {
     initialMessage.className = '';
   }
   function currentSheet() { return state.sheets[state.sheet]; }
+  // Hora da importação; de outro dia (importação reaberta do navegador), data e hora.
+  function importStamp(date) {
+    if (!date) return '';
+    const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return date.toDateString() === new Date().toDateString() ? time : `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${time}`;
+  }
+  const stampPrefix = stamp => (stamp.includes('/') ? 'em' : 'às');
   function renderImportContext() {
     if (!state.fileName || !currentSheet()) { el('#topbar-file').hidden = true; return; }
-    const importedAt = state.importedAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
+    const importedAt = importStamp(state.importedAt);
     // No painel publicado vale a data em que ele foi gerado (pode ser aberto dias depois).
     const generatedAt = panelMode ? state.panelGeneratedAt?.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) ?? '' : '';
     const stamp = generatedAt
       ? `<span title="Painel gerado em ${escapeHtml(generatedAt)}${state.purchases ? `, com o SNAC0540 ${escapeHtml(state.purchases.fileName)}` : ''}">Dados de ${escapeHtml(generatedAt)}</span>`
-      : importedAt ? `<span title="Importado às ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : '';
-    el('#topbar-file').innerHTML = `<strong>${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${stamp}`;
+      : importedAt ? `<span title="Importado ${stampPrefix(importedAt)} ${escapeHtml(importedAt)}">${escapeHtml(importedAt)}</span>` : '';
+    // Limpar dados: apaga a importação guardada no navegador e volta à tela inicial.
+    const clear = panelMode ? '' : `<button id="clear-data" class="topbar-file-clear" type="button" title="Limpar dados: apaga as planilhas guardadas neste navegador e volta à tela inicial" aria-label="Limpar dados importados">${svgIcon('close')}</button>`;
+    el('#topbar-file').innerHTML = `<strong title="${escapeHtml(state.fileName)} · ${escapeHtml(currentSheet().name)}">${escapeHtml(state.fileName)}</strong><span>${escapeHtml(currentSheet().name)}</span>${stamp}${clear}`;
     // Só com o painel aberto (Analítico esperando o SNAC0540 fica só no campo da tela inicial).
     el('#topbar-file').hidden = !el('.shell').classList.contains('has-data');
-    setAttachState('#stock-field', 'ok', `${state.fileName} · ${currentSheet().name}${importedAt ? ` · importado às ${importedAt}` : ''}`);
+    setAttachState('#stock-field', 'ok', `${state.fileName} · ${currentSheet().name}${importedAt ? ` · importado ${stampPrefix(importedAt)} ${importedAt}` : ''}`);
     renderPurchaseContext();
   }
   // Campos de anexo da tela inicial (Analítico e SNAC0540): estado vazio, lendo, ok ou erro.
@@ -531,13 +541,13 @@ if (typeof document !== 'undefined') {
     const button = el('#purchase-file');
     button.hidden = !isAnaliticoMode();
     const loaded = state.purchases;
-    const time = loaded?.importedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) ?? '';
+    const time = importStamp(loaded?.importedAt);
     button.querySelector('span').textContent = loaded ? `SNAC0540 · ${time}` : 'Importar SNAC0540';
     button.title = loaded
       ? `${loaded.fileName}: ${loaded.requests.length.toLocaleString('pt-BR')} linhas de SC de ${loaded.byItem.size.toLocaleString('pt-BR')} itens. Clique para trocar.`
       : 'Importar o follow-up de compras (SNAC0540) para conferir SCs em andamento';
     button.classList.toggle('is-loaded', Boolean(loaded));
-    if (loaded) setAttachState('#purchase-field', 'ok', `${loaded.fileName} · ${loaded.requests.length.toLocaleString('pt-BR')} linhas de SC · importado às ${time}`);
+    if (loaded) setAttachState('#purchase-field', 'ok', `${loaded.fileName} · ${loaded.requests.length.toLocaleString('pt-BR')} linhas de SC · importado ${stampPrefix(time)} ${time}`);
     else setAttachState('#purchase-field', '', 'Escolha ou arraste o arquivo');
   }
   function dataRows() { return selectDataRows(currentSheet().rows, state.mapping, currentSheet().headerRow + 1); }
@@ -710,6 +720,7 @@ if (typeof document !== 'undefined') {
     message('');
     renderResults();
     persistFilters();
+    persistImport();
   }
 
   function urgentAction(action) {
@@ -1215,6 +1226,21 @@ if (typeof document !== 'undefined') {
     state.collapsedGroups.clear();
     state.sheet = state.sheets.findIndex(sheet => sheet.rows.length > sheet.headerRow + 1);
     state.mapping = suggestMapping(currentSheet().rows[currentSheet().headerRow] || []);
+    applyFilterPreferences();
+    state.fileName = file.name;
+    state.importedAt = new Date();
+    // Analítico sem SNAC0540: fica guardado na tela inicial; o painel só abre com os dois.
+    if (isAnaliticoMode() && !state.purchases) {
+      el('.shell').classList.remove('has-data');
+      el('#workspace').hidden = true;
+      renderImportContext();
+      return false;
+    }
+    await openPanel();
+    return true;
+  }
+  // Filtros lembrados (busca, ação, posição, página, ordem) ao abrir uma planilha.
+  function applyFilterPreferences() {
     const savedFilters = readFilterPreferences();
     // Itens ocultos não são lembrados: cada importação começa só com os itens com ação.
     el('#show-hidden').checked = false;
@@ -1231,17 +1257,65 @@ if (typeof document !== 'undefined') {
     state.sortKey = typeof savedFilters.sortKey === 'string' ? savedFilters.sortKey : '';
     state.sortDirection = savedFilters.sortDirection === 'desc' ? 'desc' : 'asc';
     state.pendingActionFilter = typeof savedFilters.action === 'string' ? savedFilters.action : '';
-    state.fileName = file.name;
-    state.importedAt = new Date();
-    // Analítico sem SNAC0540: fica guardado na tela inicial; o painel só abre com os dois.
+  }
+
+  // Última importação guardada no navegador (src/saved-import.js): grava a cada importação ou
+  // mudança de aba, mapeamento ou critério; reabre sozinha ao atualizar a página.
+  let savedImportKey = '';
+  const importKey = () => JSON.stringify([state.importedAt, state.purchases?.importedAt, state.sheet, state.mapping, state.mode, state.numberFormat, state.settings]);
+  function persistImport() {
+    if (panelMode || (!state.sheets.length && !state.purchases)) return;
+    const key = importKey();
+    if (key === savedImportKey) return;
+    savedImportKey = key;
+    saveImport({
+      sheets: state.sheets,
+      sheet: state.sheet,
+      mapping: state.mapping,
+      mode: state.mode,
+      numberFormat: state.numberFormat,
+      settings: state.settings,
+      fileName: state.fileName,
+      importedAt: state.importedAt,
+      purchases: state.purchases,
+    }).catch(() => { savedImportKey = ''; /* Sem armazenamento: os dados valem até fechar a página. */ });
+  }
+  async function restoreSavedImport() {
+    let data;
+    try { data = await loadSavedImport(); } catch { return; }
+    // Nada guardado, ou a pessoa já começou a importar enquanto o navegador respondia.
+    if (!data || importRun) return;
+    if (data.purchases) state.purchases = data.purchases;
+    if (data.sheets?.length) {
+      state.sheets = data.sheets;
+      state.sheet = data.sheet;
+      state.mapping = data.mapping;
+      state.mode = data.mode;
+      state.numberFormat = data.numberFormat;
+      for (const key of ['generic', 'giro']) Object.assign(state.settings[key], data.settings?.[key]);
+      state.fileName = data.fileName;
+      state.importedAt = data.importedAt;
+      resetDashboardState(state);
+      applyFilterPreferences();
+    }
+    savedImportKey = importKey();
+    if (!currentSheet()) {
+      renderPurchaseContext();
+      message('SNAC0540 da última importação reaberto (guardado neste navegador). Agora importe o relatório Analítico.');
+      return;
+    }
     if (isAnaliticoMode() && !state.purchases) {
-      el('.shell').classList.remove('has-data');
-      el('#workspace').hidden = true;
       renderImportContext();
-      return false;
+      message(`Analítico da última importação reaberto (${state.fileName}). Agora importe o SNAC0540 para gerar o painel.`);
+      return;
     }
     await openPanel();
-    return true;
+    message('Planilhas da última importação reabertas (guardadas neste navegador). Para apagar, use o × ao lado do nome do arquivo.');
+    playEntrance();
+  }
+  async function clearImport() {
+    try { await clearSavedImport(); } catch { /* Nada guardado ou sem armazenamento. */ }
+    location.reload();
   }
   async function openPanel() {
     setConfigExpanded(false);
@@ -1308,7 +1382,7 @@ if (typeof document !== 'undefined') {
     }
     finally {
       if (run === importRun) {
-        if (!failed) resetAttachFields();
+        if (!failed) { resetAttachFields(); persistImport(); }
         clearTimeout(skeletonTimer);
         el('.shell').classList.remove('is-loading');
         upload.removeAttribute('aria-busy'); upload.classList.remove('loading'); setProgress(null);
@@ -1319,6 +1393,7 @@ if (typeof document !== 'undefined') {
 
   el('#replace-file').addEventListener('click', () => el('#file-input').click());
   el('#generate-panel').addEventListener('click', generatePanel);
+  el('#topbar-file').addEventListener('click', event => { if (event.target.closest('#clear-data')) clearImport(); });
   el('#file-input').addEventListener('change', event => { const files = [...event.target.files]; event.target.value = ''; loadFiles(files); });
   el('#purchase-file').addEventListener('click', () => el('#purchase-input').click());
   el('#purchase-input').addEventListener('change', event => { const files = [...event.target.files]; event.target.value = ''; loadFiles(files, { purchase: true }); });
@@ -1597,4 +1672,5 @@ if (typeof document !== 'undefined') {
     el(`${menu} summary`).focus();
   });
   if (panelMode) openEmbeddedPanel();
+  else restoreSavedImport();
 }

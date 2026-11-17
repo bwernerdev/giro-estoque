@@ -14,6 +14,8 @@ Código da aplicação. Sem framework: `template.js` gera o HTML e `main.js` lig
 | `template.js` | ~80 | `renderApp()`: HTML da interface |
 | `icons.js` | ~25 | `svgIcon(name)`: ícones SVG inline |
 
+`saved-import.js` guarda a última importação no IndexedDB do navegador (`saveImport`, `loadSavedImport`, `clearSavedImport`); `main.js` grava em `persistImport`, reabre em `restoreSavedImport` e apaga pelo × `#clear-data` da barra superior.
+
 `main.js` também tem **Gerar painel** (`generatePanel`, carrega `panel/generate.js` sob demanda) e o modo painel publicado (`panelMode`, `openEmbeddedPanel`).
 
 ## CSS (`styles/index.css` importa as camadas nesta ordem)

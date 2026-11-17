@@ -52,6 +52,15 @@ main {
   font-size: var(--fs-sm);
   white-space: nowrap;
   min-width: 0;
+  overflow: hidden;
+}
+
+/* Pouco espaço: aba e hora encolhem antes do nome; o × fica sempre visível. */
+.topbar-file > span {
+  flex-shrink: 4;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-file strong {
@@ -63,6 +72,32 @@ main {
 .topbar-file span::before {
   content: '·';
   margin-right: var(--s2);
+}
+
+/* × ao lado do nome do arquivo: apaga a importação guardada no navegador. */
+.topbar-file-clear {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: calc(var(--s2) * -1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.topbar-file-clear:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+.topbar-file-clear .ui-icon {
+  width: 13px;
+  height: 13px;
 }
 
 .brand {
