@@ -76,9 +76,12 @@ Na planilha Analítico, `Cd Item` é reconhecido como código e `Ds Item` ou `Nm
 
 - `src/analysis.js`: validação dos dados e regras de negócio.
 - `src/dashboard.js`: busca, filtros, resumo, paginação e processamento em blocos.
+- `src/import.js` e `src/purchases.js`: leitura das planilhas (XLSX/CSV) e do relatório SNAC0540.
 - `src/export-data.js`: preparação dos dados para Excel e CSV.
+- `src/saved-import.js`: última importação guardada no navegador.
 - `src/template.js`: estrutura HTML da interface.
-- `src/main.js`: integração da interface, importação e exportação.
+- `src/main.js`: entrada; monta os módulos da interface.
+- `src/ui/`: a interface por área (tabela, detalhes, visão geral, importação, exportação, preferências, configuração, movimento e marcação pura).
 - `src/styles/`: CSS em camadas, carregado por `index.css` (`tokens`, `base`, `components`, `layout`, `table`, `print`). Cores, tamanhos e sombras ficam em `tokens.css`; o tema escuro só redefine esses tokens.
 - `src/icons.js`: ícones SVG padronizados usados em botões, badges e na área de importação.
 - `src/panel/`: **Gerar painel** (dados embutidos, modelo e entrada do painel publicado); `vite.panel.config.js` empacota o app num `.html` único.

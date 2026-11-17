@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { analyze, analyzeAnalitico, analyzeGiro, detectAnalysisMode, parseNumber, suggestMapping, summarizeLocationTotal } from '../src/analysis.js';
 import { locationOptions } from '../src/dashboard.js';
 import { selectDataRows, parseCsv } from '../src/import.js';
@@ -83,7 +83,11 @@ test('fontes usadas diretamente pelo navegador formam um cache offline coerente'
   assert.doesNotMatch(index, /src\/(?:style|theme|desktop|main)\.[a-z]+\?v=/);
   assert.doesNotMatch(dashboard, /analysis\.js\?v=/);
   assert.doesNotMatch(importer, /analysis\.js\?v=/);
-  for (const asset of ['./src/main.js', './src/analysis.js', './src/icons.js']) {
-    assert.match(worker, new RegExp(asset.replaceAll('.', '\\.')));
-  }
+  // Lista do service worker sem build: todo arquivo listado existe e todo módulo, estilo e
+  // fonte que o navegador carrega do fonte está listado (senão some no modo offline).
+  const listed = [...worker.match(/const APP_SHELL = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+  for (const path of listed.filter(path => path !== './')) assert.ok(existsSync(new URL(`.${path}`, import.meta.url)), `${path} não existe`);
+  const expected = [['src/', /\.js$/], ['src/ui/', /\.js$/], ['src/styles/', /\.css$/], ['src/fonts/', /\.woff2$/]]
+    .flatMap(([folder, pattern]) => readdirSync(new URL(`../${folder}`, import.meta.url)).filter(name => pattern.test(name)).map(name => `./${folder}${name}`));
+  for (const path of expected) assert.ok(listed.includes(path), `${path} fora do cache offline`);
 });

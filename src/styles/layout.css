@@ -245,15 +245,7 @@ main {
   font-size: var(--fs-sm);
 }
 
-.upload-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: flex-end;
-  margin-left: auto;
-}
-
-/* Depois da importação o arquivo é trocado pela barra lateral ou arrastado para a janela. */
+/* Depois da importação o arquivo é trocado pela barra superior ou arrastado para a janela. */
 .shell.has-data .hero,
 .shell.has-data .upload-card {
   display: none;
@@ -1285,11 +1277,6 @@ html[data-summary="collapsed"] .table-tools .filter-action {
   .shell:not(.has-data) .upload-copy {
     flex: none;
   }
-
-  .shell:not(.has-data) .upload-actions {
-    margin-left: 0;
-    justify-content: center;
-  }
 }
 
 /* ── 1700 px ou mais: detalhes sempre à vista ao lado da tabela ─────────────── */
@@ -1378,15 +1365,6 @@ html[data-summary="collapsed"] .table-tools .filter-action {
   .upload-card {
     flex-wrap: wrap;
     padding: var(--s5);
-  }
-
-  .upload-actions {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .upload-actions .primary-button {
-    width: 100%;
   }
 
   .table-tools .table-filters {

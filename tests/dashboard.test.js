@@ -5,7 +5,7 @@ import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOp
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { agingBucket, agingSummary, stockHealth } from '../src/analysis.js';
 import { renderApp } from '../src/template.js';
-import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildSummaryReport, buildTotalMarkup } from '../src/main.js';
+import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildSummaryReport, buildTotalMarkup } from '../src/ui/markup.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },

@@ -6,13 +6,13 @@ O botão **Gerar painel** (topbar, `#generate-panel`) baixa `painel-giro-estoque
 |---|---|
 | `data.js` | `PANEL_FILE_NAME`, `PANEL_MARKER`, `PANEL_VERSION`, `buildPanelData` (aba importada, mapeamento, modo, formato numérico, critérios e SCs do SNAC0540 só dos itens da planilha, sem solicitante, nome do produto nem entrega), `serializePanelData` (`<` escapado), `fillPanelTemplate`, `readPanelData` (de volta a datas e `byItem`). Roda no navegador e no Node |
 | `template.html` | Esqueleto com `/*CSS*/`, `/*JS*/` e `__DADOS_DO_PAINEL__` (em `<script id="panel-data" type="application/json">`) |
-| `entry.js` | Entrada do build do painel: `styles/index.css` + `main.js` |
-| `generate.js` | `generatePanelHtml(data)` (async): busca o modelo pronto com `fetch(new URL('./template.generated.html', import.meta.url))` e encaixa os dados. Importado sob demanda pelo `main.js`. Sem `?raw`: o app também roda servindo o código-fonte sem build (Go Live) |
+| `entry.js` | Entrada do build do painel: `styles/index.css` + `main.js` (o app inteiro) |
+| `generate.js` | `generatePanelHtml(data)` (async): busca o modelo pronto com `fetch(new URL('./template.generated.html', import.meta.url))` e encaixa os dados. Importado sob demanda por `../ui/export.js` (o build do painel troca `../panel/generate.js` por `stub.js`). Sem `?raw`: o app também roda servindo o código-fonte sem build (Go Live) |
 | `stub.js` | Substitui `generate.js` no build do painel (o painel não gera outro painel nem leva o próprio modelo) |
 | `template.generated.html` | Gerado por `npm run build:panel` (`../../vite.panel.config.js`; roda antes do `dev` e do `build`). **Versionado** (para rodar sem build, Go Live), com o hash das fontes no comentário `fontes do painel` (`../../scripts/panel-hash.mjs`). Não editar à mão: mexeu em `src/`, rode `npm run build:panel` e commite junto; `tests/panel.test.js` falha se estiver desatualizado |
 
 ## Regras
-- O `main.js` entra em modo painel quando acha `#panel-data`: `html[data-panel]`, abre direto (`openEmbeddedPanel`), sem service worker. O fim de `styles/layout.css` esconde importar, SNAC0540, configuração, Gerar painel e Excel (ExcelJS não vai no arquivo).
+- O app (`main.js` + `ui/importer.js`) entra em modo painel quando acha `#panel-data`: `html[data-panel]`, abre direto (`openEmbeddedPanel`), sem service worker. O fim de `styles/layout.css` esconde importar, SNAC0540, configuração, Gerar painel e Excel (ExcelJS não vai no arquivo).
 - Dentro de um quadro (`window.top !== window`, pré-visualização do SharePoint): `html[data-frame]`, some o menu Exportar e aparece `#frame-notice`. Lá não funcionam download, impressão nem armazenamento (o app já trata `localStorage` com try/catch).
 - IIFE não tem `import.meta`: `vite.panel.config.js` define `import.meta.url` para `new URL(ícone, import.meta.url)` do `template.js` funcionar.
 - Mudou o formato de `buildPanelData`: suba `PANEL_VERSION` (painel antigo avisa em vez de abrir errado) e ajuste `tests/panel.test.js` e `e2e/panel.spec.js`.

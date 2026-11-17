@@ -48,7 +48,7 @@ export default defineConfig({
   define: { 'import.meta.url': JSON.stringify('file:///painel-giro-estoque.html') },
   resolve: {
     // O painel não gera outro painel (e não leva o próprio modelo dentro de si).
-    alias: [{ find: /^\.\/panel\/generate\.js$/, replacement: fileURLToPath(new URL('./src/panel/stub.js', import.meta.url)) }],
+    alias: [{ find: /^\.\.\/panel\/generate\.js$/, replacement: fileURLToPath(new URL('./src/panel/stub.js', import.meta.url)) }],
   },
   build: {
     outDir: '.panel-build',
