@@ -7,7 +7,7 @@ App web local (Vite, JS puro, sem framework) que importa `.xlsx`/`.csv` de estoq
 - `npm test`: testes unitários (`node --test tests/*.test.js`, usa jsdom).
 - `npm run lint`: ESLint (`eslint.config.js`: recomendadas, variável sem uso, `===`). Roda no CI.
 - `npm run build`: `vite build` + `scripts/copy-vendor.mjs` (gera `dist/` e o service worker). `prebuild`/`predev` rodam `npm run build:panel` (`vite.panel.config.js`: app inteiro em IIFE dentro de `src/panel/template.generated.html`). O GitHub Pages publica o `dist/` pelo workflow (origem **GitHub Actions** desde 16/11/2026; antes servia o fonte da `main`). O app também roda sem build (Go Live servindo o fonte): nada que dependa do Vite em runtime (`?raw`, imports sem caminho). O modelo do painel é versionado; mexeu em `src/`, rode `npm run build:panel` e commite o modelo (`tests/panel.test.js` compara o hash de `scripts/panel-hash.mjs`).
-- `npm run test:e2e`: build + Playwright (Chrome instalado, pt-BR, America/Sao_Paulo) em `127.0.0.1:4186/giro-estoque/`. O deploy (`deploy-pages.yml`) roda lint, testes, build e e2e; nada publica se falhar.
+- `npm run test:e2e`: build + Playwright (Chrome instalado, pt-BR, America/Sao_Paulo) em `127.0.0.1:4186/giro-estoque/`. O deploy (`deploy-pages.yml`) roda lint, testes e build no Ubuntu e o e2e no Windows (testes de layout dependem da Segoe UI); nada publica se falhar.
 
 ## Pastas
 | Pasta | Conteúdo |

@@ -43,9 +43,31 @@ jobs:
       - name: Build do app
         run: npm run build
 
-      # e2e no build acima (scripts/serve-dist.mjs + Google Chrome, que já vem no runner ubuntu-latest).
-      - name: Testes e2e
-        run: npx playwright test
+      - name: Publicar artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  # e2e no Windows: os testes de layout medem pixels com a Segoe UI, que só existe no Windows
+  # (no Ubuntu a fonte substituta é mais larga e a barra superior quebra linha). Mesmo
+  # ambiente da equipe; Google Chrome já vem no runner.
+  e2e:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes e2e (build + Playwright)
+        run: npm run test:e2e
 
       - name: Guardar rastros do e2e (falha)
         if: failure()
@@ -55,13 +77,8 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      - name: Publicar artefato do Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
   deploy:
-    needs: build
+    needs: [build, e2e]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
