@@ -2,7 +2,7 @@
 // filtros de posição e aviso de filtros ativos.
 import { AGING_BUCKETS, agingSummary, analyze, analyzeAnalitico, analyzeGiro, fields, normalizeLocalKey, stockHealth, summarizeLocationTotal } from '../analysis.js';
 import { actionCounts, actionValues, dataIssueSummary, locationOptions, matchesLocation, matchesPosition, prioritizeActionCounts, processInChunks } from '../dashboard.js';
-import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup, escapeHtml, realCurrency } from './markup.js';
+import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup, escapeHtml, realCurrency, summaryGridLayout } from './markup.js';
 
 export function createOverview(ui) {
   const { state, el, message, setProgress } = ui;
@@ -127,6 +127,13 @@ export function createOverview(ui) {
     el('#total-value').innerHTML = totalMarkup;
     el('#total-value').hidden = !totalMarkup;
     if (totalMarkup) ui.countUp('total', el('#total-value strong'), Number(locationTotal) || 0, realCurrency);
+    // Até 6 cartões por linha com o gráfico embaixo (1024 a 1279 px) e até 4 com ele ao lado (1280 px ou mais).
+    const cardCount = el('#summary').querySelectorAll('.summary-card').length;
+    for (const [suffix, max] of [['', 6], ['-wide', 4]]) {
+      const { columns, lead } = summaryGridLayout(cardCount, max);
+      el('#summary').style.setProperty(`--summary-cols${suffix}`, String(columns));
+      el('#summary').style.setProperty(`--summary-lead${suffix}`, String(lead));
+    }
     el('#summary').querySelectorAll('.summary-card').forEach(card => {
       const strong = card.querySelector('.summary-value strong');
       ui.countUp(`card:${card.dataset.summaryAction ?? 'total'}`, strong, Number(strong.textContent) || 0, value => String(Math.round(value)));

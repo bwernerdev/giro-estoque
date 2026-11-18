@@ -21,7 +21,7 @@ export function createTable(ui) {
       { label: 'Posição', key: 'localCode', sortLabel: 'posição (local)' },
       { label: 'Qtd. atual', key: 'stock' },
       { label: 'Mín. / Máx', key: 'minimum' },
-      { label: 'Valor', key: 'stockValue', sortLabel: 'valor do saldo' },
+      { label: 'Valor', key: 'stockValue', sortLabel: 'valor do saldo', hint: 'Valor do saldo. A barra compara cada item com o de maior valor entre os filtrados.' },
       { label: 'Ação', key: 'action' },
       { label: 'Sem requisição', key: 'daysSince', sortLabel: 'dias sem requisição' },
     ];
@@ -51,7 +51,7 @@ export function createTable(ui) {
       const selected = state.sortKey === column.key;
       const ariaSort = selected ? (state.sortDirection === 'asc' ? 'ascending' : 'descending') : 'none';
       const direction = selected ? (state.sortDirection === 'asc' ? 'decrescente' : 'crescente') : 'crescente';
-      return `<th class="${columnClass(column.key)}" scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-button" data-sort-key="${column.key}" aria-label="Ordenar por ${escapeHtml(column.sortLabel || column.label)}, ordem ${direction}">${escapeHtml(column.label)}</button></th>`;
+      return `<th class="${columnClass(column.key)}" scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-button" data-sort-key="${column.key}" aria-label="Ordenar por ${escapeHtml(column.sortLabel || column.label)}, ordem ${direction}"${column.hint ? ` title="${escapeHtml(column.hint)}"` : ''}>${escapeHtml(column.label)}</button></th>`;
     }).join('')}</tr>`;
   }
   function urgentAction(action) {
@@ -100,11 +100,15 @@ export function createTable(ui) {
   }
   const descriptionObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleDescriptionControls) : null;
   document.fonts?.ready.then(scheduleDescriptionControls);
-  // Local, prateleira e repartição em uma coluna (ex.: 7 · 0 · I).
+  // Local, prateleira e repartição em uma coluna (ex.: 7 · 0 · I). Partes vazias no fim
+  // somem ("7" em vez de "7 · — · —"); vazia no meio vira "—" para a ordem não mudar.
+  // O title sempre nomeia as três.
   function positionHtml(row) {
     const parts = [stockLocation(row), row.shelfCode, row.partitionCode];
     const title = [['Local', parts[0]], ['Prateleira', parts[1]], ['Repartição', parts[2]]].map(([label, value]) => `${label} ${value || '—'}`).join(' · ');
-    return `<span title="${escapeHtml(title)}">${escapeHtml(parts.map(value => value || '—').join(' · '))}</span>`;
+    const shown = parts.map(value => value || '—');
+    while (shown.length > 1 && !parts[shown.length - 1]) shown.pop();
+    return `<span title="${escapeHtml(title)}">${escapeHtml(shown.join(' · '))}</span>`;
   }
   function codeHtml(code) {
     const value = String(code ?? '');
@@ -175,7 +179,7 @@ export function createTable(ui) {
       const numeric = Number(value) || 0;
       if (!largestValue || numeric <= 0) return itemCurrency(value);
       const share = filteredValue ? Math.round((numeric / filteredValue) * 1000) / 10 : 0;
-      return `<span class="value-cell" title="${String(share).replace('.', ',')}% do valor dos itens filtrados">${itemCurrency(value)}<span class="value-bar" aria-hidden="true"><span style="width:${Math.max((numeric / largestValue) * 100, 2).toFixed(1)}%"></span></span></span>`;
+      return `<span class="value-cell" title="${String(share).replace('.', ',')}% do valor dos itens filtrados · barra comparada ao maior valor">${itemCurrency(value)}<span class="value-bar" aria-hidden="true"><span style="width:${Math.max((numeric / largestValue) * 100, 2).toFixed(1)}%"></span></span></span>`;
     };
     const groupCounts = new Map();
     if (state.grouped) filtered.forEach(row => groupCounts.set(primaryAction(row), (groupCounts.get(primaryAction(row)) ?? 0) + 1));

@@ -49,6 +49,15 @@ export function buildSummaryMarkup({ summaryResults, summaryAllResults, actions,
   ].filter(Boolean).join('');
 }
 
+// Grade dos cartões do resumo sem buraco no fim: linhas com o mesmo número de cartões,
+// no máximo `max` por linha. Se ainda sobrar vaga, o primeiro cartão (o total) ocupa
+// as vagas (`lead` colunas). Ex.: 6 cartões, máx. 4 → 3 + 3; 5, máx. 4 → total largo + 1, depois 3.
+export function summaryGridLayout(count, max) {
+  const rows = Math.max(1, Math.ceil(count / max));
+  const columns = Math.max(1, Math.ceil(count / rows));
+  return { columns, lead: Math.min(columns, rows * columns - count + 1) };
+}
+
 // Gráfico de envelhecimento: valor do estoque com saldo por faixa de dias sem requisição.
 // Uma série, uma cor; cada faixa é um botão que filtra a tabela.
 export function buildAgingChartMarkup(buckets, selected = '') {

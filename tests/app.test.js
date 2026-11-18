@@ -161,7 +161,7 @@ test('modo Analítico mostra as oito colunas fixas com posição combinada e val
   assert.equal(cells[0], 'Peça A');
   assert.equal(app.el('#result-rows').querySelector('tr').children[0].querySelectorAll('small').length, 0);
   assert.equal(cells[1], '001');
-  assert.equal(cells[2], '298 · — · —');
+  assert.equal(cells[2], '298', 'prateleira e repartição vazias no fim não viram traços');
   assert.match(app.el('#result-rows td.col-posicao span').title, /Local 298 · Prateleira — · Repartição —/);
   assert.equal(cells[3], '5');
   assert.equal(cells[4], '10 / 20');
@@ -185,7 +185,8 @@ test('a coluna Valor mostra a barra do peso de cada item e o esqueleto some depo
   const bars = cells.map(cell => cell.querySelector('.value-bar > span')?.style.width ?? null);
   assert.deepEqual(bars.sort(), ['100%', '25%', null].sort());
   const titles = cells.map(cell => cell.querySelector('.value-cell')?.title).filter(Boolean).sort();
-  assert.deepEqual(titles, ['20% do valor dos itens filtrados', '80% do valor dos itens filtrados']);
+  assert.deepEqual(titles, ['20% do valor dos itens filtrados · barra comparada ao maior valor', '80% do valor dos itens filtrados · barra comparada ao maior valor']);
+  assert.match(app.el('#table-head th.col-valor .sort-button').title, /barra compara cada item com o de maior valor/);
   assert.ok(cells.every(cell => /R\$/.test(cell.textContent)), 'o valor continua legível na célula');
   assert.equal(app.el('.shell').classList.contains('is-loading'), false);
   app.el('[data-export="summary"]').click();

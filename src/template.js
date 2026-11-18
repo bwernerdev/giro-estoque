@@ -65,12 +65,15 @@ export function renderApp() {
                 
                 <div id="overview" class="overview">
                   <div class="overview-top">
+                    <div class="overview-head">
+                      <h2 class="overview-title">Resumo</h2>
+                      <button id="summary-toggle" class="discreet-button summary-toggle" type="button" aria-controls="overview-body" aria-expanded="true">${svgIcon('chevronUp')}<span>Recolher resumo</span></button>
+                    </div>
                     <div class="kpi-row">
                       <div id="total-value" class="total-value money-kpi" hidden></div>
                       <div id="idle-value" class="money-kpi idle" hidden></div>
                       <div id="obsolete-value" class="money-kpi obsolete" hidden></div>
                     </div>
-                    <button id="summary-toggle" class="discreet-button summary-toggle" type="button" aria-controls="overview-body" aria-expanded="true">${svgIcon('chevronUp')}<span>Recolher resumo</span></button>
                   </div>
                   <div id="overview-body" class="overview-body">
                     <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
@@ -95,7 +98,7 @@ export function renderApp() {
                           <button id="density-toggle" class="view-toggle density-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Modo compacto</span></button>
                           <button id="stripe-toggle" class="view-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Zebrado</span></button>
                           <button id="group-toggle" class="view-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Agrupar por ação</span></button>
-                          <label id="hidden-toggle" class="hidden-toggle" hidden><input id="show-hidden" type="checkbox"> <span id="hidden-toggle-text">Mostrar itens ocultos</span></label>
+                          <label id="hidden-toggle" class="view-toggle hidden-toggle" hidden><input id="show-hidden" class="view-check-input" type="checkbox"><span class="density-check">${svgIcon('check')}</span><span id="hidden-toggle-text">Mostrar itens ocultos</span></label>
                         </div></details>
                         <details id="export-menu" class="export-menu"><summary class="primary-button"><span>Exportar</span>${svgIcon('chevronDown')}</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF da tabela</button><button type="button" data-export="summary">PDF de resumo (1 página)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
                       </div>

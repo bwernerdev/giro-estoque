@@ -5,7 +5,7 @@ import { actionCounts, actionValues, dataIssueSummary, filterResults, locationOp
 import { buildCsv, buildExportData, currencyNumber, shouldIncludeDaysSince } from '../src/export-data.js';
 import { agingBucket, agingSummary, stockHealth } from '../src/analysis.js';
 import { renderApp } from '../src/template.js';
-import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildSummaryReport, buildTotalMarkup } from '../src/ui/markup.js';
+import { ANALITICO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildSummaryReport, buildTotalMarkup, summaryGridLayout } from '../src/ui/markup.js';
 
 const rows = [
   { item: 'Parafuso', sku: '100', localCode: '7', action: 'BLOQUEAR', actions: ['BLOQUEAR'], hidden: false },
@@ -33,6 +33,7 @@ test('estrutura da interface mantém controles e nomes acessíveis', () => {
   assert.ok(document.querySelector('.table-tools #location-filter'));
   assert.ok(document.querySelector('.topbar #replace-file'));
   assert.ok(document.querySelector('#summary-toggle[aria-controls="overview-body"]'));
+  assert.ok(document.querySelector('.overview-head h2 + #summary-toggle'), 'recolher fica no cabeçalho Resumo, não ao lado dos valores');
   assert.ok(document.querySelector('.results-bar #hidden-chip'));
   assert.ok(document.querySelector('#aging-chart #aging-chart-bars'));
   assert.match(document.querySelector('.brand').textContent, /GIRO DE ESTOQUE/);
@@ -338,4 +339,23 @@ test('cartão REVISAR SC mantém a sigla em maiúsculas', () => {
   const rows = [{ item: 'Luva', sku: '1', action: 'REVISAR SC', actions: ['REVISAR SC'], hidden: false }];
   const markup = buildSummaryMarkup({ summaryResults: rows, summaryAllResults: rows, actions: ANALITICO_ACTIONS, analitico: true });
   assert.match(markup, /REVISAR <span class="acronym">SC<\/span>/);
+});
+
+test('grade do resumo: linhas iguais e o cartão do total cobre a vaga que sobrar', () => {
+  // [cartões, máximo por linha] → { colunas, colunas do total }
+  const cases = [
+    [[6, 4], { columns: 3, lead: 1 }],
+    [[6, 6], { columns: 6, lead: 1 }],
+    [[5, 4], { columns: 3, lead: 2 }],
+    [[7, 4], { columns: 4, lead: 2 }],
+    [[8, 4], { columns: 4, lead: 1 }],
+    [[3, 4], { columns: 3, lead: 1 }],
+    [[1, 4], { columns: 1, lead: 1 }],
+    [[0, 4], { columns: 1, lead: 1 }],
+  ];
+  for (const [[count, max], expected] of cases) {
+    const layout = summaryGridLayout(count, max);
+    assert.deepEqual(layout, expected, `${count} cartões, máx. ${max}`);
+    if (count) assert.equal((count - 1 + layout.lead) % layout.columns, 0, 'a última linha fecha cheia');
+  }
 });
