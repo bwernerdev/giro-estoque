@@ -103,6 +103,13 @@ test('descrições sobrevivem à ordenação, busca e paginação e detalhes abr
   await second.locator('.details-button').click();
   await expect(page.locator('.panel-item-name')).toHaveText('Item 01');
   await page.locator('#item-panel-close').click();
+  // Descrição curta: fora do Tab e o clique nela abre os detalhes do item, como o resto da linha.
+  await expect(second.locator('.item-description')).not.toHaveClass(/is-expandable/);
+  await expect(second.locator('.item-description summary')).toHaveAttribute('tabindex', '-1');
+  await second.locator('.item-description summary').click();
+  await expect(page.locator('.panel-item-name')).toHaveText('Item 01');
+  await expect(second.locator('.item-description')).not.toHaveAttribute('open');
+  await page.locator('#item-panel-close').click();
   await page.locator('#search-toggle').click();
   await page.locator('#search').fill('Item 60');
   await expect(page.locator('#result-rows tr')).toHaveCount(1);

@@ -85,7 +85,11 @@ export function createTable(ui) {
       const text = details.querySelector('strong');
       return { details, expandable: text.scrollHeight > text.clientHeight + 1 };
     });
-    measurements.forEach(({ details, expandable }) => details.classList.toggle('is-expandable', expandable));
+    measurements.forEach(({ details, expandable }) => {
+      details.classList.toggle('is-expandable', expandable);
+      // Descrição curta não tem o que abrir: sai da ordem do Tab e o clique vai para a linha (detalhes).
+      details.querySelector('summary').tabIndex = expandable ? 0 : -1;
+    });
   }
   function scheduleDescriptionControls() {
     if (descriptionFrame) return;
@@ -277,7 +281,12 @@ export function createTable(ui) {
       renderResults();
       return;
     }
-    if (event.target.closest('summary, a, input, select')) return;
+    if (event.target.closest('a, input, select')) return;
+    const summary = event.target.closest('summary');
+    if (summary) {
+      if (summary.closest('.item-description')?.classList.contains('is-expandable') || summary.closest('details')?.open) return;
+      event.preventDefault(); // descrição curta: não abre o <details>, abre os detalhes do item como o resto da linha
+    }
     const line = event.target.closest('tr[data-row]');
     const trigger = event.target.closest('[data-detail-row]') ?? line?.querySelector('[data-detail-row]');
     if (!trigger) return;

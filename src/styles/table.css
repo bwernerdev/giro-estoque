@@ -342,7 +342,7 @@ td.col-descricao strong {
 
 .item-description summary {
   list-style: none;
-  cursor: default;
+  cursor: inherit; /* descrição curta: o clique abre os detalhes, como o resto da linha */
 }
 
 .item-description summary::-webkit-details-marker {

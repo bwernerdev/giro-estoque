@@ -79,8 +79,8 @@ main {
   display: inline-grid;
   flex: none;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px; /* alvo mínimo de toque/clique (WCAG 2.5.8) */
+  height: 24px;
   margin-right: calc(var(--s2) * -1);
   padding: 0;
   border: 0;
@@ -1124,9 +1124,10 @@ html[data-summary="collapsed"] .table-tools .filter-action {
 }
 
 .search-label input {
+  align-self: stretch; /* o campo ocupa a altura toda da caixa (34 px), não só a linha do texto */
   width: 100%;
   min-width: 0;
-  height: 100%;
+  height: auto;
   padding: 0;
   border: 0;
   border-radius: 0;
