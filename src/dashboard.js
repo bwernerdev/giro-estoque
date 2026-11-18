@@ -95,7 +95,7 @@ const actionPriority = new Map(ACTION_PRIORITY.map((action, index) => [normalize
 export function prioritizeActionCounts(counts) {
   return counts.map((entry, index) => ({ ...entry, index }))
     .sort((a, b) => (actionPriority.get(normalize(a.action)) ?? ACTION_PRIORITY.length) - (actionPriority.get(normalize(b.action)) ?? ACTION_PRIORITY.length) || a.index - b.index)
-    .map(({ index: _index, ...entry }) => entry);
+    .map(({ index, ...entry }) => entry);
 }
 
 export function sortResults(rows, { key = '', direction = 'asc' } = {}) {

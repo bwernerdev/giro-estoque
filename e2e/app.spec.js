@@ -75,14 +75,40 @@ test('PDF de resumo cabe em uma página A4 em pé, sem a tabela de itens', async
   expect(pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)/g)).toHaveLength(1);
 });
 
+test('worker do .xlsx que não carrega: a leitura cai para a própria página', async ({ page }) => {
+  await page.route('**/assets/import.worker-*.js', route => route.fulfill({ status: 404, body: '' }));
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Analítico');
+  sheet.addRow(['Cd Item', 'Nm Item', 'Qtde Atual', 'Qnt Min', 'Qnt Max', 'Dif Dias', 'Itens Acima de 90 dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Cd Local Estoque']);
+  sheet.addRow([1, 'Peça', 2, 0, 0, 100, 'Item com Giro', 'Desbloqueado', 'Desbloqueado', 7]);
+  await page.goto('./');
+  await attach(page, { name: 'dados.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await workbook.xlsx.writeBuffer()) });
+  await expect(page.locator('#filtered-count')).toHaveText('1 de 1 item');
+});
+
 test('leitura Excel, filtros, paginação e impressão incluem todos os resultados', async ({ page }) => {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Analítico');
   sheet.addRow(['Cd Item', 'Nm Item', 'Qtde Atual', 'Qnt Min', 'Qnt Max', 'Dif Dias', 'Itens Acima de 90 dias', 'Ds Motivo Bloqueio', 'Id Bloqueio', 'Cd Local Estoque']);
   for (let i = 0; i < 61; i++) sheet.addRow([i + 1, `Peça ${i}`, 2, 0, 0, 100, 'Item com Giro', 'Desbloqueado', 'Desbloqueado', 7]);
+  // O .xlsx é lido no worker (src/import.worker.js), que carrega o ExcelJS por conta própria.
+  const workers = [];
+  page.on('worker', worker => workers.push(worker.url()));
   await page.goto('./');
-  await attach(page, { name: 'dados.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await workbook.xlsx.writeBuffer()) });
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  await attach(page, { name: 'dados.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer });
   await expect(page.locator('#filtered-count')).toHaveText('61 de 61 itens');
+  const workerUrl = workers.find(url => /\/assets\/import\.worker-[\w-]+\.js$/.test(url));
+  expect(workerUrl).toBeTruthy();
+  // O worker do build acha o ExcelJS (dist/vendor) e devolve as abas, sem cair para a página.
+  const reply = await page.evaluate(([url, bytes]) => new Promise(resolve => {
+    const worker = new Worker(url);
+    worker.onmessage = ({ data }) => { worker.terminate(); resolve(data.error ?? `${data.sheets[0].name}: ${data.sheets[0].rows.length} linhas`); };
+    worker.onerror = event => { worker.terminate(); resolve(`não carregou: ${event.message}`); };
+    const buffer = Uint8Array.from(bytes).buffer;
+    worker.postMessage({ buffer }, [buffer]);
+  }), [workerUrl, [...buffer]]);
+  expect(reply).toBe('Analítico: 62 linhas');
   await expect(page.locator('#result-rows tr')).toHaveCount(50);
   await page.locator('#page-next').click();
   await expect(page.locator('#result-rows tr')).toHaveCount(11);
@@ -266,6 +292,30 @@ test('última importação fica no navegador: atualizar reabre o painel e o × l
   await expect(page.locator('#upload-card')).toBeVisible();
   await expect(page.locator('#workspace')).toBeHidden();
   await expect(page.locator('#purchase-field')).not.toHaveAttribute('data-state', 'ok');
+});
+
+test('importação guardada que não abre mais: aviso, é apagada e a tela inicial volta', async ({ page }) => {
+  await page.goto('./');
+  // Mesma versão do formato, mas sem mapeamento: falha ao montar o painel, não ao ler.
+  await page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('giro-estoque', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('importacao');
+    request.onsuccess = () => {
+      const tx = request.result.transaction('importacao', 'readwrite');
+      tx.objectStore('importacao').put({ version: 1, sheets: [{ name: 'x', headerRow: 0, rows: [['Produto'], ['A']] }], sheet: 0, mapping: null, mode: 'generic', numberFormat: 'pt-BR', settings: {}, fileName: 'velho.csv', importedAt: new Date(), purchases: null }, 'ultima');
+      tx.oncomplete = () => { request.result.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  }));
+  await page.reload();
+  await expect(page.locator('#message')).toContainText('Não foi possível reabrir a última importação');
+  await expect(page.locator('#upload-card')).toBeVisible();
+  await expect(page.locator('#workspace')).toBeHidden();
+  await expect(page.locator('#topbar-file')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#message')).toBeEmpty();
+  await expect(page.locator('#workspace')).toBeHidden();
 });
 
 test('botão Zebrado alterna as linhas alternadas e lembra a escolha', async ({ page }) => {

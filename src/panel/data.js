@@ -1,8 +1,9 @@
 // "Gerar painel": o que vai dentro do painel-giro-estoque.html e como volta a ser estado do app.
-// O painel leva a aba importada (linhas e cabeçalho), o mapeamento de colunas, o modo, os
+// O painel leva a aba importada (só as colunas mapeadas, panelRows), o mapeamento de colunas, o modo, os
 // critérios e as SCs do SNAC0540 dos itens da planilha. Ao abrir, o app refaz a análise com
 // as mesmas regras de analysis.js. Roda no navegador e no Node (sem ?raw nem DOM).
 import { itemKey } from '../analysis.js';
+import { selectDataRows } from '../import.js';
 
 export const PANEL_FILE_NAME = 'painel-giro-estoque.html';
 export const PANEL_MARKER = '__DADOS_DO_PAINEL__';
@@ -19,6 +20,35 @@ const readDate = value => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+/**
+ * Linhas da aba que vão para o painel: só as colunas mapeadas (as outras viram ""), nas mesmas
+ * posições, para o mapeamento e o número da linha continuarem valendo. Quem abre o HTML não lê
+ * colunas que nenhuma tela usa.
+ * Fidelidade a selectDataRows (import.js), que olha a linha inteira: linha que o app descarta
+ * (vazia, total) vai vazia; linha que o app mantém e ficaria vazia sem as outras colunas leva
+ * KEEP_ROW numa coluna não mapeada, só para não ser descartada no painel.
+ */
+export const KEEP_ROW = '·';
+
+export function panelRows(rows, mapping, headerRow) {
+  const mapped = [...new Set(Object.values(mapping).filter(index => Number.isInteger(index) && index >= 0))];
+  const width = mapped.length ? Math.max(...mapped) + 1 : 0;
+  const filler = mapped.length ? [...Array(width + 1).keys()].find(index => !mapped.includes(index)) : 0;
+  const kept = new Set(selectDataRows(rows, mapping, headerRow + 1).map(({ row }) => row - 1));
+  const only = cells => {
+    const out = Array(width).fill('');
+    for (const index of mapped) out[index] = cells[index] ?? '';
+    return out;
+  };
+  return rows.map((cells, index) => {
+    if (index === headerRow) return only(cells);
+    if (!kept.has(index)) return [];
+    const out = only(cells);
+    if (!out.some(value => String(value ?? '').trim())) out[filler] = KEEP_ROW;
+    return out;
+  });
+}
+
 export function buildPanelData({ sheet, mapping, mode, numberFormat, settings, fileName, importedAt, purchases = null, generatedAt = new Date() }) {
   if (!sheet?.rows?.length) throw new Error('Importe a planilha antes de gerar o painel.');
   // SCs só dos itens que estão na planilha: o resto não muda nenhuma ação.
@@ -28,7 +58,7 @@ export function buildPanelData({ sheet, mapping, mode, numberFormat, settings, f
     generatedAt: isoDate(generatedAt),
     fileName,
     importedAt: isoDate(importedAt),
-    sheet: { name: sheet.name, headerRow: sheet.headerRow, rows: sheet.rows },
+    sheet: { name: sheet.name, headerRow: sheet.headerRow, rows: panelRows(sheet.rows, mapping, sheet.headerRow) },
     mapping: { ...mapping },
     mode,
     numberFormat,

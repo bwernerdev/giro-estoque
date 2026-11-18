@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPanelData, fillPanelTemplate, PANEL_MARKER, readPanelData } from '../src/panel/data.js';
+import { buildPanelData, fillPanelTemplate, KEEP_ROW, PANEL_MARKER, panelRows, readPanelData } from '../src/panel/data.js';
+import { selectDataRows } from '../src/import.js';
 
 const rows = [['Cd Item', 'Nm Item', 'Qtde Atual'], ['0001001', 'Luva </script><b>', 1], ['1002', 'Broca', 0]];
 const request = (product, extra = {}) => ({ request: '7609604', status: 'Compra confirmada', createdAt: new Date(2026, 9, 10), product, productName: 'Nome', sequence: '1', quantity: 4, canceled: '', local: 4, requester: 'Fulano', order: '900', orderStatus: 'Compra confirmada', orderBalance: 3, supplier: 'ACME', deliveryDate: new Date(2026, 10, 1), invoice: '', ...extra });
@@ -22,13 +23,41 @@ function sample() {
 test('dados do painel: aba, mapeamento e só as SCs dos itens da planilha, sem campos que a tela não usa', () => {
   const data = sample();
   assert.equal(data.version, 1);
-  assert.equal(data.sheet.rows, rows);
+  assert.deepEqual(data.sheet.rows, rows, 'todas as colunas mapeadas: linhas iguais');
   assert.deepEqual(data.purchases.requests.map(entry => entry.request), ['7609604', '2'], 'SC de item fora da planilha fica fora');
   const [first] = data.purchases.requests;
   assert.equal(first.createdAt, new Date(2026, 9, 10).toISOString());
   for (const field of ['requester', 'productName', 'deliveryDate']) assert.equal(field in first, false, field);
   assert.equal(buildPanelData({ sheet: { name: 'x', rows, headerRow: 0 }, mapping: {}, settings: {} }).purchases, null);
   assert.throws(() => buildPanelData({ sheet: { rows: [] }, mapping: {}, settings: {} }), /Importe a planilha/);
+});
+
+test('dados do painel: só as colunas mapeadas; mesmas linhas que o app analisa', () => {
+  const full = [
+    ['Relatório de estoque', 'uso interno'],
+    ['Cd Item', 'Custo interno', 'Nm Item', 'Qtde Atual', 'Observação'],
+    ['1001', 12.5, 'Luva', 3, 'fornecedor X'],
+    ['', '', '', '', 'só observação'],
+    ['', 'TOTAL', '', 3, ''],
+    [],
+    ['1002', 7, 'Broca', 0, ''],
+  ];
+  const mapping = { sku: 0, item: 2, stock: 3, minimum: -1 };
+  const rows = panelRows(full, mapping, 1);
+  assert.deepEqual(rows, [
+    [],
+    ['Cd Item', '', 'Nm Item', 'Qtde Atual'],
+    ['1001', '', 'Luva', 3],
+    ['', KEEP_ROW, '', ''],
+    [],
+    [],
+    ['1002', '', 'Broca', 0],
+  ]);
+  assert.equal(JSON.stringify(rows).includes('fornecedor X'), false);
+  assert.equal(JSON.stringify(rows).includes('12.5'), false);
+  // O painel (selectDataRows de novo) vê as mesmas linhas, com os mesmos números, que o app.
+  const lines = sheetRows => selectDataRows(sheetRows, mapping, 2).map(({ row, cells }) => [row, cells[0], cells[2]]);
+  assert.deepEqual(lines(rows), lines(full));
 });
 
 test('modelo do painel: dados embutidos sem fechar a tag e lidos de volta com datas e SCs por item', () => {

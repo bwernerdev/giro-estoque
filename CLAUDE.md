@@ -5,8 +5,9 @@ App web local (Vite, JS puro, sem framework) que importa `.xlsx`/`.csv` de estoq
 ## Comandos (PowerShell: use `npm.cmd` se scripts estiverem bloqueados)
 - `npm run dev`: servidor Vite.
 - `npm test`: testes unitários (`node --test tests/*.test.js`, usa jsdom).
+- `npm run lint`: ESLint (`eslint.config.js`: recomendadas, variável sem uso, `===`). Roda no CI.
 - `npm run build`: `vite build` + `scripts/copy-vendor.mjs` (gera `dist/` e o service worker). `prebuild`/`predev` rodam `npm run build:panel` (`vite.panel.config.js`: app inteiro em IIFE dentro de `src/panel/template.generated.html`). O GitHub Pages publica o `dist/` pelo workflow (origem **GitHub Actions** desde 16/11/2026; antes servia o fonte da `main`). O app também roda sem build (Go Live servindo o fonte): nada que dependa do Vite em runtime (`?raw`, imports sem caminho). O modelo do painel é versionado; mexeu em `src/`, rode `npm run build:panel` e commite o modelo (`tests/panel.test.js` compara o hash de `scripts/panel-hash.mjs`).
-- `npm run test:e2e`: build + Playwright (Chrome instalado) em `127.0.0.1:4186/giro-estoque/`.
+- `npm run test:e2e`: build + Playwright (Chrome instalado, pt-BR, America/Sao_Paulo) em `127.0.0.1:4186/giro-estoque/`. O deploy (`deploy-pages.yml`) roda lint, testes, build e e2e; nada publica se falhar.
 
 ## Pastas
 | Pasta | Conteúdo |
@@ -21,12 +22,13 @@ App web local (Vite, JS puro, sem framework) que importa `.xlsx`/`.csv` de estoq
 | `dist/`, `test-results/`, `node_modules/`, `.npm-cache/` | Gerados/ignorados: não ler nem editar |
 
 ## Arquivos na raiz
-`index.html` (entrada), `manifest.webmanifest` (PWA), `service-worker.js` (modelo; o build injeta `CACHE_VERSION` e `APP_SHELL`), `vite.config.js` (`base: './'`), `vite.panel.config.js` (modelo do painel publicado), `playwright.config.js`.
+`index.html` (entrada), `manifest.webmanifest` (PWA), `service-worker.js` (modelo; o build injeta `CACHE_VERSION` e `APP_SHELL`), `vite.config.js` (`base: './'`; o worker do .xlsx nunca embutido), `eslint.config.js`, `vite.panel.config.js` (modelo do painel publicado), `playwright.config.js`.
 
 ## Convenções
 - Textos de interface e mensagens em português do Brasil.
 - Regras de ação ficam só em `src/analysis.js`; a UI não as reimplementa.
-- Interface em `src/ui/` (ver `src/ui/README.md`): `main.js` cria o contexto `ui` (`ui/context.js`: `state`, `el`, `message`, `setProgress`) e monta `createConfig`, `createMotion`, `createPreferences`, `createTable`, `createDetails`, `createOverview`, `createExport`, `createImporter`; função de outro módulo se chama `ui.nome()`. Nada de estado no nível do arquivo (os testes recarregam `main.js` a cada teste). Marcação pura em `ui/markup.js`.
+- Interface em `src/ui/` (ver `src/ui/README.md`): `main.js` cria o contexto `ui` (`ui/context.js`: `state`, `el`, `message`, `setProgress`) e monta `createConfig`, `createMotion`, `createPreferences`, `createTable`, `createDetails`, `createOverview`, `createExport`, `createImporter`; função de outro módulo se chama `ui.nome()`. Nada de estado no nível do arquivo (os testes recarregam `main.js` a cada teste). Marcação pura em `ui/markup.js`. Todo texto que vem da planilha e entra em `innerHTML` (inclusive atributos) passa por `escapeHtml`; o teste "texto da planilha com HTML" em `tests/app.test.js` falha se um escapar.
+- Importação: `.xlsx` lido em `src/import.worker.js` (worker clássico, `importScripts` do ExcelJS em `vendor/`); sem worker, `importFile` lê na página. Mexeu na conversão de células: altere as duas (o teste compara). Painel publicado leva só as colunas mapeadas (`panelRows` em `src/panel/data.js`).
 - Arquivo novo que o navegador carrega do fonte: incluir no `APP_SHELL` de `service-worker.js` (`tests/regressions.test.js` confere). O deploy roda `npm test` antes do build.
 - Alterou regra ou texto de interface: atualize o teste correspondente e o `README.md` da raiz.
 - Caminhos relativos (`./`) para funcionar em subpasta.

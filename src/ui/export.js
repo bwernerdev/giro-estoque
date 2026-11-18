@@ -38,7 +38,7 @@ export function createExport(ui) {
       width: Math.min(42, Math.max(12, header.length + 3)),
     }));
     const headerRow = sheet.addRow(headers);
-    headerRow.eachCell((cell, _colNumber) => {
+    headerRow.eachCell(cell => {
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C2B3A' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };

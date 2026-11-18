@@ -410,6 +410,35 @@ test('painel publicado com dados de outra versão avisa em vez de abrir', async 
   assert.equal(app.el('.shell').classList.contains('has-data'), false);
 });
 
+test('texto da planilha com HTML aparece como texto em toda a tela (innerHTML sempre com escapeHtml)', async t => {
+  const app = await boot(t);
+  const name = '<b data-xss>Peça</b>';
+  const code = '001"><i data-xss>';
+  const local = '7<u data-xss>';
+  const reason = '<s data-xss>motivo</s>';
+  await app.csv(`Nm Item;Cd Item;Cd Local Estoque;Qtde Atual;Qnt Min;Qnt Max;Dif Dias;Itens Acima de 90 dias;Ds Motivo Bloqueio;Id Bloqueio\n${name};${code};${local};5;10;20;200;Acima de 90;${reason};Bloqueado`, '<em data-xss>.csv');
+  const row = app.el('#result-rows tr[data-row="2"]');
+  row.querySelector('[data-detail-row]').click();
+  const html = window.document.body;
+  assert.equal(html.querySelectorAll('[data-xss]').length, 0, 'nenhum texto da planilha virou elemento');
+  for (const text of [name, code, reason]) assert.ok(row.textContent.includes(text) || app.el('#item-panel-content').textContent.includes(text), text);
+  assert.ok(app.el('#location-filter').textContent.includes(local), 'filtro de local');
+  assert.equal(row.querySelector('[data-copy-code]').dataset.copyCode, code, 'atributo com aspas continua inteiro');
+  assert.ok(app.el('#topbar-file').textContent.includes('<em data-xss>.csv'), 'nome do arquivo');
+  assert.ok(app.el('#item-panel-content').textContent.includes(name), 'detalhes');
+});
+
+test('painel publicado que falha depois de ler os dados avisa e não fica pela metade', async t => {
+  // Versão certa, mas sem mapeamento: a falha vem ao montar a tela, não ao ler o JSON.
+  const data = { version: 1, sheet: { name: 'x', headerRow: 0, rows: [['Produto'], ['A']] }, mapping: null, mode: 'generic', settings: {} };
+  const app = await boot(t, { body: `<script id="panel-data" type="application/json">${JSON.stringify(data)}</script>` });
+  await waitFor(() => app.el('#message').textContent);
+  assert.match(app.el('#message').textContent, /^Não foi possível abrir os dados do painel \(.+\)\. Gere o painel de novo no app\.$/);
+  assert.equal(app.el('#message').className, 'message error');
+  assert.equal(app.el('.shell').classList.contains('has-data'), false);
+  assert.equal(app.el('#workspace').hidden, true);
+});
+
 test('SC aberta que não cobre o necessário: aviso explícito na tabela, nos detalhes e na exportação', async t => {
   const app = await boot(t);
   await app.load({ name: 'REL_SNAC0540.CSV', text: async () => `${SNAC_HEADER}7609604;Compra confirmada;10/10/2026;1;1001;4;7222987;3;Compra confirmada;` }, '#purchase-input');

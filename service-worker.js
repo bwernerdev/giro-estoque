@@ -22,6 +22,7 @@ const APP_SHELL = [
   './src/export-data.js',
   './src/icons.js',
   './src/import.js',
+  './src/import.worker.js',
   './src/main.js',
   './src/purchases.js',
   './src/saved-import.js',

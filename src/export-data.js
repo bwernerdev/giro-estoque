@@ -13,7 +13,7 @@ function formatCurrency(value, fractionDigits = 2) {
 }
 
 function unitPriceValue(row) {
-  if (row.stock == null || row.stockValue == null) return null;
+  if (row.stock === null || row.stock === undefined || row.stockValue === null || row.stockValue === undefined) return null;
   const stock = Number(row.stock);
   const totalValue = Number(row.stockValue);
   if (!Number.isFinite(stock) || !Number.isFinite(totalValue) || stock === 0) return null;
@@ -84,6 +84,8 @@ export function buildExportData(rows, mode, { includeDaysSince = false } = {}) {
 export function csvField(value) {
   let text = typeof value === 'number' ? String(value).replace('.', ',') : String(value ?? '');
   // Quoting CSV separators alone does not stop spreadsheet formula interpretation.
+  // Control characters before the formula sign are part of the check, on purpose.
+  // eslint-disable-next-line no-control-regex
   if (typeof value === 'string' && (/^[\s\u0000-\u001f]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text))) text = "'" + text;
   return `"${text.replace(/"/g, '""')}"`;
 }

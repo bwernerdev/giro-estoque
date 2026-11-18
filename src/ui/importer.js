@@ -61,26 +61,33 @@ export function createImporter(ui) {
     else setAttachState('#purchase-field', '', 'Escolha ou arraste o arquivo');
   }
   // Painel publicado: abre direto com os dados embutidos, sem importar nada.
+  // Qualquer erro até a tabela aparecer (dados, versão, análise, desenho) vira aviso, sem painel pela metade.
   async function openEmbeddedPanel() {
-    let data;
-    try { data = readPanelData(panelSource.textContent); }
-    catch (error) {
-      message(`Não foi possível abrir os dados do painel (${error.message}). Gere o painel de novo no app.`, 'error');
-      return;
+    try {
+      const data = readPanelData(panelSource.textContent);
+      state.sheets = [data.sheet];
+      state.sheet = 0;
+      state.mapping = data.mapping;
+      state.mode = data.mode;
+      state.numberFormat = data.numberFormat;
+      for (const key of ['generic', 'giro']) Object.assign(state.settings[key], data.settings?.[key]);
+      state.fileName = data.fileName;
+      state.importedAt = data.importedAt;
+      state.panelGeneratedAt = data.generatedAt;
+      state.purchases = data.purchases;
+      resetDashboardState(state);
+      await openPanel();
+      ui.playEntrance();
+    } catch (error) {
+      closePanel();
+      message(`Não foi possível abrir os dados do painel (${error?.message ?? error}). Gere o painel de novo no app.`, 'error');
     }
-    state.sheets = [data.sheet];
-    state.sheet = 0;
-    state.mapping = data.mapping;
-    state.mode = data.mode;
-    state.numberFormat = data.numberFormat;
-    for (const key of ['generic', 'giro']) Object.assign(state.settings[key], data.settings?.[key]);
-    state.fileName = data.fileName;
-    state.importedAt = data.importedAt;
-    state.panelGeneratedAt = data.generatedAt;
-    state.purchases = data.purchases;
-    resetDashboardState(state);
-    await openPanel();
-    ui.playEntrance();
+  }
+  // Volta à tela inicial (sem tabela nem nome de arquivo) depois de uma abertura que falhou.
+  function closePanel() {
+    el('.shell').classList.remove('has-data', 'is-loading');
+    el('#workspace').hidden = true;
+    el('#topbar-file').hidden = true;
   }
 
   // SNAC0540 lido: fica guardado em state.purchases e vale para o Analítico atual ou o próximo.
@@ -169,7 +176,19 @@ export function createImporter(ui) {
       message(`Analítico da última importação reaberto (${state.fileName}). Agora importe o SNAC0540 para gerar o painel.`);
       return;
     }
-    await openPanel();
+    try {
+      await openPanel();
+    } catch (error) {
+      // Guardado por uma versão anterior do app e não abre mais: apaga e volta à tela inicial.
+      if (importRun) return; // a pessoa já está importando outro arquivo
+      try { await clearSavedImport(); } catch { /* sem armazenamento */ }
+      Object.assign(state, { sheets: [], sheet: 0, mapping: {}, mode: 'auto', purchases: null, fileName: '', importedAt: null, allResults: [], results: [] });
+      savedImportKey = '';
+      closePanel();
+      resetAttachFields();
+      message(`Não foi possível reabrir a última importação (${error?.message ?? error}). Ela foi apagada deste navegador: importe as planilhas de novo.`, 'error');
+      return;
+    }
     message('Planilhas da última importação reabertas (guardadas neste navegador). Para apagar, use o × ao lado do nome do arquivo.');
     ui.playEntrance();
   }

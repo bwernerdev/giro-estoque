@@ -40,6 +40,9 @@ export async function importFile(file) {
     return [{ name: 'CSV', rows: parseCsv(content.replace(/^\uFEFF/, ''), separator) }];
   }
   if (!/\.xlsx$/i.test(file.name)) throw new Error('Use um arquivo .xlsx ou .csv.');
+  // Primeiro no worker (a tela não congela); sem worker (testes, navegador bloqueando), aqui mesmo.
+  const sheets = await readXlsxInWorker(await file.arrayBuffer());
+  if (sheets) return sheets;
   const ExcelJS = globalThis.ExcelJS;
   if (!ExcelJS) throw new Error('A biblioteca de Excel não foi carregada. Recarregue a página.');
   const workbook = new ExcelJS.Workbook();
@@ -52,6 +55,25 @@ export async function importFile(file) {
       rows.push(cells);
     });
     return { name: sheet.name, rows };
+  });
+}
+
+/**
+ * Lê o .xlsx em src/import.worker.js. Devolve as abas, null quando não há worker ou ele não
+ * carregou (quem chama lê na página), ou rejeita com o erro de leitura da planilha.
+ * O buffer é transferido ao worker: para ler de novo, peça outro ao arquivo.
+ */
+export function readXlsxInWorker(buffer, WorkerClass = globalThis.Worker) {
+  if (typeof WorkerClass !== 'function') return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    let worker;
+    try { worker = new WorkerClass(new URL('./import.worker.js', import.meta.url)); }
+    catch { resolve(null); return; }
+    const finish = (settle, value) => { worker.terminate(); settle(value); };
+    worker.onmessage = ({ data }) => (data?.error ? finish(reject, new Error(data.error)) : finish(resolve, data?.sheets ?? null));
+    worker.onerror = event => { event.preventDefault?.(); finish(resolve, null); };
+    worker.onmessageerror = () => finish(resolve, null);
+    worker.postMessage({ buffer }, [buffer]);
   });
 }
 

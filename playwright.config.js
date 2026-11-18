@@ -8,6 +8,9 @@ export default defineConfig({
     channel: 'chrome',
     headless: true,
     reducedMotion: 'reduce',
+    // Iguais ao computador da equipe, para o CI (GitHub Actions) dar o mesmo resultado.
+    locale: 'pt-BR',
+    timezoneId: 'America/Sao_Paulo',
     trace: 'retain-on-failure',
   },
   webServer: {

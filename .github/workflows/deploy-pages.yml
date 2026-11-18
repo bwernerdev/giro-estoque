@@ -18,6 +18,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/Sao_Paulo # datas dos testes iguais às da equipe
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -31,11 +33,27 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      # Nada é publicado se algo falhar (lint, testes unitários, build ou e2e).
+      - name: Lint
+        run: npm run lint
+
       - name: Testes unitários
         run: npm test
 
       - name: Build do app
         run: npm run build
+
+      # e2e no build acima (scripts/serve-dist.mjs + Google Chrome, que já vem no runner ubuntu-latest).
+      - name: Testes e2e
+        run: npx playwright test
+
+      - name: Guardar rastros do e2e (falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-rastros
+          path: test-results/
+          retention-days: 7
 
       - name: Publicar artefato do Pages
         uses: actions/upload-pages-artifact@v3
