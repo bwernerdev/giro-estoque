@@ -326,7 +326,8 @@ test('SC aberta: desconta da sugestão, compra o restante e pede revisão quando
   assert.equal(scCoverageText(low, { short: true }), 'SC insuficiente: cobre 2 de 9, não chega ao mín.');
   assert.match(scCoverageText(low), /faltam 7\. Com elas o saldo vai a 3 \(mínimo 4 \/ máximo 10\), ainda abaixo do mínimo\.$/);
   assert.equal(results[1].actions.includes('AJUSTAR MIN/MAX'), false, 'SC aberta tira o AJUSTAR MIN/MAX');
-  assert.match(results[1].reason, /Revisar SC: SC aberta \(5 a receber\): SC 3 .*mas o item não precisa de compra \(saldo 12 no mínimo \(2\) ou acima\)/);
+  assert.match(results[1].reason, /Revisar SC: SC aberta \(5 a receber\): SC 3 .*mas o item não precisa de compra \(saldo 12 no mínimo \(2\) ou acima\)\. Com a SC o saldo vai a 17, acima do máximo \(5\)\. Confira/);
+  assert.match(results[2].reason, /Com a SC o saldo vai a 5, sem passar do máximo \(5\)\./);
   assert.match(results[2].reason, /120 dias sem requisição \(90 ou mais\)/);
   assert.match(results[3].reason, /local obsoleto \(1 ou 298\)/);
   assert.equal(results[1].toBuy, null);

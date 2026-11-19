@@ -183,8 +183,14 @@ function purchaseActions({ sku, stock, minimum, maximum, daysSince, obsoleteLoca
       blocked && 'item bloqueado',
       willBlock && 'recomendação de bloqueio nesta análise',
     ].filter(Boolean);
+    // Onde o saldo chega quando a SC entrar, frente aos limites (ajuda a decidir se cancela).
+    const after = stock + onOrder;
+    const limitNote = maximum !== null && after > maximum ? `, acima do máximo (${formatNumber(maximum)})`
+      : minimum !== null && after < minimum ? `, ainda abaixo do mínimo (${formatNumber(minimum)})`
+        : maximum !== null ? `, sem passar do máximo (${formatNumber(maximum)})` : '';
+    const afterText = `Com ${open.length === 1 ? 'a SC' : 'as SCs'} o saldo vai a ${formatNumber(after)}${limitNote}.`;
     actions.push('REVISAR SC');
-    why.push(`Revisar SC: ${openText}, mas o item não precisa de compra (${reasons.join('; ')}). Confira se a compra ainda faz sentido.`);
+    why.push(`Revisar SC: ${openText}, mas o item não precisa de compra (${reasons.join('; ')}). ${afterText} Confira se a compra ainda faz sentido.`);
   }
   return { actions, why, purchase, toBuy, scCoverage, onOrder: open.length ? onOrder : null };
 }
