@@ -1,45 +1,10 @@
 // Detalhes do item: gaveta (dialog#item-panel) ou painel fixo à direita (≥1700 px), cópia do código.
-import { formatNumber, purchaseRequestText, scCoverageText, stockLocation } from '../analysis.js';
+import { stockLocation } from '../analysis.js';
 import { svgIcon } from '../icons.js';
-import { escapeHtml, realCurrency } from './markup.js';
+import { codeHtml, detailFields, escapeHtml } from './markup.js';
 
 export function createDetails(ui) {
   const { state, el } = ui;
-  function limitsText(row) {
-    if (row.minimum === null || row.minimum === undefined || row.maximum === null || row.maximum === undefined) return formatNumber(row.stock);
-    const status = row.stock < row.minimum ? 'abaixo do mínimo' : row.stock > row.maximum ? 'acima do máximo' : 'dentro dos limites';
-    return `${formatNumber(row.stock)} · mín. ${formatNumber(row.minimum)} / máx. ${formatNumber(row.maximum)} (${status})`;
-  }
-  function detailFields(reason, row) {
-    const entries = [];
-    const add = (label, value, html = false) => { if (value !== '' && value !== null && value !== undefined) entries.push({ label, value, html }); };
-    const filled = value => value !== null && value !== undefined;
-    if (ui.isAnaliticoMode()) {
-      const elapsed = filled(row.daysSince) ? `${formatNumber(row.daysSince)} dias desde a última requisição` : '';
-      const notes = reason.split(' · ').filter(part => part !== elapsed && part !== row.blockReason && part !== `Id Bloqueio: ${row.blockId}`).join(' · ');
-      add('Ação recomendada', row.actions?.length ? row.actions.map(ui.badgeHtml).join(' ') : '', true);
-      add(reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Por que', notes);
-      add('Saldo', limitsText(row));
-      add('Sugestão de compra', filled(row.toBuy) ? `${formatNumber(row.toBuy)} (até o máximo${filled(row.onOrder) ? `, descontado o que está em SC aberta` : ''})` : '');
-      add('Em SC aberta', filled(row.onOrder) ? `${formatNumber(row.onOrder)} a receber` : '');
-      add(row.scCoverage && !row.scCoverage.sufficient ? 'SC insuficiente' : 'Cobertura da SC', scCoverageText(row.scCoverage));
-      add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
-      add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
-      add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
-      add('Giro do estoque', filled(row.coverage) ? `${formatNumber(row.coverage)} dias` : '');
-      add('Classificação', row.classification);
-      add('Última requisição', row.lastRequest);
-      add('Tempo sem requisição', elapsed);
-      add('Bloqueio', [...new Set([row.blockReason, row.blockId].filter(Boolean))].join(' · '));
-    } else {
-      add('Motivo da ação', reason);
-    }
-    return `<dl class="detail-fields">${entries.map(({ label, value, html }) => `<div><dt>${escapeHtml(label)}</dt><dd>${html ? value : escapeHtml(value)}</dd></div>`).join('')}</dl>`;
-  }
-  function detailsHtml(reason, row) {
-    if (!reason) return '<span class="no-details">—</span>';
-    return `<button type="button" class="icon-button details-button" data-detail-row="${row.row}" aria-haspopup="dialog" aria-label="Ver detalhes" title="Ver detalhes">${svgIcon('chevronRight')}</button>`;
-  }
   let panelTrigger = null;
   let panelRow = null;
   const DOCK_MIN_WIDTH = 1700;
@@ -69,7 +34,7 @@ export function createDetails(ui) {
     el(`#result-rows tr[data-row="${row.row}"]`)?.classList.add('is-selected');
     const identity = [stockLocation(row) && `Local ${stockLocation(row)}`, row.shelfCode && `Prateleira ${row.shelfCode}`, row.partitionCode && `Repartição ${row.partitionCode}`].filter(Boolean).join(' · ');
     const parts = panelParts();
-    parts.content.innerHTML = `<strong class="panel-item-name">${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${row.sku ? `<div class="panel-item-code"><span>Código</span>${ui.codeHtml(row.sku)}</div>` : ''}${identity ? `<p class="panel-item-location">${escapeHtml(identity)}</p>` : ''}${detailFields(row.reason, row)}`;
+    parts.content.innerHTML = `<strong class="panel-item-name">${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${row.sku ? `<div class="panel-item-code"><span>Código</span>${codeHtml(row.sku)}</div>` : ''}${identity ? `<p class="panel-item-location">${escapeHtml(identity)}</p>` : ''}${detailFields(row.reason, row, ui.isAnaliticoMode())}`;
     const neighbours = detailRows();
     const index = neighbours.indexOf(row);
     parts.prev.disabled = index <= 0;
@@ -164,5 +129,5 @@ export function createDetails(ui) {
     panelTrigger = null;
     panelRow = null;
   });
-  return { limitsText, detailFields, detailsHtml, panelParts, clearDock, closeItemPanel, fillItemPanel, detailRows, openItemPanel, stepItemPanel, copyCode, docked };
+  return { closeItemPanel, openItemPanel, copyCode };
 }

@@ -312,5 +312,5 @@ export function createImporter(ui) {
     stopDragging();
     loadFiles(event.dataTransfer.files);
   });
-  return { importStamp, renderImportContext, setAttachState, resetAttachFields, renderPurchaseContext, openEmbeddedPanel, setPurchases, purchaseSummary, loadStock, persistImport, restoreSavedImport, clearImport, openPanel, loadFiles, stampPrefix, importKey, waitingPanel, draggingFiles, stopDragging };
+  return { renderImportContext, openEmbeddedPanel, persistImport, restoreSavedImport, waitingPanel };
 }

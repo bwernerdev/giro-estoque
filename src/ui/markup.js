@@ -1,5 +1,7 @@
 // Marcação pura (sem DOM nem estado): listas de ações, formatação em reais, cartões, gráfico,
-// indicadores e o relatório de resumo. Testada direto em tests/dashboard.test.js.
+// indicadores, relatório de resumo e as peças da tabela e dos detalhes. Testada direto em
+// tests/dashboard.test.js e tests/markup.test.js.
+import { formatNumber, purchaseRequestText, purchaseStage, scCoverageText, stockLocation } from '../analysis.js';
 import { prioritizeActionCounts } from '../dashboard.js';
 import { svgIcon } from '../icons.js';
 
@@ -138,4 +140,109 @@ export function itemCurrency(value) { return value === null || value === undefin
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
+
+// Tabela e detalhes do item: colunas, selos de ação, código copiável, posição, dicas de compra
+// e os campos do painel de detalhes. Recebem a linha já analisada; nada de estado.
+export function resultColumns(analitico, giro) {
+  if (analitico) return [
+    { label: 'Descrição', key: 'item' },
+    { label: 'Código', key: 'sku' },
+    { label: 'Posição', key: 'localCode', sortLabel: 'posição (local)' },
+    { label: 'Qtd. atual', key: 'stock' },
+    { label: 'Mín. / Máx', key: 'minimum' },
+    { label: 'Valor', key: 'stockValue', sortLabel: 'valor do saldo', hint: 'Valor do saldo. A barra compara cada item com o de maior valor entre os filtrados.' },
+    { label: 'Ação', key: 'action' },
+    { label: 'Sem requisição', key: 'daysSince', sortLabel: 'dias sem requisição' },
+  ];
+  if (giro) return [
+    { label: 'Item / Filial', key: 'item' },
+    { label: 'Estoque (R$)', key: 'stockValue' },
+    { label: 'Consumo (R$)', key: 'consumption' },
+    { label: 'Giro', key: 'coverage' },
+    { label: 'Recomendação', key: 'action' },
+    { label: 'Motivo', key: 'reason' },
+  ];
+  return [
+    { label: 'Item', key: 'item' },
+    { label: 'Estoque', key: 'stock' },
+    { label: 'Vendas / 30d', key: 'sales' },
+    { label: 'Cobertura', key: 'coverage' },
+    { label: 'Recomendação', key: 'action' },
+    { label: 'Motivo', key: 'reason' },
+  ];
+}
+export function columnClass(key) {
+  const names = { item: 'descricao', sku: 'codigo', localCode: 'posicao', shelfCode: 'prateleira', partitionCode: 'reparticao', stock: 'estoque', stockValue: 'valor', sales: 'consumo', consumption: 'consumo', coverage: 'cobertura', minimum: 'limites', action: 'acao', daysSince: 'detalhes', reason: 'detalhes' };
+  return `col-${names[key]}`;
+}
+export function urgentAction(action) {
+  return ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'VERIFICAR DADOS'].includes(String(action).toUpperCase());
+}
+export function badgeHtml(action) {
+  return `<span class="badge ${slug(action)}${urgentAction(action) ? ' urgent-action' : ''}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span><span class="badge-label">${actionLabelHtml(action)}</span></span>`;
+}
+// Local, prateleira e repartição em uma coluna (ex.: 7 · 0 · I). Partes vazias no fim
+// somem ("7" em vez de "7 · — · —"); vazia no meio vira "—" para a ordem não mudar.
+// O title sempre nomeia as três.
+export function positionHtml(row) {
+  const parts = [stockLocation(row), row.shelfCode, row.partitionCode];
+  const title = [['Local', parts[0]], ['Prateleira', parts[1]], ['Repartição', parts[2]]].map(([label, value]) => `${label} ${value || '—'}`).join(' · ');
+  const shown = parts.map(value => value || '—');
+  while (shown.length > 1 && !parts[shown.length - 1]) shown.pop();
+  return `<span title="${escapeHtml(title)}">${escapeHtml(shown.join(' · '))}</span>`;
+}
+export function codeHtml(code) {
+  const value = String(code ?? '');
+  if (!value) return '';
+  return `<span class="item-code"><span>${escapeHtml(value)}</span><button type="button" class="copy-code" data-copy-code="${escapeHtml(value)}" aria-label="Copiar código ${escapeHtml(value)}" title="Copiar código">${svgIcon('copy')}</button></span>`;
+}
+// Sugestão de compra (até o máximo) e a SC do SNAC0540, abaixo da célula.
+export function buyHint(row) {
+  if (row.toBuy === null || row.toBuy === undefined) return '';
+  const coverage = row.scCoverage;
+  const full = escapeHtml(scCoverageText(coverage));
+  if (coverage?.sufficient) return `<small class="cell-hint" title="${full}">${escapeHtml(scCoverageText(coverage, { short: true }))}</small>`;
+  // SC aberta que não cobre o necessário: aviso explícito acima da sugestão de compra.
+  const alert = coverage ? `<small class="cell-hint is-alert" title="${full}">${escapeHtml(scCoverageText(coverage, { short: true }))}</small>` : '';
+  return `${alert}<small class="cell-hint" title="Sugestão de compra: ${formatNumber(row.toBuy)} para chegar ao máximo${coverage ? `, já descontados ${formatNumber(row.onOrder)} em SC aberta` : ''}">comprar ${formatNumber(row.toBuy)} até o máx.</small>`;
+}
+export function purchaseHint(row) {
+  if (!row.purchase) return '';
+  return `<small class="cell-hint" title="${escapeHtml(purchaseRequestText(row.purchase))}">SC ${escapeHtml(row.purchase.request)} · ${escapeHtml(purchaseStage(row.purchase))}</small>`;
+}
+export function limitsText(row) {
+  if (row.minimum === null || row.minimum === undefined || row.maximum === null || row.maximum === undefined) return formatNumber(row.stock);
+  const status = row.stock < row.minimum ? 'abaixo do mínimo' : row.stock > row.maximum ? 'acima do máximo' : 'dentro dos limites';
+  return `${formatNumber(row.stock)} · mín. ${formatNumber(row.minimum)} / máx. ${formatNumber(row.maximum)} (${status})`;
+}
+export function detailFields(reason, row, analitico) {
+  const entries = [];
+  const add = (label, value, html = false) => { if (value !== '' && value !== null && value !== undefined) entries.push({ label, value, html }); };
+  const filled = value => value !== null && value !== undefined;
+  if (analitico) {
+    const elapsed = filled(row.daysSince) ? `${formatNumber(row.daysSince)} dias desde a última requisição` : '';
+    const notes = reason.split(' · ').filter(part => part !== elapsed && part !== row.blockReason && part !== `Id Bloqueio: ${row.blockId}`).join(' · ');
+    add('Ação recomendada', row.actions?.length ? row.actions.map(badgeHtml).join(' ') : '', true);
+    add(reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Por que', notes);
+    add('Saldo', limitsText(row));
+    add('Sugestão de compra', filled(row.toBuy) ? `${formatNumber(row.toBuy)} (até o máximo${filled(row.onOrder) ? `, descontado o que está em SC aberta` : ''})` : '');
+    add('Em SC aberta', filled(row.onOrder) ? `${formatNumber(row.onOrder)} a receber` : '');
+    add(row.scCoverage && !row.scCoverage.sufficient ? 'SC insuficiente' : 'Cobertura da SC', scCoverageText(row.scCoverage));
+    add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
+    add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
+    add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
+    add('Giro do estoque', filled(row.coverage) ? `${formatNumber(row.coverage)} dias` : '');
+    add('Classificação', row.classification);
+    add('Última requisição', row.lastRequest);
+    add('Tempo sem requisição', elapsed);
+    add('Bloqueio', [...new Set([row.blockReason, row.blockId].filter(Boolean))].join(' · '));
+  } else {
+    add('Motivo da ação', reason);
+  }
+  return `<dl class="detail-fields">${entries.map(({ label, value, html }) => `<div><dt>${escapeHtml(label)}</dt><dd>${html ? value : escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+}
+export function detailsHtml(reason, row) {
+  if (!reason) return '<span class="no-details">—</span>';
+  return `<button type="button" class="icon-button details-button" data-detail-row="${row.row}" aria-haspopup="dialog" aria-label="Ver detalhes" title="Ver detalhes">${svgIcon('chevronRight')}</button>`;
 }

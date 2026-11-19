@@ -164,5 +164,5 @@ export function createExport(ui) {
       else exportCsv();
     } catch (error) { message(error.message || 'Não foi possível exportar os itens.', 'error'); }
   }));
-  return { exportData, exportName, saveBlob, exportCsv, exportXlsx, exportPdf, exportSummaryPdf, generatePanel, fileSize };
+  return { exportXlsx };
 }

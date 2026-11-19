@@ -1,28 +1,17 @@
 // Configuração: aba, mapeamento das colunas, tipo de análise e critérios.
-import { ANALITICO_REQUIRED_KEYS, detectAnalysisMode, fields, suggestMapping } from '../analysis.js';
+import { fields, suggestMapping } from '../analysis.js';
 import { svgIcon } from '../icons.js';
-import { selectDataRows } from '../import.js';
 import { escapeHtml } from './markup.js';
 
 export function createConfig(ui) {
   const { state, el } = ui;
+  // Consultas ao estado vêm de selectors.js (montado antes).
+  const { currentSheet, requiredKeys, isAnaliticoMode, isGiroMode } = ui;
   function setConfigExpanded(expanded) {
     el('#config-grid').hidden = !expanded;
     el('#config-toggle').setAttribute('aria-expanded', String(expanded));
     el('#config-toggle').innerHTML = `${svgIcon('adjust')}<span>${expanded ? 'Fechar configuração' : 'Abrir configuração'}</span>`;
     el('#config-toggle').title = expanded ? 'Fechar configuração' : 'Abrir configuração';
-  }
-  function currentSheet() { return state.sheets[state.sheet]; }
-  function dataRows() { return selectDataRows(currentSheet().rows, state.mapping, currentSheet().headerRow + 1); }
-
-  function isMapped(key) { return state.mapping[key] >= 0; }
-  function currentMode() { return state.mode === 'auto' ? detectAnalysisMode(state.mapping) : state.mode; }
-  function isGiroMode() { return currentMode() === 'giro'; }
-  function isAnaliticoMode() { return currentMode() === 'analitico'; }
-  function requiredKeys() {
-    if (isAnaliticoMode()) return ANALITICO_REQUIRED_KEYS;
-    if (isGiroMode()) return ['item', 'stockValue', 'consumption'];
-    return ['item', 'stock', 'sales'];
   }
   function renderSettings() {
     el('#criteria-panel').hidden = isAnaliticoMode();
@@ -71,5 +60,5 @@ export function createConfig(ui) {
     }));
   }
   el('#config-toggle').addEventListener('click', () => setConfigExpanded(el('#config-grid').hidden));
-  return { setConfigExpanded, currentSheet, dataRows, isMapped, currentMode, isGiroMode, isAnaliticoMode, requiredKeys, renderSettings, renderMapping };
+  return { setConfigExpanded, renderSettings, renderMapping };
 }

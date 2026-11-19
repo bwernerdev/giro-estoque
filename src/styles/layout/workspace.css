@@ -1,0 +1,203 @@
+/* Espaço de trabalho: barra superior depois da importação, cabeçalho do resumo, indicadores em reais, filtros de posição e painel de detalhes fixo.
+   Parte do layout; a ordem de carga está em ../index.css. */
+
+/* ── Espaço de trabalho: conteúdo e painel de detalhes ──────────────────────── */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s4);
+  margin-top: var(--s5);
+}
+
+.workspace-main {
+  min-width: 0;
+}
+
+/* Arquivo e configuração ficam na barra superior depois da importação. */
+.shell:not(.has-data) .topbar-data {
+  display: none;
+}
+
+.topbar-data {
+  min-width: 0;
+}
+
+/* SNAC0540 importado: o botão ganha o tom de selecionado. */
+.purchase-file.is-loaded {
+  border-color: var(--ring);
+  color: var(--text-strong);
+}
+
+/* Cabeçalho "Resumo" com o botão de recolher à direita; os valores em reais logo abaixo,
+   na largura toda (o botão não ocupa mais uma coluna ao lado deles). */
+.overview-top {
+  display: grid;
+  gap: var(--s2);
+}
+
+.overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-height: var(--h-control-sm);
+}
+
+.overview-title {
+  color: var(--text-strong);
+  font: 700 var(--fs-md) / 1.3 var(--font-display);
+}
+
+.summary-toggle {
+  flex: none;
+  gap: var(--s1);
+  height: var(--h-control-sm);
+  padding-inline: var(--s2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* Resumo recolhido: só os valores em reais, mais baixos. */
+html[data-summary="collapsed"] .money-kpi {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s2);
+  padding-block: var(--s2);
+}
+
+html[data-summary="collapsed"] .money-kpi strong {
+  font-size: var(--fs-xl);
+}
+
+html[data-summary="collapsed"] .money-kpi small {
+  display: none;
+}
+
+/* Indicadores em reais: valor total, parado há 180 dias ou mais e em locais obsoletos. */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s2);
+}
+
+.money-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--tone-line, var(--accent));
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  position: relative;
+  isolation: isolate;
+  transition: box-shadow var(--dur) ease, transform var(--dur) var(--ease-out);
+}
+
+.money-kpi[hidden] {
+  display: none;
+}
+
+.money-kpi.idle {
+  --tone-line: var(--warning-line);
+}
+
+.money-kpi.obsolete {
+  --tone-line: var(--danger-line);
+}
+
+.total-label {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+/* Valores em reais são o destaque da página: maiores que as contagens dos cartões. */
+.money-kpi strong {
+  color: var(--text-strong);
+  font: 700 26px / 1.15 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.money-kpi small {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* Filtros de posição. O select de ação continua disponível só para leitores de tela
+   e teclado; as abas de ação são o controle visual. */
+.table-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s1);
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.filter-field > span:first-child {
+  padding-left: 2px;
+  line-height: 1.2;
+}
+
+.table-filters select {
+  width: 100%;
+  min-width: 0;
+}
+
+.filter-action {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.hidden-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hidden-toggle:has(input:focus-visible) {
+  border-radius: 4px;
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+/* Painel de detalhes fixo (telas muito largas) */
+.detail-dock {
+  display: none;
+  flex-direction: column;
+  max-height: calc(100vh - 2 * var(--s4));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.dock-empty {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}

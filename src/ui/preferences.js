@@ -138,5 +138,5 @@ export function createPreferences(ui) {
     try { localStorage.setItem('controle-estoque-group', state.grouped ? 'on' : 'off'); } catch { /* A escolha vale até fechar a página. */ }
     ui.renderResults();
   });
-  return { setTheme, setDensity, setSummaryCollapsed, updateViewDot, setStripedRows, readFilterPreferences, persistFilters, applyFilterPreferences };
+  return { updateViewDot, persistFilters, applyFilterPreferences };
 }

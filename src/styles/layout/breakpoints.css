@@ -1,0 +1,253 @@
+/* Pontos de quebra: 1024, 1700, abaixo de 1024, 1180, 720 e 480 px. Ficam depois das áreas para valer sobre elas.
+   Parte do layout; a ordem de carga está em ../index.css. */
+
+/* ── 1024 px ou mais: a página rola inteira ─────────────────────────────────────
+   Barra de ferramentas, cabeçalho da tabela e rodapé ficam fixos; a pesquisa fica
+   sempre visível.                                                                */
+@media (min-width: 1024px) {
+  .shell {
+    --content-max: 1760px;
+    --content-share: 96%;
+  }
+
+  /* Barra superior fixa e translúcida: o conteúdo passa desfocado por baixo. */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--topbar-glass);
+    -webkit-backdrop-filter: saturate(1.6) blur(14px);
+    backdrop-filter: saturate(1.6) blur(14px);
+  }
+
+  .table-tools {
+    position: sticky;
+    top: var(--topbar-h);
+    z-index: 4;
+    scroll-margin-top: var(--topbar-h);
+  }
+
+  .search-toggle {
+    cursor: text;
+  }
+
+  .table-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    border-radius: 0 0 var(--r-md) var(--r-md);
+    background: var(--surface);
+  }
+
+  /* Antes de importar: texto à esquerda e área de soltar o arquivo à direita. */
+  .shell:not(.has-data) main {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s7);
+    align-content: center;
+    align-items: center;
+    padding-bottom: var(--s7);
+  }
+
+  .shell:not(.has-data) #message,
+  .shell:not(.has-data) #frame-notice,
+  .shell:not(.has-data) #workspace {
+    grid-column: 1 / -1;
+  }
+
+  .shell:not(.has-data) .hero {
+    padding: 0;
+  }
+
+  .shell:not(.has-data) .upload-card {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s5);
+    min-height: 300px;
+    padding: var(--s6);
+    text-align: center;
+  }
+
+  .shell:not(.has-data) .upload-copy {
+    flex: none;
+  }
+}
+
+/* ── 1700 px ou mais: detalhes sempre à vista ao lado da tabela ─────────────── */
+@media (min-width: 1700px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) var(--dock-w);
+  }
+
+  .detail-dock {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--s4));
+    max-height: calc(100vh - var(--topbar-h) - 2 * var(--s4));
+    display: flex;
+  }
+}
+
+/* ── Abaixo de 1024 px ──────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .shell:not(.has-data) .hero {
+    padding-top: 48px;
+  }
+
+  /* Pesquisa e ações na primeira linha; filtros numa linha própria abaixo. */
+  .table-tools .table-filters {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* ── Abaixo de 1180 px: arquivo e configuração só com ícone na barra superior ── */
+@media (max-width: 1179px) {
+  .topbar-data {
+    width: var(--h-control-sm);
+    padding: 0;
+  }
+
+  .topbar-data span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+}
+
+/* ── Abaixo de 720 px ───────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    height: auto;
+    min-height: var(--topbar-h);
+    padding-block: var(--s3);
+  }
+
+  .topbar-file {
+    display: none;
+  }
+
+  .brand {
+    font-size: 15px;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .topbar-button {
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  .hero {
+    padding: 48px 0 32px;
+  }
+
+  .hero h1 {
+    font-size: clamp(34px, 11vw, 52px);
+  }
+
+  .upload-card {
+    flex-wrap: wrap;
+    padding: var(--s5);
+  }
+
+  .table-tools .table-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s2);
+  }
+
+  .table-tools .filter-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s1);
+  }
+
+  .table-tools .table-filters select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .insight-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .table-tools-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-tools-header .search-control {
+    flex: none;
+    width: 100%;
+  }
+
+  .filter-actions {
+    width: 100%;
+  }
+
+  .filter-actions .export-menu {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .filter-actions .export-menu summary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .view-options {
+    right: auto;
+    left: 0;
+  }
+
+  .table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Abaixo de 480 px ───────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .brand-light {
+    display: none;
+  }
+
+  .topbar-button {
+    width: var(--h-control);
+    padding: 0;
+  }
+
+  .topbar-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .results-counter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel {
+    padding: var(--s4);
+  }
+}

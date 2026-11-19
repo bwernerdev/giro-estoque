@@ -1,8 +1,8 @@
 // Tabela de resultados: colunas, linhas, busca, paginação, ordenação e agrupamento.
-import { agingBucket, formatNumber, purchaseRequestText, purchaseStage, scCoverageText, stockLocation } from '../analysis.js';
+import { agingBucket, formatNumber } from '../analysis.js';
 import { PAGE_SIZE, filterResults, paginate, sortResults } from '../dashboard.js';
 import { svgIcon } from '../icons.js';
-import { actionIcon, actionLabelHtml, escapeHtml, itemCurrency, slug } from './markup.js';
+import { badgeHtml, buyHint, codeHtml, columnClass, detailsHtml, escapeHtml, itemCurrency, positionHtml, purchaseHint, slug, urgentAction } from './markup.js';
 
 export function createTable(ui) {
   const { state, el, message } = ui;
@@ -14,38 +14,6 @@ export function createTable(ui) {
     el('#search-toggle').setAttribute('aria-expanded', String(expanded));
     el('#search-expansion').inert = !expanded;
   }
-  function resultColumns(analitico, giro) {
-    if (analitico) return [
-      { label: 'Descrição', key: 'item' },
-      { label: 'Código', key: 'sku' },
-      { label: 'Posição', key: 'localCode', sortLabel: 'posição (local)' },
-      { label: 'Qtd. atual', key: 'stock' },
-      { label: 'Mín. / Máx', key: 'minimum' },
-      { label: 'Valor', key: 'stockValue', sortLabel: 'valor do saldo', hint: 'Valor do saldo. A barra compara cada item com o de maior valor entre os filtrados.' },
-      { label: 'Ação', key: 'action' },
-      { label: 'Sem requisição', key: 'daysSince', sortLabel: 'dias sem requisição' },
-    ];
-    if (giro) return [
-      { label: 'Item / Filial', key: 'item' },
-      { label: 'Estoque (R$)', key: 'stockValue' },
-      { label: 'Consumo (R$)', key: 'consumption' },
-      { label: 'Giro', key: 'coverage' },
-      { label: 'Recomendação', key: 'action' },
-      { label: 'Motivo', key: 'reason' },
-    ];
-    return [
-      { label: 'Item', key: 'item' },
-      { label: 'Estoque', key: 'stock' },
-      { label: 'Vendas / 30d', key: 'sales' },
-      { label: 'Cobertura', key: 'coverage' },
-      { label: 'Recomendação', key: 'action' },
-      { label: 'Motivo', key: 'reason' },
-    ];
-  }
-  function columnClass(key) {
-    const names = { item: 'descricao', sku: 'codigo', localCode: 'posicao', shelfCode: 'prateleira', partitionCode: 'reparticao', stock: 'estoque', stockValue: 'valor', sales: 'consumo', consumption: 'consumo', coverage: 'cobertura', minimum: 'limites', action: 'acao', daysSince: 'detalhes', reason: 'detalhes' };
-    return `col-${names[key]}`;
-  }
   function renderTableHead() {
     el('#table-head').innerHTML = `<tr>${state.columns.map(column => {
       const selected = state.sortKey === column.key;
@@ -53,12 +21,6 @@ export function createTable(ui) {
       const direction = selected ? (state.sortDirection === 'asc' ? 'decrescente' : 'crescente') : 'crescente';
       return `<th class="${columnClass(column.key)}" scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-button" data-sort-key="${column.key}" aria-label="Ordenar por ${escapeHtml(column.sortLabel || column.label)}, ordem ${direction}"${column.hint ? ` title="${escapeHtml(column.hint)}"` : ''}>${escapeHtml(column.label)}</button></th>`;
     }).join('')}</tr>`;
-  }
-  function urgentAction(action) {
-    return ['BLOQUEAR', 'BLOQUEAR E TRANSFERIR OBSOLETO', 'VERIFICAR DADOS'].includes(String(action).toUpperCase());
-  }
-  function badgeHtml(action) {
-    return `<span class="badge ${slug(action)}${urgentAction(action) ? ' urgent-action' : ''}"><span class="badge-icon" aria-hidden="true">${svgIcon(actionIcon(action), 'badge-svg')}</span><span class="badge-label">${actionLabelHtml(action)}</span></span>`;
   }
   const expandedRows = new Set();
   let expansionVersion = 0;
@@ -100,21 +62,6 @@ export function createTable(ui) {
   }
   const descriptionObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleDescriptionControls) : null;
   document.fonts?.ready.then(scheduleDescriptionControls);
-  // Local, prateleira e repartição em uma coluna (ex.: 7 · 0 · I). Partes vazias no fim
-  // somem ("7" em vez de "7 · — · —"); vazia no meio vira "—" para a ordem não mudar.
-  // O title sempre nomeia as três.
-  function positionHtml(row) {
-    const parts = [stockLocation(row), row.shelfCode, row.partitionCode];
-    const title = [['Local', parts[0]], ['Prateleira', parts[1]], ['Repartição', parts[2]]].map(([label, value]) => `${label} ${value || '—'}`).join(' · ');
-    const shown = parts.map(value => value || '—');
-    while (shown.length > 1 && !parts[shown.length - 1]) shown.pop();
-    return `<span title="${escapeHtml(title)}">${escapeHtml(shown.join(' · '))}</span>`;
-  }
-  function codeHtml(code) {
-    const value = String(code ?? '');
-    if (!value) return '';
-    return `<span class="item-code"><span>${escapeHtml(value)}</span><button type="button" class="copy-code" data-copy-code="${escapeHtml(value)}" aria-label="Copiar código ${escapeHtml(value)}" title="Copiar código">${svgIcon('copy')}</button></span>`;
-  }
   function primaryAction(row) {
     const options = row.actions?.length ? row.actions : [row.action];
     return [...options].sort((a, b) => (state.actionRank.get(a) ?? 99) - (state.actionRank.get(b) ?? 99))[0];
@@ -139,20 +86,6 @@ export function createTable(ui) {
     }), { key: state.sortKey, direction: state.sortDirection });
     if (!state.grouped) return sorted;
     return sorted.sort((a, b) => (state.actionRank.get(primaryAction(a)) ?? 99) - (state.actionRank.get(primaryAction(b)) ?? 99));
-  }
-  // Sugestão de compra (até o máximo) e a SC do SNAC0540, abaixo da célula.
-  function buyHint(row) {
-    if (row.toBuy === null || row.toBuy === undefined) return '';
-    const coverage = row.scCoverage;
-    const full = escapeHtml(scCoverageText(coverage));
-    if (coverage?.sufficient) return `<small class="cell-hint" title="${full}">${escapeHtml(scCoverageText(coverage, { short: true }))}</small>`;
-    // SC aberta que não cobre o necessário: aviso explícito acima da sugestão de compra.
-    const alert = coverage ? `<small class="cell-hint is-alert" title="${full}">${escapeHtml(scCoverageText(coverage, { short: true }))}</small>` : '';
-    return `${alert}<small class="cell-hint" title="Sugestão de compra: ${formatNumber(row.toBuy)} para chegar ao máximo${coverage ? `, já descontados ${formatNumber(row.onOrder)} em SC aberta` : ''}">comprar ${formatNumber(row.toBuy)} até o máx.</small>`;
-  }
-  function purchaseHint(row) {
-    if (!row.purchase) return '';
-    return `<small class="cell-hint" title="${escapeHtml(purchaseRequestText(row.purchase))}">SC ${escapeHtml(row.purchase.request)} · ${escapeHtml(purchaseStage(row.purchase))}</small>`;
   }
   function renderResults() {
     rememberExpansions();
@@ -194,9 +127,9 @@ export function createTable(ui) {
       if (state.grouped && state.collapsedGroups.has(group)) continue;
       if (analitico) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}${buyHint(row)}</td><td>${valueCell(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}${purchaseHint(row)}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${ui.detailsHtml(row.reason, row)}</div></td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}${buyHint(row)}</td><td>${valueCell(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}${purchaseHint(row)}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
       } else {
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? valueCell(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${ui.detailsHtml(row.reason, row)}</td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? valueCell(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
       }
     }
     el('#result-rows').classList.toggle('rows-enter', Boolean(state.animateRows) && !ui.reducedMotion());
@@ -313,5 +246,5 @@ export function createTable(ui) {
     expansionVersion++;
     expandedRows.clear();
   }
-  return { setSearchExpanded, resultColumns, columnClass, renderTableHead, urgentAction, badgeHtml, expansionAttributes, rememberExpansions, descriptionHtml, updateDescriptionControls, scheduleDescriptionControls, positionHtml, codeHtml, primaryAction, rowClass, groupRowHtml, visibleResults, buyHint, purchaseHint, renderResults, changePage, resetExpansions };
+  return { renderTableHead, visibleResults, renderResults, resetExpansions };
 }

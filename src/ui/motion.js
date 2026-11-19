@@ -90,5 +90,5 @@ export function createMotion(ui) {
   });
   // Nova planilha: os números voltam a subir do zero.
   function resetCountUp() { shownNumbers.clear(); }
-  return { withTransition, countUp, playEntrance, applyTilt, trackTilt, resetTilt, resetCountUp, reducedMotion };
+  return { withTransition, countUp, playEntrance, resetCountUp, reducedMotion };
 }

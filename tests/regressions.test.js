@@ -87,7 +87,7 @@ test('fontes usadas diretamente pelo navegador formam um cache offline coerente'
   // fonte que o navegador carrega do fonte está listado (senão some no modo offline).
   const listed = [...worker.match(/const APP_SHELL = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
   for (const path of listed.filter(path => path !== './')) assert.ok(existsSync(new URL(`.${path}`, import.meta.url)), `${path} não existe`);
-  const expected = [['src/', /\.js$/], ['src/ui/', /\.js$/], ['src/styles/', /\.css$/], ['src/fonts/', /\.woff2$/]]
+  const expected = [['src/', /\.js$/], ['src/analysis/', /\.js$/], ['src/ui/', /\.js$/], ['src/styles/', /\.css$/], ['src/styles/layout/', /\.css$/], ['src/fonts/', /\.woff2$/]]
     .flatMap(([folder, pattern]) => readdirSync(new URL(`../${folder}`, import.meta.url)).filter(name => pattern.test(name)).map(name => `./${folder}${name}`));
   for (const path of expected) assert.ok(listed.includes(path), `${path} fora do cache offline`);
 });

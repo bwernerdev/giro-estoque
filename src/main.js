@@ -3,6 +3,7 @@
 // ficam o estado, os atalhos de DOM e as funções dos outros módulos (chamadas como ui.x()).
 import { renderApp } from './template.js';
 import { createContext } from './ui/context.js';
+import { createSelectors } from './ui/selectors.js';
 import { createConfig } from './ui/config.js';
 import { createMotion } from './ui/motion.js';
 import { createPreferences } from './ui/preferences.js';
@@ -28,8 +29,9 @@ if (app) {
     el('#frame-notice').hidden = !inFrame;
   }
   Object.assign(ui, { panelMode, panelSource, inFrame });
-  // A ordem importa só para o que roda ao montar: preferências usam configuração e movimento.
-  for (const create of [createConfig, createMotion, createPreferences, createTable, createDetails, createOverview, createExport, createImporter]) Object.assign(ui, create(ui));
+  // A ordem importa só para o que roda ao montar: configuração usa as consultas e preferências
+  // usam as consultas e o movimento.
+  for (const create of [createSelectors, createConfig, createMotion, createPreferences, createTable, createDetails, createOverview, createExport, createImporter]) Object.assign(ui, create(ui));
   let deferredInstallPrompt = null;
   const installButton = el('#install-app');
 

@@ -2,7 +2,7 @@
 // filtros de posição e aviso de filtros ativos.
 import { AGING_BUCKETS, agingSummary, analyze, analyzeAnalitico, analyzeGiro, fields, normalizeLocalKey, stockHealth, summarizeLocationTotal } from '../analysis.js';
 import { actionCounts, actionValues, dataIssueSummary, locationOptions, matchesLocation, matchesPosition, prioritizeActionCounts, processInChunks } from '../dashboard.js';
-import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup, escapeHtml, realCurrency, summaryGridLayout } from './markup.js';
+import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup, escapeHtml, realCurrency, resultColumns, summaryGridLayout } from './markup.js';
 
 export function createOverview(ui) {
   const { state, el, message, setProgress } = ui;
@@ -142,7 +142,7 @@ export function createOverview(ui) {
     el('#filter').value = availableActions.includes(previousFilter) ? previousFilter : '';
     el('#filter').setAttribute('aria-label', 'Filtrar ação');
     el('#result-table').className = analitico ? 'analitico-table' : 'standard-table';
-    state.columns = ui.resultColumns(analitico, giro);
+    state.columns = resultColumns(analitico, giro);
     if (!state.columns.some(column => column.key === state.sortKey)) {
       state.sortKey = '';
       state.sortDirection = 'asc';
@@ -258,5 +258,5 @@ export function createOverview(ui) {
     el('#show-hidden').checked = false;
     ui.withTransition(() => refresh({ reanalyze: false }));
   });
-  return { renderDataQuality, renderOverview, renderHiddenToggle, updatePositionFilters, refresh, updateSummarySelection, renderActiveFilters };
+  return { refresh, updateSummarySelection, renderActiveFilters };
 }

@@ -12,7 +12,7 @@ O botão **Gerar painel** (topbar, `#generate-panel`) baixa `painel-giro-estoque
 | `template.generated.html` | Gerado por `npm run build:panel` (`../../vite.panel.config.js`; roda antes do `dev` e do `build`). **Versionado** (para rodar sem build, Go Live), com o hash das fontes no comentário `fontes do painel` (`../../scripts/panel-hash.mjs`). Não editar à mão: mexeu em `src/`, rode `npm run build:panel` e commite junto; `tests/panel.test.js` falha se estiver desatualizado |
 
 ## Regras
-- O app (`main.js` + `ui/importer.js`) entra em modo painel quando acha `#panel-data`: `html[data-panel]`, abre direto (`openEmbeddedPanel`; qualquer erro até a tabela aparecer vira aviso e a tela volta ao início), sem service worker. O fim de `styles/layout.css` esconde importar, SNAC0540, configuração, Gerar painel e Excel (ExcelJS não vai no arquivo).
+- O app (`main.js` + `ui/importer.js`) entra em modo painel quando acha `#panel-data`: `html[data-panel]`, abre direto (`openEmbeddedPanel`; qualquer erro até a tabela aparecer vira aviso e a tela volta ao início), sem service worker. `styles/layout/panel.css` esconde importar, SNAC0540, configuração, Gerar painel e Excel (ExcelJS não vai no arquivo).
 - Dentro de um quadro (`window.top !== window`, pré-visualização do SharePoint): `html[data-frame]`, some o menu Exportar e aparece `#frame-notice`. Lá não funcionam download, impressão nem armazenamento (o app já trata `localStorage` com try/catch).
 - IIFE não tem `import.meta`: `vite.panel.config.js` define `import.meta.url` para `new URL(ícone, import.meta.url)` do `template.js` funcionar.
 - Mudou o formato de `buildPanelData`: suba `PANEL_VERSION` (painel antigo avisa em vez de abrir errado) e ajuste `tests/panel.test.js` e `e2e/panel.spec.js`.

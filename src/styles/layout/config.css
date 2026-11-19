@@ -1,0 +1,73 @@
+/* Configuração: aba, mapeamento das colunas e critérios.
+   Parte do layout; a ordem de carga está em ../index.css. */
+
+/* ── Configuração ───────────────────────────────────────────────────────────── */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s4);
+  margin-bottom: var(--s5);
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--s4);
+}
+
+.mapping-grid label,
+.settings-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.mapping-grid select,
+.settings-grid input {
+  width: 100%;
+}
+
+.field-label {
+  display: block;
+}
+
+.required {
+  color: var(--danger-fg);
+}
+
+.optional-fields {
+  grid-column: 1 / -1;
+  margin-top: var(--s1);
+  border-top: 1px solid var(--line-soft);
+}
+
+.optional-fields > summary {
+  padding: var(--s3) 0 var(--s1);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.optional-fields > .mapping-grid {
+  margin-top: var(--s3);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  max-width: 720px;
+}
+
+.formula-note {
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line-soft);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}

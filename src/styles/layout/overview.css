@@ -1,0 +1,310 @@
+/* Visão geral: cartões de ação, atalho de itens sem ação e gráfico por tempo sem requisição.
+   Parte do layout; a ordem de carga está em ../index.css. */
+
+/* ── Visão geral: valor total, cartões de ação e gráfico ─────────────────────────
+   O resumo continua sendo gerado como botões .summary-card (filtram a tabela);
+   aqui viram cartões de indicador. O gráfico mostra o valor do estoque por ação. */
+.results-section {
+  padding-bottom: var(--s7);
+}
+
+.overview {
+  display: grid;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+}
+
+.overview-body {
+  display: grid;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--s2);
+}
+
+/* Desktop: colunas calculadas por summaryGridLayout (src/ui/markup.js) para não sobrar
+   buraco na última linha; vaga que sobra vai para o cartão do total. */
+@media (min-width: 1024px) {
+  .summary-grid {
+    grid-template-columns: repeat(var(--summary-cols, 6), minmax(0, 1fr));
+  }
+
+  .summary-grid > .summary-card:first-child {
+    grid-column: span var(--summary-lead, 1);
+  }
+}
+
+@media (min-width: 1280px) {
+  .summary-grid {
+    grid-template-columns: repeat(var(--summary-cols-wide, 4), minmax(0, 1fr));
+  }
+
+  .summary-grid > .summary-card:first-child {
+    grid-column: span var(--summary-lead-wide, 1);
+  }
+}
+
+.summary-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: 88px;
+  padding: var(--s3);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  text-align: left;
+  appearance: none;
+  isolation: isolate;
+}
+
+/* Filete superior com o tom da ação. */
+.summary-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--tone-line, var(--line-strong));
+}
+
+.summary-card.total::before {
+  background: var(--accent);
+}
+
+/* Altura de duas linhas de rótulo: todos os cartões ficam iguais sem esticar a linha do atalho. */
+.kpi-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  min-height: 2.5em;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.kpi-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  background: var(--tone-bg, var(--neutral-bg));
+  color: var(--tone-fg, var(--neutral-fg));
+}
+
+.summary-card.total .kpi-icon {
+  background: var(--info-bg);
+  color: var(--accent-text);
+}
+
+.kpi-svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Rótulos vêm em maiúsculas das regras; aqui ficam em caixa de frase. */
+.kpi-label {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+  text-transform: lowercase;
+}
+
+/* Até duas linhas: "Bloquear e transferir obsoleto" não é cortado. */
+.chart-label {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+  text-transform: lowercase;
+}
+
+.kpi-label::first-letter,
+.chart-label::first-letter {
+  text-transform: uppercase;
+}
+
+/* Número em cima e apoio embaixo, sempre: a base dos números fica alinhada entre cartões. */
+.summary-value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.summary-value strong {
+  color: var(--text-strong);
+  font: 700 22px / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-value small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-filter {
+  cursor: pointer;
+  transition: border-color var(--dur) ease, background var(--dur) ease, box-shadow var(--dur) ease, transform var(--dur) var(--ease-out);
+}
+
+.summary-filter:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+}
+
+/* Cartão de indicador sobe um pouco com sombra ao passar o mouse; a inclinação vem
+   da seção "Hover" (fim do arquivo). */
+.summary-card.summary-filter:hover:not(:disabled) {
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+.summary-filter.is-active {
+  border-color: var(--ring);
+  background: var(--surface-selected);
+  box-shadow: 0 0 0 1px var(--ring);
+}
+
+/* Itens sem ação: atalho discreto, não um indicador. */
+.hidden-shortcut {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-self: start;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.hidden-shortcut .ui-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Gráfico: barras horizontais de uma só série (cor da marca), rótulo e valor em texto. */
+.value-chart {
+  margin: 0;
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.value-chart figcaption strong {
+  display: block;
+  color: var(--text-strong);
+  font: 700 var(--fs-md) / 1.3 var(--font-display);
+}
+
+.value-chart figcaption span {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.chart-bars {
+  display: grid;
+  gap: 2px;
+  margin-top: var(--s3);
+}
+
+/* Cada faixa é um botão que filtra a tabela. */
+.chart-row {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5em) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+  padding: 5px var(--s1);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition: background var(--dur) ease, transform var(--dur) var(--ease-out);
+}
+
+.chart-row:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.chart-row[aria-pressed="true"] {
+  border-color: var(--ring);
+  background: var(--surface-selected);
+}
+
+.chart-row:disabled {
+  cursor: default;
+  opacity: .55;
+}
+
+.chart-track {
+  height: 10px;
+}
+
+.chart-bar {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+  transition: width var(--dur-slow) var(--ease-out), opacity var(--dur) ease;
+}
+
+.chart-value {
+  display: grid;
+  justify-items: end;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chart-value small {
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+}
+
+/* Gráfico ao lado dos cartões a partir de 1280 px; abaixo disso, embaixo deles. */
+@media (min-width: 1280px) {
+  .overview-body {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    align-items: start;
+  }
+}

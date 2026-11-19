@@ -1,0 +1,387 @@
+/* Painel da tabela: ferramentas, filtros, aviso de ocultos, menu Exibir, pesquisa, contador e rodapé.
+   Parte do layout; a ordem de carga está em ../index.css. */
+
+/* ── Painel da tabela: ferramentas ──────────────────────────────────────────── */
+.table-panel {
+  container: tablepanel / inline-size;
+  margin-top: var(--s1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.table-tools {
+  display: flex;
+  align-items: center;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  background: var(--surface);
+}
+
+.table-tools-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  width: 100%;
+  min-width: 0;
+}
+
+/* Filtros de posição na barra da tabela, com o nome antes do seletor. */
+.table-tools .table-filters {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.table-tools .filter-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-tools .filter-field > span:first-child {
+  padding-left: 0;
+}
+
+.table-tools .table-filters select {
+  width: auto;
+  min-width: 96px;
+  max-width: 180px;
+}
+
+/* Com o resumo recolhido, o filtro de ação aparece aqui (os cartões ficam escondidos). */
+html[data-summary="collapsed"] .table-tools .filter-action {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+
+.menu-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.menu-dot[hidden] {
+  display: none;
+}
+
+/* Aviso de itens ocultos ao lado do contador: clicar esconde de novo. */
+.filter-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 var(--s2) 0 var(--s3);
+  border: 1px solid var(--ring);
+  border-radius: var(--r-pill);
+  background: var(--surface-selected);
+  color: var(--accent-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  background: var(--surface-hover);
+}
+
+.filter-chip[hidden] {
+  display: none;
+}
+
+.filter-chip .ui-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.filter-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s2);
+  margin-left: auto;
+}
+
+.filter-actions .export-menu summary {
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+/* Menu Exibir: opções da tabela que antes ficavam na barra lateral. */
+.view-menu summary {
+  min-width: 0;
+}
+
+.view-options {
+  min-width: 220px;
+}
+
+/* O espaço do visto fica reservado para os textos alinharem. */
+.view-options .density-check {
+  flex: none;
+  width: 16px;
+  margin-right: var(--s1);
+}
+
+/* "Mostrar itens ocultos" é um checkbox de verdade (o estado é lido em vários lugares),
+   mas aparece igual às outras opções: mesmo visto, mesma fonte e o mesmo hover. */
+.view-options .hidden-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: var(--h-control-sm);
+  gap: 0;
+  margin-top: var(--s1);
+  padding: var(--s2) var(--s3);
+  border-top: 1px solid var(--line-soft);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+}
+
+.view-options .hidden-toggle:hover {
+  background: var(--surface-hover);
+}
+
+.view-check-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.hidden-toggle:has(.view-check-input:checked) .density-check {
+  width: 16px;
+  opacity: 1;
+}
+
+.view-options .hidden-toggle[hidden] {
+  display: none;
+}
+
+/* Pesquisa: no desktop fica sempre aberta; abaixo de 1024 px recolhe até ser tocada. */
+.search-control {
+  position: relative;
+  display: grid;
+  flex: 1 1 0;
+  grid-template-columns: 128px minmax(0, 0fr);
+  align-items: center;
+  min-width: 128px;
+  min-height: var(--h-control);
+  transition: grid-template-columns .4s cubic-bezier(.22, 1, .36, 1);
+}
+
+.search-control::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 128px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  pointer-events: none;
+  transition: width .4s cubic-bezier(.22, 1, .36, 1), border-color var(--dur) ease;
+}
+
+.search-control:focus-within::before {
+  border-color: var(--ring);
+}
+
+.search-control.is-expanded {
+  grid-template-columns: var(--h-control) minmax(0, 1fr);
+}
+
+.search-control.is-expanded::before {
+  width: 100%;
+}
+
+.search-toggle {
+  position: relative;
+  z-index: 1;
+  width: 128px;
+  height: var(--h-control);
+  padding: 0 var(--s3);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  transition: width .4s cubic-bezier(.22, 1, .36, 1), color var(--dur) ease;
+}
+
+.search-toggle:hover:not(:disabled) {
+  background: transparent;
+  color: var(--focus);
+}
+
+.search-toggle:focus-visible {
+  outline: none;
+}
+
+.search-toggle > span {
+  max-width: 82px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width .28s ease, opacity .18s ease;
+}
+
+.search-control.is-expanded .search-toggle {
+  width: var(--h-control);
+  padding: 0;
+  gap: 0;
+  color: var(--accent-text);
+}
+
+.search-control.is-expanded .search-toggle > span {
+  max-width: 0;
+  opacity: 0;
+}
+
+.search-expansion {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-8px);
+  transition: opacity .24s ease, transform .4s cubic-bezier(.22, 1, .36, 1);
+}
+
+.search-control.is-expanded .search-expansion {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.search-expansion-inner {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.search-field {
+  display: block;
+  min-width: 0;
+}
+
+.search-field > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.search-label {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--h-control);
+  padding: 0 var(--s4) 0 2px;
+  color: var(--text-muted);
+}
+
+.search-label > .ui-icon {
+  display: none;
+}
+
+.search-label input {
+  align-self: stretch; /* o campo ocupa a altura toda da caixa (34 px), não só a linha do texto */
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  font-weight: 500;
+}
+
+/* Contador e filtros ativos */
+.results-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s4);
+}
+
+.results-counter {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: var(--s2) 0 10px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.results-counter strong {
+  color: var(--text-strong);
+  font-size: var(--fs-sm);
+}
+
+.active-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.active-filters button {
+  flex: none;
+}
+
+/* Rodapé e paginação */
+.table-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--line-soft);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.page-size-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.page-size-control select {
+  width: 76px;
+  height: var(--h-control-sm);
+  padding: 0 28px 0 var(--s2);
+  background-position: right 8px center;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}

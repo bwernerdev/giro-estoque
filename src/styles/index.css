@@ -3,6 +3,15 @@
 @import './tokens.css';
 @import './base.css';
 @import './components.css';
-@import './layout.css';
+@import './layout/structure.css';
+@import './layout/start.css';
+@import './layout/workspace.css';
+@import './layout/config.css';
+@import './layout/overview.css';
+@import './layout/table-tools.css';
+@import './layout/breakpoints.css';
+@import './layout/motion.css';
+@import './layout/attach.css';
+@import './layout/panel.css';
 @import './table.css';
 @import './print.css';
