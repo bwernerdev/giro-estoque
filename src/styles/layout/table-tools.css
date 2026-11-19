@@ -350,8 +350,35 @@ html[data-summary="collapsed"] .table-tools .filter-action {
   font-size: var(--fs-xs);
 }
 
-.active-filters button {
+.active-filters > button {
   flex: none;
+}
+
+/* Filtros ativos como etiquetas; cada × remove o seu. */
+.active-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.active-chips .filter-chip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.active-chips .filter-chip > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-count {
+  margin-left: var(--s1);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Rodapé e paginação */

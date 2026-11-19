@@ -20,9 +20,26 @@ export function renderApp() {
       </header>
       <main>
         <section class="hero">
-          <div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE ESTOQUE</div>
-          <h1>Entenda o giro<br>de cada <em>item.</em></h1>
-          <p>Veja o que fazer com cada item (bloquear, transferir, ajustar ou repor) e quanto valor está parado.</p>
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="eyebrow-dot"></span> ANÁLISE DE ESTOQUE</div>
+            <h1>Entenda o giro<br>de cada <em>item.</em></h1>
+            <p>Veja o que fazer com cada item (bloquear, transferir, ajustar ou repor) e quanto valor está parado.</p>
+          </div>
+          <svg class="hero-art" viewBox="0 0 320 220" aria-hidden="true" focusable="false">
+            <rect class="art-panel" x="8" y="8" width="304" height="204" rx="14"/>
+            <path class="art-shelf" d="M36 92h148M36 160h148M44 52v112M176 52v112"/>
+            <rect class="art-box" x="54" y="62" width="34" height="30" rx="3"/>
+            <rect class="art-box art-box-alert" x="94" y="70" width="26" height="22" rx="3"/>
+            <rect class="art-box" x="126" y="58" width="40" height="34" rx="3"/>
+            <rect class="art-box art-box-muted" x="54" y="128" width="44" height="32" rx="3"/>
+            <rect class="art-box" x="104" y="136" width="30" height="24" rx="3"/>
+            <rect class="art-box art-box-muted" x="140" y="122" width="26" height="38" rx="3"/>
+            <path class="art-axis" d="M210 160h82"/>
+            <rect class="art-bar" x="216" y="70" width="14" height="90" rx="3"/>
+            <rect class="art-bar" x="238" y="100" width="14" height="60" rx="3"/>
+            <rect class="art-bar art-bar-alert" x="260" y="118" width="14" height="42" rx="3"/>
+            <rect class="art-bar art-bar-alert" x="282" y="136" width="10" height="24" rx="3"/>
+          </svg>
         </section>
         <section class="upload-card" id="upload-card">
           <div class="upload-icon" aria-hidden="true">${svgIcon('upload')}</div>
@@ -32,22 +49,42 @@ export function renderApp() {
           </div>
           <div class="attach-fields" role="group" aria-label="Planilhas do processo">
             <label class="attach-field" id="stock-field">
-              <span class="attach-head"><span class="attach-icon" aria-hidden="true">${svgIcon('list')}</span><span class="attach-title">Relatório Analítico</span><span class="attach-tag">Obrigatório</span></span>
+              <span class="attach-head"><span class="attach-step" aria-hidden="true">1</span><span class="attach-icon" aria-hidden="true">${svgIcon('list')}</span><span class="attach-title">Relatório Analítico</span><span class="attach-tag">Obrigatório</span></span>
               <span class="attach-hint">Analítico do estoque (.xlsx ou .csv). Também aceita BBOG6656 ou estoque e vendas.</span>
               <span class="attach-status" id="stock-status" aria-live="polite">Escolha ou arraste o arquivo</span>
               <input id="file-input" type="file" accept=".xlsx,.csv">
             </label>
             <label class="attach-field" id="purchase-field">
-              <span class="attach-head"><span class="attach-icon" aria-hidden="true">${svgIcon('clock')}</span><span class="attach-title">SNAC0540</span><span class="attach-tag">Obrigatório</span></span>
+              <span class="attach-head"><span class="attach-step" aria-hidden="true">2</span><span class="attach-icon" aria-hidden="true">${svgIcon('clock')}</span><span class="attach-title">SNAC0540</span><span class="attach-tag">Obrigatório</span></span>
               <span class="attach-hint">Follow-up de compras (.csv ou .xlsx), exportado sem mexer nas colunas. O painel do Analítico só abre com ele.</span>
               <span class="attach-status" id="purchase-status" aria-live="polite">Escolha ou arraste o arquivo</span>
               <input id="purchase-input" type="file" accept=".csv,.xlsx">
             </label>
           </div>
+          <details class="upload-help">
+            <summary>O que cada planilha precisa ter</summary>
+            <div class="upload-help-body">
+              <div>
+                <h3><span class="attach-step" aria-hidden="true">1</span> Relatório Analítico</h3>
+                <p>Exporte com o cabeçalho original. O app reconhece as colunas pelo nome:</p>
+                <ul>
+                  <li><strong>Obrigatórias:</strong> Nm Item, Qtde Atual, Qnt Min, Qnt Max, Dif Dias, Itens Acima de 90 dias, Ds Motivo Bloqueio, Id Bloqueio e Cd Local Estoque.</li>
+                  <li><strong>Recomendadas:</strong> Cd Item (código copiável e cruzamento com as SCs), Vl Saldo (valores em reais e gráfico), Cd Prateleira e Cd Reparticao (filtros de posição), Media de Consumo e Dt Ultima Req (detalhes do item).</li>
+                </ul>
+                <p>Se algum nome for diferente, ajuste em <strong>Abrir configuração</strong> depois de importar.</p>
+              </div>
+              <div>
+                <h3><span class="attach-step" aria-hidden="true">2</span> SNAC0540</h3>
+                <p>Follow-up de compras como sai do sistema, sem apagar nem renomear colunas. O app lê os blocos SC, OF e REC: código e situação da SC, produto, quantidade, local, saldo e data de entrega da OF e a nota fiscal.</p>
+                <p>Com ele, o app desconta as SCs abertas da sugestão de compra e mostra a compra em andamento.</p>
+              </div>
+            </div>
+          </details>
           <small class="upload-note">Os dados não saem do seu computador.</small>
         </section>
         <p id="frame-notice" class="message warning" hidden>Aberto dentro do SharePoint: aqui dá para consultar, filtrar e copiar códigos. Para exportar ou imprimir, use ⋯ › Baixar e abra o arquivo baixado.</p>
         <div id="message" role="status" aria-live="polite"></div>
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden><span class="toast-icon" aria-hidden="true">${svgIcon('check')}</span><span id="toast-text"></span></div>
         <section id="loading-skeleton" class="loading-skeleton" aria-hidden="true">
           <div class="skeleton-kpis">${'<span class="skeleton-block skeleton-kpi"></span>'.repeat(3)}</div>
           <div class="skeleton-cards">${'<span class="skeleton-block skeleton-card"></span>'.repeat(6)}</div>
@@ -78,7 +115,7 @@ export function renderApp() {
                   <div id="overview-body" class="overview-body">
                     <div id="summary" class="summary-grid" role="group" aria-label="Filtrar por ação"></div>
                     <figure id="aging-chart" class="value-chart aging-chart" hidden>
-                      <figcaption><strong>Tempo sem requisição</strong><span>Valor do estoque com saldo por faixa de dias · clique para filtrar</span></figcaption>
+                      <figcaption><strong>Tempo sem requisição</strong><span>Valor do estoque com saldo por faixa de dias · 180 dias ou mais em destaque · clique para filtrar</span></figcaption>
                       <div id="aging-chart-bars" class="chart-bars" role="group" aria-label="Filtrar por tempo sem requisição"></div>
                     </figure>
                   </div>
@@ -100,12 +137,13 @@ export function renderApp() {
                           <button id="group-toggle" class="view-toggle" type="button" aria-pressed="false"><span class="density-check">${svgIcon('check')}</span><span>Agrupar por ação</span></button>
                           <label id="hidden-toggle" class="view-toggle hidden-toggle" hidden><input id="show-hidden" class="view-check-input" type="checkbox"><span class="density-check">${svgIcon('check')}</span><span id="hidden-toggle-text">Mostrar itens ocultos</span></label>
                         </div></details>
+                        <button id="shortcuts-button" class="discreet-button shortcuts-button" type="button" aria-haspopup="dialog" aria-label="Atalhos de teclado" title="Atalhos de teclado (?)"><span aria-hidden="true">?</span></button>
                         <details id="export-menu" class="export-menu"><summary class="primary-button"><span>Exportar</span>${svgIcon('chevronDown')}</summary><div class="export-options"><button type="button" data-export="xlsx">Excel (.xlsx)</button><button type="button" data-export="pdf">PDF da tabela</button><button type="button" data-export="summary">PDF de resumo (1 página)</button><button type="button" data-export="csv">CSV (.csv)</button></div></details>
                       </div>
                     </div>
                   </div>
-                  <div class="results-bar"><div class="results-counter" role="status" aria-live="polite"><strong id="filtered-count">0 de 0 itens</strong><span>conforme os filtros atuais</span></div><button id="hidden-chip" class="filter-chip" type="button" hidden><span id="hidden-chip-text">Itens ocultos incluídos</span>${svgIcon('close')}<span class="sr-only">: ocultar de novo</span></button></div>
-                  <div id="active-filters" class="active-filters" hidden><span id="active-filters-text"></span><button id="clear-filters" class="discreet-button" type="button">Limpar filtros</button></div>
+                  <div class="results-bar"><div class="results-counter" role="status" aria-live="polite"><strong id="filtered-count" aria-hidden="true">0 de 0 itens</strong><span id="filtered-count-sr" class="sr-only">0 de 0 itens</span><span>conforme os filtros atuais</span></div><button id="hidden-chip" class="filter-chip" type="button" hidden><span id="hidden-chip-text">Itens ocultos incluídos</span>${svgIcon('close')}<span class="sr-only">: ocultar de novo</span></button></div>
+                  <div id="active-filters" class="active-filters" role="group" aria-label="Filtros ativos" hidden><div id="active-filters-text" class="active-chips"></div><button id="clear-filters" class="discreet-button" type="button">Limpar tudo</button></div>
                   <div class="table-scroll"><table id="result-table"><caption class="sr-only">Resultados da análise de estoque</caption><thead id="table-head"></thead><tbody id="result-rows"></tbody></table></div>
                   <div id="table-footer" class="table-footer"><span id="page-status"></span><label class="page-size-control">Itens por página<select id="page-size"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></label><nav id="pagination" class="pagination" aria-label="Páginas de resultados" hidden><button id="page-previous" type="button">Anterior</button><span id="page-label"></span><button id="page-next" type="button">Próxima</button></nav></div>
                 </div>
@@ -119,6 +157,14 @@ export function renderApp() {
         </section>
       </main>
     </div>
+    <dialog id="shortcuts-dialog" class="shortcuts-dialog" aria-labelledby="shortcuts-title"><header class="shortcuts-header"><h2 id="shortcuts-title">Atalhos de teclado</h2><button id="shortcuts-close" class="discreet-button" type="button" aria-label="Fechar atalhos">${svgIcon('close')}</button></header><dl class="shortcuts-list">
+      <div><dt><kbd>/</kbd></dt><dd>Pesquisar item ou código</dd></div>
+      <div><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Item anterior ou próximo nos detalhes</dd></div>
+      <div><dt><kbd>Esc</kbd></dt><dd>Fechar detalhes, menus e a pesquisa vazia</dd></div>
+      <div><dt><kbd>Tab</kbd></dt><dd>Passar pelos filtros, cartões e botões da tabela</dd></div>
+      <div><dt><kbd>Enter</kbd></dt><dd>Acionar o botão em foco (o › da linha abre os detalhes)</dd></div>
+      <div><dt><kbd>?</kbd></dt><dd>Abrir ou fechar esta lista</dd></div>
+    </dl></dialog>
     <dialog id="item-panel" class="item-panel" aria-labelledby="item-panel-title"><header class="item-panel-header"><h2 id="item-panel-title">Detalhes do item</h2><div class="item-panel-nav"><button id="item-panel-prev" class="discreet-button" type="button" aria-label="Item anterior" title="Item anterior (↑)">${svgIcon('chevronUp')}</button><button id="item-panel-next" class="discreet-button" type="button" aria-label="Próximo item" title="Próximo item (↓)">${svgIcon('chevronDown')}</button><button id="item-panel-close" class="discreet-button" type="button" aria-label="Fechar detalhes">${svgIcon('close')}</button></div></header><div id="item-panel-content" class="item-panel-content"></div></dialog>
     <span id="copy-feedback" class="sr-only" role="status" aria-live="polite"></span>
     <section id="print-report" aria-hidden="true"></section>`;

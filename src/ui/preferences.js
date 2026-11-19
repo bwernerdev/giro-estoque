@@ -20,11 +20,11 @@ export function createPreferences(ui) {
     document.documentElement.dataset.density = compact ? 'compact' : 'comfortable';
     el('#density-toggle').setAttribute('aria-pressed', String(compact));
   }
-  const WIDE_DESKTOP = 1366;
+  // Compacto por padrão: mais linhas por tela. O modo padrão continua no menu Exibir.
   try {
     const savedDensity = localStorage.getItem('controle-estoque-density');
-    setDensity(savedDensity ? savedDensity === 'compact' : window.innerWidth >= WIDE_DESKTOP);
-  } catch { setDensity(window.innerWidth >= WIDE_DESKTOP); }
+    setDensity(savedDensity ? savedDensity === 'compact' : true);
+  } catch { setDensity(true); }
   try { state.grouped = localStorage.getItem('controle-estoque-group') === 'on'; } catch { state.grouped = false; }
   el('#group-toggle').setAttribute('aria-pressed', String(state.grouped));
   // Resumo recolhido: ficam só os valores em reais e o filtro de ação aparece na barra da tabela.

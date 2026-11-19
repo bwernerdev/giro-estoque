@@ -41,5 +41,22 @@ export function createContext() {
     el('#message').textContent = text;
     el('#message').className = text ? `message${type ? ` ${type}` : ''}` : '';
   }
-  return { state, el, setProgress, message };
+  // Aviso flutuante e curto (exportação concluída, código copiado...). Some sozinho; um novo
+  // aviso substitui o anterior. A região tem role=status, então o leitor de tela também lê.
+  let toastTimer = 0;
+  function toast(text, type = 'success') {
+    const box = el('#toast');
+    if (!box) return;
+    clearTimeout(toastTimer);
+    box.className = `toast is-${type}`;
+    el('#toast-text').textContent = text;
+    box.hidden = false;
+    void box.offsetWidth; // aplica o estado inicial antes da transição de entrada
+    box.classList.add('is-visible');
+    toastTimer = setTimeout(() => {
+      box.classList.remove('is-visible');
+      toastTimer = setTimeout(() => { box.hidden = true; }, 220);
+    }, 3200);
+  }
+  return { state, el, setProgress, message, toast };
 }

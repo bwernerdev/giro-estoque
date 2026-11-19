@@ -2,7 +2,7 @@
 // filtros de posição e aviso de filtros ativos.
 import { AGING_BUCKETS, agingSummary, analyze, analyzeAnalitico, analyzeGiro, fields, normalizeLocalKey, stockHealth, summarizeLocationTotal } from '../analysis.js';
 import { actionCounts, actionValues, dataIssueSummary, locationOptions, matchesLocation, matchesPosition, prioritizeActionCounts, processInChunks } from '../dashboard.js';
-import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildAgingChartMarkup, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup, escapeHtml, realCurrency, resultColumns, summaryGridLayout } from './markup.js';
+import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildAgingChartMarkup, buildFilterChips, buildHealthMarkup, buildSummaryMarkup, buildTotalMarkup, escapeHtml, realCurrency, resultColumns, summaryGridLayout } from './markup.js';
 
 export function createOverview(ui) {
   const { state, el, message, setProgress } = ui;
@@ -171,22 +171,48 @@ export function createOverview(ui) {
   function renderActiveFilters(filteredCount) {
     const parts = [];
     const query = el('#search').value.trim();
-    if (state.locationFilter) parts.push(`Local ${state.locationFilter}`);
-    if (state.shelfFilter) parts.push(`Prateleira ${state.shelfFilter}`);
-    if (state.partitionFilter) parts.push(`Repartição ${state.partitionFilter}`);
-    if (el('#filter').value) parts.push(el('#filter').value);
-    if (query) parts.push(`Busca: “${query}”`);
-    if (state.agingFilter) parts.push(`Sem requisição: ${AGING_BUCKETS.find(bucket => bucket.key === state.agingFilter)?.label ?? ''}`);
+    if (state.locationFilter) parts.push({ key: 'location', label: `Local ${state.locationFilter}` });
+    if (state.shelfFilter) parts.push({ key: 'shelf', label: `Prateleira ${state.shelfFilter}` });
+    if (state.partitionFilter) parts.push({ key: 'partition', label: `Repartição ${state.partitionFilter}` });
+    if (el('#filter').value) parts.push({ key: 'action', label: el('#filter').value });
+    if (query) parts.push({ key: 'query', label: `Busca: “${query}”` });
+    if (state.agingFilter) parts.push({ key: 'aging', label: `Sem requisição: ${AGING_BUCKETS.find(bucket => bucket.key === state.agingFilter)?.label ?? ''}` });
     const sortedColumn = state.columns.find(column => column.key === state.sortKey);
-    if (sortedColumn) parts.push(`Ordem: ${sortedColumn.sortLabel || sortedColumn.label} (${state.sortDirection === 'asc' ? 'crescente' : 'decrescente'})`);
+    if (sortedColumn) parts.push({ key: 'sort', label: `Ordem: ${sortedColumn.sortLabel || sortedColumn.label} (${state.sortDirection === 'asc' ? 'crescente' : 'decrescente'})` });
     // Itens ocultos ganham um aviso próprio, ao lado do contador, que desliga com um clique.
     const showingHidden = el('#show-hidden').checked && ui.isAnaliticoMode();
     el('#hidden-chip').hidden = !showingHidden;
     el('#hidden-chip-text').textContent = state.hiddenOnly ? 'Somente itens ocultos' : 'Itens ocultos incluídos';
     ui.updateViewDot();
     el('#active-filters').hidden = parts.length === 0;
-    el('#active-filters-text').textContent = parts.length ? `${parts.join(' · ')} · ${filteredCount} ${filteredCount === 1 ? 'item' : 'itens'}` : '';
+    el('#active-filters-text').innerHTML = parts.length ? buildFilterChips(parts, filteredCount) : '';
   }
+  // Etiqueta de filtro ativo: remove só aquele filtro e devolve o foco à próxima etiqueta.
+  function clearFilter(key) {
+    state.page = 1;
+    if (key === 'location') state.locationFilter = '';
+    else if (key === 'shelf') state.shelfFilter = '';
+    else if (key === 'partition') state.partitionFilter = '';
+    else if (key === 'action') el('#filter').value = '';
+    else if (key === 'query') el('#search').value = '';
+    else if (key === 'sort') { state.sortKey = ''; state.sortDirection = 'asc'; }
+    else if (key === 'aging') {
+      state.agingFilter = '';
+      if (state.agingRevealedHidden) {
+        el('#show-hidden').checked = false;
+        state.agingRevealedHidden = false;
+      }
+    }
+  }
+  el('#active-filters-text').addEventListener('click', event => {
+    const chip = event.target.closest('[data-clear-filter]');
+    if (!chip) return;
+    clearFilter(chip.dataset.clearFilter);
+    ui.withTransition(async () => {
+      await refresh({ reanalyze: false });
+      (el('#active-filters-text .filter-chip') ?? el('#search-toggle')).focus({ preventScroll: true });
+    });
+  });
   el('#location-filter').addEventListener('change', () => {
     state.locationFilter = el('#location-filter').value;
     state.page = 1;

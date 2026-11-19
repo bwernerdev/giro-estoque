@@ -43,6 +43,114 @@
   line-height: 1.6;
 }
 
+/* Ilustração da tela inicial: prateleira e barras em traço, só com cores dos tokens. */
+.hero-art {
+  display: none;
+}
+
+/* Abaixo do texto, para não apertar o título na coluna da tela inicial. */
+@media (min-width: 900px) and (min-height: 640px) {
+  .hero-art {
+    display: block;
+    width: min(260px, 100%);
+    height: auto;
+    margin-top: var(--s5);
+  }
+}
+
+.art-panel {
+  fill: var(--surface);
+  stroke: var(--line);
+}
+
+.art-shelf,
+.art-axis {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.art-box {
+  fill: var(--info-bg);
+  stroke: var(--info-line);
+  stroke-width: 1.5;
+}
+
+.art-box-muted {
+  fill: var(--neutral-bg);
+  stroke: var(--neutral-line);
+}
+
+.art-box-alert {
+  fill: var(--warning-bg);
+  stroke: var(--warning-line);
+}
+
+.art-bar {
+  fill: var(--accent);
+}
+
+.art-bar-alert {
+  fill: var(--warning-line);
+}
+
+/* "O que cada planilha precisa ter": ajuda recolhida abaixo dos campos de anexo. */
+.upload-help {
+  flex: 1 1 100%;
+  max-width: 760px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.upload-help summary {
+  width: fit-content;
+  color: var(--accent-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.upload-help summary:hover {
+  text-decoration: underline;
+}
+
+.upload-help-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s4);
+  margin-top: var(--s3);
+}
+
+.upload-help h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+  color: var(--text-strong);
+  font: 600 var(--fs-md) var(--font-display);
+}
+
+.upload-help p,
+.upload-help li {
+  line-height: 1.5;
+}
+
+.upload-help p + p,
+.upload-help ul + p {
+  margin-top: var(--s2);
+}
+
+.upload-help ul {
+  display: grid;
+  gap: var(--s1);
+  margin: var(--s2) 0 0;
+  padding-left: var(--s4);
+}
+
+.upload-help strong {
+  color: var(--text);
+}
+
 .upload-card {
   display: flex;
   align-items: center;

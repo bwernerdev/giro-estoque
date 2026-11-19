@@ -6,7 +6,7 @@ import { PANEL_FILE_NAME, buildPanelData } from '../panel/data.js';
 import { ANALITICO_ACTIONS, GENERIC_ACTIONS, GIRO_ACTIONS, buildSummaryReport, escapeHtml, slug } from './markup.js';
 
 export function createExport(ui) {
-  const { state, el, message } = ui;
+  const { state, el, message, toast } = ui;
   function exportData(source = ui.visibleResults(), actionValue = el('#filter').value) {
     const mode = ui.isAnaliticoMode() ? 'analitico' : ui.isGiroMode() ? 'giro' : 'generic';
     return buildExportData(source, mode, {
@@ -27,6 +27,7 @@ export function createExport(ui) {
   function exportCsv() {
     const content = buildCsv(exportData());
     saveBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), exportName('csv'));
+    toast(`CSV baixado: ${exportName('csv')}`);
   }
   async function exportXlsx(source = ui.visibleResults(), actionValue = el('#filter').value) {
     if (!globalThis.ExcelJS) throw new Error('A biblioteca de Excel não foi carregada. Recarregue a página.');
@@ -73,6 +74,7 @@ export function createExport(ui) {
     sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(rows.length + 1, 2), column: headers.length } };
     const buffer = await workbook.xlsx.writeBuffer();
     saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportName('xlsx', actionValue));
+    toast(`Excel baixado: ${exportName('xlsx', actionValue)}`);
   }
   function exportPdf() {
     const analitico = ui.isAnaliticoMode();
@@ -90,8 +92,14 @@ export function createExport(ui) {
     const local = state.locationFilter ? ` · Local: ${escapeHtml(state.locationFilter)}` : '';
     const shelf = state.shelfFilter ? ` · Prateleira: ${escapeHtml(state.shelfFilter)}` : '';
     const partition = state.partitionFilter ? ` · Repartição: ${escapeHtml(state.partitionFilter)}` : '';
-    el('#print-report').className = '';
-    el('#print-report').innerHTML = `<h1>Giro de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${shelf}${partition}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p><table><thead><tr>${columns.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([, value]) => `<td>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    // Colunas de número alinham à direita; Item e textos longos ficam mais largos.
+    const numeric = new Set(['Saldo', 'Mín./máx.', 'Dias desde a última movimentação', 'Quantidade', 'Giro (dias)', 'Estoque', 'Vendas/30 dias', 'Cobertura']);
+    const wide = new Set(['Item', 'Outros dados', 'Motivo']);
+    const cellClass = label => numeric.has(label) ? ' class="number"' : wide.has(label) ? ' class="wide"' : '';
+    const generated = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const source = state.fileName ? `${escapeHtml(state.fileName)}${ui.currentSheet() ? ` · ${escapeHtml(ui.currentSheet().name)}` : ''}` : '';
+    el('#print-report').className = 'table-report';
+    el('#print-report').innerHTML = `<header class="report-header"><div><h1>Giro de Estoque</h1><p>Ação: ${escapeHtml(filter)}${local}${shelf}${partition}${search ? ` · Busca: ${escapeHtml(search)}` : ''} · ${rows.length} ${rows.length === 1 ? 'item' : 'itens'}</p></div><p class="report-generated">${source ? `${source}<br>` : ''}Gerado em ${escapeHtml(generated)}</p></header><table><thead><tr>${columns.map(([label]) => `<th${cellClass(label)}>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([label, value]) => `<td${cellClass(label)}>${escapeHtml(value(row) ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     window.print();
   }
 
@@ -146,6 +154,7 @@ export function createExport(ui) {
       }));
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       saveBlob(blob, PANEL_FILE_NAME);
+      toast(`Painel gerado: ${PANEL_FILE_NAME}`);
       message(`Painel gerado: ${PANEL_FILE_NAME} (${fileSize(blob.size)}). Para publicar, envie o arquivo para a pasta do SharePoint e escolha "Substituir" (mesmo nome): o link continua o mesmo e quem abrir vê os dados de agora.`);
     } catch (error) {
       message(error.message || 'Não foi possível gerar o painel.', 'error');

@@ -89,6 +89,8 @@ export function createMotion(ui) {
     if (tiltCard && !tiltCard.contains(event.relatedTarget)) resetTilt();
   });
   // Nova planilha: os números voltam a subir do zero.
-  function resetCountUp() { shownNumbers.clear(); }
-  return { withTransition, countUp, playEntrance, resetCountUp, reducedMotion };
+  function resetCountUp() { shownNumbers.clear(); ui.state.countedTotal = null; }
+  // Contador de itens filtrados: em planilha nova ele não anima, só passa a valer o número atual.
+  function resetFilteredCount(value) { shownNumbers.set('filtered', value); }
+  return { withTransition, countUp, playEntrance, resetCountUp, resetFilteredCount, reducedMotion };
 }

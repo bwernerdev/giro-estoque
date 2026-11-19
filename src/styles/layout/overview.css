@@ -286,6 +286,25 @@
   transition: width var(--dur-slow) var(--ease-out), opacity var(--dur) ease;
 }
 
+/* 180 dias ou mais: candidatos a bloqueio e obsoleto. */
+.chart-row.is-warning .chart-bar {
+  background: var(--warning-line);
+}
+
+.chart-row.is-danger .chart-bar {
+  background: var(--danger-line);
+}
+
+.chart-row.is-danger .chart-label {
+  color: var(--danger-fg);
+  font-weight: 600;
+}
+
+.chart-row.is-warning .chart-label {
+  color: var(--warning-fg);
+  font-weight: 600;
+}
+
 .chart-value {
   display: grid;
   justify-items: end;

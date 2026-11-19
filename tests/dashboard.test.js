@@ -328,7 +328,10 @@ test('agrupa o valor com saldo por tempo sem requisição e separa parado de obs
   assert.match(buildHealthMarkup('obsolete', health.obsolete), /R\$\s?700,00/);
 
   const chart = buildAgingChartMarkup(buckets, '90-179');
-  assert.equal((chart.match(/class="chart-row"/g) || []).length, 4);
+  assert.equal((chart.match(/class="chart-row[ "]/g) || []).length, 4);
+  // 180 dias ou mais em destaque: atenção (180 a 364) e perigo (365 ou mais).
+  assert.match(chart, /class="chart-row is-warning" data-aging="180-364"/);
+  assert.match(chart, /class="chart-row is-danger" data-aging="365\+"/);
   assert.match(chart, /data-aging="90-179" aria-pressed="true"/);
   assert.match(chart, /width:100\.0%/);
   assert.match(chart, /R\$\s?1\.000,50/);

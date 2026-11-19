@@ -12,6 +12,7 @@ import { createDetails } from './ui/details.js';
 import { createOverview } from './ui/overview.js';
 import { createExport } from './ui/export.js';
 import { createImporter } from './ui/importer.js';
+import { createShortcuts } from './ui/shortcuts.js';
 
 const app = typeof document !== 'undefined' ? document.querySelector('#app') : null;
 if (app) {
@@ -31,7 +32,7 @@ if (app) {
   Object.assign(ui, { panelMode, panelSource, inFrame });
   // A ordem importa só para o que roda ao montar: configuração usa as consultas e preferências
   // usam as consultas e o movimento.
-  for (const create of [createSelectors, createConfig, createMotion, createPreferences, createTable, createDetails, createOverview, createExport, createImporter]) Object.assign(ui, create(ui));
+  for (const create of [createSelectors, createConfig, createMotion, createPreferences, createTable, createDetails, createOverview, createExport, createImporter, createShortcuts]) Object.assign(ui, create(ui));
   let deferredInstallPrompt = null;
   const installButton = el('#install-app');
 

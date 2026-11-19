@@ -2,7 +2,7 @@
 import { agingBucket, formatNumber } from '../analysis.js';
 import { PAGE_SIZE, filterResults, paginate, sortResults } from '../dashboard.js';
 import { svgIcon } from '../icons.js';
-import { badgeHtml, buyHint, codeHtml, columnClass, detailsHtml, escapeHtml, itemCurrency, positionHtml, purchaseHint, slug, urgentAction } from './markup.js';
+import { badgeHtml, buyHint, codeHtml, columnClass, detailsHtml, displayItemName, emptyStateHtml, escapeHtml, itemCurrency, positionHtml, purchaseHint, slug, urgentAction } from './markup.js';
 
 export function createTable(ui) {
   const { state, el, message } = ui;
@@ -40,7 +40,8 @@ export function createTable(ui) {
   function descriptionHtml(row) {
     const attributes = expansionAttributes(row, 'description');
     const expanded = attributes.endsWith(' open');
-    return `<details class="item-description${expanded ? ' is-expandable' : ''}" ${attributes}><summary><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong></summary></details>`;
+    const name = row.item || `Linha ${row.row}`;
+    return `<details class="item-description${expanded ? ' is-expandable' : ''}" ${attributes}><summary><strong title="${escapeHtml(name)}">${escapeHtml(displayItemName(name))}</strong></summary></details>`;
   }
   function updateDescriptionControls() {
     const measurements = [...el('#result-rows').querySelectorAll('.item-description:not([open])')].map(details => {
@@ -129,12 +130,14 @@ export function createTable(ui) {
         const hiddenTag = row.hidden ? ' <span class="hidden-indicator">Oculto</span>' : '';
         rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row, row.actions.some(urgentAction) && 'urgent-row')}"><td>${descriptionHtml(row)}${hiddenTag}</td><td>${codeHtml(row.sku)}</td><td>${positionHtml(row)}</td><td>${formatNumber(row.stock)}</td><td>${formatNumber(row.minimum)} / ${formatNumber(row.maximum)}${buyHint(row)}</td><td>${valueCell(row.stockValue)}</td><td>${row.actions.map(badgeHtml).join(' ')}${purchaseHint(row)}</td><td class="reason"><div class="cell-details"><span class="days">${row.daysSince === null || row.daysSince === undefined ? '—' : `${formatNumber(row.daysSince)} dias`}</span>${detailsHtml(row.reason, row)}</div></td></tr>`);
       } else {
-        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong>${escapeHtml(row.item || `Linha ${row.row}`)}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? valueCell(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
+        rowsHtml.push(`<tr data-row="${row.row}" class="${rowClass(row)}"><td><strong title="${escapeHtml(row.item || `Linha ${row.row}`)}">${escapeHtml(displayItemName(row.item || `Linha ${row.row}`))}</strong>${codeHtml(row.sku)}<small>${escapeHtml([row.branch, row.location, row.localCode && `Local ${row.localCode}`].filter(Boolean).join(' · ') || `Linha ${row.row}`)}</small></td><td>${giro ? valueCell(row.stockValue) : formatNumber(row.stock)}</td><td>${giro ? itemCurrency(row.consumption) : formatNumber(row.sales)}</td><td>${row.coverage === null ? '—' : `${formatNumber(row.coverage)} dias`}</td><td>${badgeHtml(row.action)}</td><td class="reason">${detailsHtml(row.reason, row)}</td></tr>`);
       }
     }
     el('#result-rows').classList.toggle('rows-enter', Boolean(state.animateRows) && !ui.reducedMotion());
     state.animateRows = false;
-    el('#result-rows').innerHTML = visible.length ? rowsHtml.join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">Nenhum item encontrado.</td></tr>`;
+    const anyFilter = Boolean(query || filter || state.locationFilter || state.shelfFilter || state.partitionFilter || state.agingFilter || state.hiddenOnly);
+    const hiddenCount = el('#show-hidden').checked ? 0 : state.allResults.length - state.results.length;
+    el('#result-rows').innerHTML = visible.length ? rowsHtml.join('') : `<tr><td class="empty-row" colspan="${state.columns.length}">${emptyStateHtml({ filtered: anyFilter, hiddenCount })}</td></tr>`;
     el('#result-rows').querySelectorAll('tr').forEach(tr => {
       if (tr.querySelector('.empty-row') || tr.classList.contains('group-row')) return;
       [...tr.children].forEach((cell, index) => cell.classList.add(columnClass(state.columns[index].key)));
@@ -145,7 +148,15 @@ export function createTable(ui) {
     const itemLabel = filtered.length === 1 ? 'item' : 'itens';
     const filterLabel = query || filter || state.locationFilter || state.shelfFilter || state.partitionFilter || state.hiddenOnly || state.agingFilter ? filtered.length === 1 ? ' filtrado' : ' filtrados' : '';
     el('#page-status').textContent = filtered.length ? `${start + 1}–${start + visible.length} de ${filtered.length} ${itemLabel}${filterLabel}` : 'Nenhum item encontrado';
-    el('#filtered-count').textContent = `${filtered.length.toLocaleString('pt-BR')} de ${state.allResults.length.toLocaleString('pt-BR')} ${state.allResults.length === 1 ? 'item' : 'itens'}`;
+    // Contador: o texto acessível muda direto; o visível sobe ou desce até o novo número
+    // quando só os filtros mudaram (mesma planilha).
+    const totalText = `${state.allResults.length.toLocaleString('pt-BR')} ${state.allResults.length === 1 ? 'item' : 'itens'}`;
+    const countText = count => `${Math.round(count).toLocaleString('pt-BR')} de ${totalText}`;
+    el('#filtered-count').textContent = countText(filtered.length);
+    el('#filtered-count-sr').textContent = countText(filtered.length);
+    if (state.countedTotal !== state.allResults.length) ui.resetFilteredCount(filtered.length);
+    ui.countUp('filtered', el('#filtered-count'), filtered.length, countText);
+    state.countedTotal = state.allResults.length;
     el('#pagination').hidden = pageCount <= 1;
     el('#page-label').textContent = `Página ${state.page} de ${pageCount}`;
     el('#page-previous').disabled = state.page === 1;
@@ -188,11 +199,14 @@ export function createTable(ui) {
   el('#page-next').addEventListener('click', () => changePage(1));
   document.addEventListener('keydown', event => {
     if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.target.closest?.('input, select, textarea, [contenteditable]') || el('#workspace').hidden || el('#item-panel').open) return;
+    if (event.target.closest?.('input, select, textarea, [contenteditable]') || el('#workspace').hidden || el('#item-panel').open || ui.shortcutsOpen()) return;
     event.preventDefault();
     setSearchExpanded(true);
     el('#search').focus({ preventScroll: true });
   });
+  // Coluna fixa ganha sombra na borda depois que a tabela rola de lado.
+  const tableScroll = el('.table-scroll');
+  tableScroll.addEventListener('scroll', () => tableScroll.classList.toggle('is-scrolled-x', tableScroll.scrollLeft > 0), { passive: true });
   if (typeof ResizeObserver === 'function') {
     new ResizeObserver(() => document.documentElement.style.setProperty('--tools-height', `${el('.table-tools').offsetHeight}px`)).observe(el('.table-tools'));
   }
@@ -204,6 +218,15 @@ export function createTable(ui) {
     ui.persistFilters();
   });
   el('#result-rows').addEventListener('click', event => {
+    const emptyAction = event.target.closest('[data-empty-action]');
+    if (emptyAction) {
+      if (emptyAction.dataset.emptyAction === 'clear') el('#clear-filters').click();
+      else {
+        el('#show-hidden').checked = true;
+        el('#show-hidden').dispatchEvent(new Event('change'));
+      }
+      return;
+    }
     const copy = event.target.closest('[data-copy-code]');
     if (copy) { ui.copyCode(copy); return; }
     const groupRow = event.target.closest('tr.group-row');

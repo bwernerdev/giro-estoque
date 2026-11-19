@@ -196,7 +196,7 @@ test('a coluna Valor mostra a barra do peso de cada item e o esqueleto some depo
   assert.match(app.el('#print-report .report-kpi').textContent, /R\$\s?125,00/);
   assert.equal(app.el('#print-report .report-bars') !== null, true);
   app.el('[data-export="pdf"]').click();
-  assert.equal(app.el('#print-report').className, '');
+  assert.equal(app.el('#print-report').className, 'table-report');
   assert.ok(app.el('#print-report tbody tr'));
 });
 

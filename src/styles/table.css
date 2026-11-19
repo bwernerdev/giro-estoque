@@ -293,10 +293,49 @@ html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-ite
 }
 
 .empty-row {
-  padding: 40px;
+  padding: 40px var(--s4);
   color: var(--text-muted);
   font-size: var(--fs-md);
   text-align: center;
+}
+
+/* Estado vazio: ícone, motivo e a saída (limpar filtros ou mostrar ocultos). */
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--s2);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--neutral-bg);
+  color: var(--text-muted);
+}
+
+.empty-icon .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.empty-state strong {
+  color: var(--text-strong);
+  font: 600 var(--fs-lg) var(--font-display);
+}
+
+.empty-state p {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  overflow-wrap: normal;
+}
+
+.empty-state button {
+  margin-top: var(--s1);
 }
 
 .no-details {
@@ -352,7 +391,7 @@ td.col-descricao strong {
 #result-table .item-description:not([open]) strong {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   line-height: 1.4;
 }
@@ -384,6 +423,47 @@ td.col-descricao strong {
 .item-description summary:focus-visible {
   border-radius: 3px;
   outline-offset: 3px;
+}
+
+/* Copiar código: com mouse, o botão aparece ao passar sobre a linha ou com o foco do
+   teclado, sobre o fim da célula (não ocupa uma linha a mais). Em tela de toque fica sempre à vista. */
+@media (hover: hover) {
+  #result-table td.col-codigo {
+    position: relative;
+  }
+
+  #result-table td.col-codigo .copy-code {
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity var(--dur) ease;
+  }
+
+  #result-table tbody tr:hover td.col-codigo .copy-code,
+  #result-table td.col-codigo .copy-code:focus-visible,
+  #result-table td.col-codigo .copy-code.is-copied {
+    opacity: 1;
+  }
+
+  #result-table td.col-codigo .copy-code:hover {
+    background: var(--surface-hover);
+  }
+
+  /* Modo padrão: o código fica na linha da descrição, o botão continua ao lado dele. */
+  .standard-table td.col-descricao .copy-code {
+    opacity: 0;
+    transition: opacity var(--dur) ease;
+  }
+
+  .standard-table tbody tr:hover td.col-descricao .copy-code,
+  .standard-table td.col-descricao .copy-code:focus-visible,
+  .standard-table td.col-descricao .copy-code.is-copied {
+    opacity: 1;
+  }
 }
 
 /* ── Badges dentro da tabela ────────────────────────────────────────────────── */
@@ -422,6 +502,57 @@ td .badge + .badge {
     padding-inline: 6px;
   }
 
+}
+
+/* ── Abaixo de 1024 px: a primeira coluna (descrição) fica fixa ao rolar de lado ── */
+@media (max-width: 1023px) {
+  #result-table th:first-child,
+  #result-table td:first-child {
+    position: sticky;
+    left: 0;
+  }
+
+  #result-table th:first-child {
+    z-index: 3;
+  }
+
+  #result-table td:first-child {
+    z-index: 1;
+    background: var(--surface);
+  }
+
+  #result-table tbody tr.hidden-item > td:first-child,
+  html[data-rows="striped"] #result-table tbody tr:nth-child(even):not(.hidden-item):not(:hover):not(.is-selected) > td:first-child,
+  #result-table tbody tr.group-row > td:first-child {
+    background: var(--surface-2);
+  }
+
+  #result-table tbody tr:hover > td:first-child {
+    background: var(--surface-hover);
+  }
+
+  #result-table tbody tr.is-selected > td:first-child {
+    background: var(--surface-selected);
+  }
+
+  /* Sombra na borda da coluna fixa só depois de rolar: indica que há conteúdo por baixo. */
+  .table-scroll.is-scrolled-x #result-table :is(th, td):first-child::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -8px;
+    bottom: 0;
+    width: 8px;
+    background: linear-gradient(to right, var(--scroll-shade), transparent);
+    pointer-events: none;
+  }
+}
+
+/* ── Abaixo de 720 px: a tabela do Analítico rola de lado em vez de espremer as colunas ── */
+@media (max-width: 719px) {
+  #result-table.analitico-table {
+    min-width: 720px;
+  }
 }
 
 /* ── Barra de valor: peso de cada item no valor dos itens filtrados ──────────── */

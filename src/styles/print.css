@@ -8,7 +8,19 @@
 @media print {
   @page {
     size: A4 landscape;
-    margin: 12mm;
+    margin: 12mm 12mm 14mm;
+
+    @bottom-left {
+      content: "Giro de Estoque";
+      color: #6b7280;
+      font: 8px Arial, sans-serif;
+    }
+
+    @bottom-right {
+      content: "Página " counter(page) " de " counter(pages);
+      color: #6b7280;
+      font: 8px Arial, sans-serif;
+    }
   }
 
   html,
@@ -87,6 +99,52 @@
     letter-spacing: 0;
     text-transform: none;
     print-color-adjust: exact;
+  }
+
+  /* PDF da tabela: cabeçalho com arquivo e data, linhas alternadas, números à direita. */
+  #print-report.table-report .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #2f5bd3;
+    print-color-adjust: exact;
+  }
+
+  #print-report.table-report .report-header p {
+    margin: 0;
+    color: #4b5563 !important;
+    font-size: 10px;
+  }
+
+  #print-report.table-report .report-generated {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  #print-report.table-report th {
+    border-bottom: 2px solid #9aa6b2;
+  }
+
+  #print-report.table-report tbody tr:nth-child(even) td {
+    background: #f5f7f9 !important;
+    print-color-adjust: exact;
+  }
+
+  #print-report.table-report .number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  #print-report.table-report th.number {
+    white-space: normal;
+  }
+
+  #print-report.table-report .wide {
+    width: 18%;
   }
 }
 

@@ -114,6 +114,7 @@
   --backdrop: rgba(17, 20, 24, .25);
 
   /* Barra de rolagem e seta dos selects */
+  --scroll-shade: rgba(17, 20, 24, .12); /* borda da coluna fixa da tabela ao rolar de lado */
   --scrollbar-thumb: #c9ced6;
   --scrollbar-track: #f1f3f5;
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235f6672' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -138,10 +139,11 @@ html[data-density="compact"] {
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #17191e;
-  --surface: #1f2229;
-  --surface-2: #232730;
-  --surface-hover: #2a2f38;
+  /* Camadas com degrau visível: fundo mais escuro, superfícies mais claras. */
+  --bg: #111317;
+  --surface: #1e2128;
+  --surface-2: #262a33;
+  --surface-hover: #2d323c;
   --surface-selected: #222c40;
   --ring: #6b93f0;
 
@@ -150,10 +152,10 @@ html[data-theme="dark"] {
   --text-muted: #a3aab4;
   --text-faint: #9aa1ab;
 
-  --line: #2e333c;
-  --line-strong: #454c58;
-  --control-border: #6f7784; /* >= 3:1 nas superfícies escuras */
-  --line-soft: #282c34;
+  --line: #333944;
+  --line-strong: #4b5361;
+  --control-border: #737b88; /* >= 3:1 nas superfícies escuras */
+  --line-soft: #2b3039;
 
   --accent: #6b93f0;
   --accent-hover: #86a7f3;
@@ -164,8 +166,8 @@ html[data-theme="dark"] {
   --button-bg: #2b3039;
   --button-hover: #353b46;
 
-  --topbar-bg: #1f2229;
-  --topbar-glass: rgba(31, 34, 41, .78);
+  --topbar-bg: #1e2128;
+  --topbar-glass: rgba(30, 33, 40, .8);
 
   --danger-fg: #f07a7a;
   --danger-bg: #2e1f21;
@@ -183,12 +185,14 @@ html[data-theme="dark"] {
   --neutral-bg: #262a32;
   --neutral-line: #454c58;
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, .25);
-  --shadow-2: 0 6px 18px rgba(0, 0, 0, .4);
-  --shadow-3: 0 12px 32px rgba(0, 0, 0, .55);
+  /* No escuro a sombra some no fundo: um filete claro no topo separa a camada. */
+  --shadow-1: inset 0 1px 0 rgba(255, 255, 255, .04), 0 1px 3px rgba(0, 0, 0, .45);
+  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, .06), 0 8px 20px rgba(0, 0, 0, .5);
+  --shadow-3: inset 0 1px 0 rgba(255, 255, 255, .06), 0 14px 36px rgba(0, 0, 0, .65);
   --backdrop: rgba(0, 0, 0, .45);
 
+  --scroll-shade: rgba(0, 0, 0, .45);
   --scrollbar-thumb: #454c58;
-  --scrollbar-track: #1b1e24;
+  --scrollbar-track: #16181d;
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a3aab4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }

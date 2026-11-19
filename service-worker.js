@@ -53,6 +53,7 @@ const APP_SHELL = [
   './src/ui/overview.js',
   './src/ui/preferences.js',
   './src/ui/selectors.js',
+  './src/ui/shortcuts.js',
   './src/ui/table.js',
   './src/panel/data.js',
   './src/panel/generate.js',

@@ -61,7 +61,9 @@ export function summaryGridLayout(count, max) {
 }
 
 // Gráfico de envelhecimento: valor do estoque com saldo por faixa de dias sem requisição.
-// Uma série, uma cor; cada faixa é um botão que filtra a tabela.
+// Cada faixa é um botão que filtra a tabela. As faixas de 180 dias ou mais (candidatas a
+// bloqueio e obsoleto) ganham o tom de atenção e de perigo; valor, itens e fatia ficam à vista.
+const AGING_TONES = { '180-364': 'warning', '365+': 'danger' };
 export function buildAgingChartMarkup(buckets, selected = '') {
   if (!buckets.some(({ count }) => count > 0)) return '';
   const total = buckets.reduce((sum, { value }) => sum + value, 0);
@@ -71,7 +73,8 @@ export function buildAgingChartMarkup(buckets, selected = '') {
     const width = largest ? Math.max((value / largest) * 100, value > 0 ? 1.5 : 0) : 0;
     const items = `${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}`;
     const tip = `${label}: ${realCurrency(value)} (${share}% do valor) · ${items}`;
-    return `<button type="button" class="chart-row" data-aging="${key}" aria-pressed="${key === selected}" title="${escapeHtml(tip)}"${count ? '' : ' disabled'}><span class="chart-label">${escapeHtml(label)}</span><span class="chart-track"><span class="chart-bar" style="width:${width.toFixed(1)}%"></span></span><span class="chart-value">${realCurrency(value)}<small>${items}</small></span></button>`;
+    const tone = AGING_TONES[key] ? ` is-${AGING_TONES[key]}` : '';
+    return `<button type="button" class="chart-row${tone}" data-aging="${key}" aria-pressed="${key === selected}" title="${escapeHtml(tip)}"${count ? '' : ' disabled'}><span class="chart-label">${escapeHtml(label)}</span><span class="chart-track"><span class="chart-bar" style="width:${width.toFixed(1)}%"></span></span><span class="chart-value">${realCurrency(value)}<small>${items} · ${share}%</small></span></button>`;
   }).join('');
 }
 
@@ -140,6 +143,36 @@ export function itemCurrency(value) { return value === null || value === undefin
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
+
+// Filtros ativos como etiquetas: cada uma remove o seu filtro (data-clear-filter); no fim, quantos itens sobram.
+export function buildFilterChips(filters, count) {
+  const chips = filters.map(({ key, label }) => `<button type="button" class="filter-chip" data-clear-filter="${escapeHtml(key)}" title="Remover este filtro"><span>${escapeHtml(label)}</span>${svgIcon('close')}<span class="sr-only">: remover filtro</span></button>`).join('');
+  return `${chips}<span class="active-count">${count.toLocaleString('pt-BR')} ${count === 1 ? 'item' : 'itens'}</span>`;
+}
+
+// Tabela sem linhas: diz por quê e oferece a saída (limpar filtros ou mostrar os ocultos).
+export function emptyStateHtml({ filtered = false, hiddenCount = 0 } = {}) {
+  const [text, button] = filtered
+    ? ['Nenhum item atende aos filtros atuais. Remova um filtro acima ou limpe todos.', '<button type="button" class="secondary-button" data-empty-action="clear">Limpar filtros</button>']
+    : hiddenCount > 0
+      ? [`Nenhum item precisa de ação agora. ${hiddenCount.toLocaleString('pt-BR')} ${hiddenCount === 1 ? 'item está oculto' : 'itens estão ocultos'} (sem ação ou com compra em andamento).`, '<button type="button" class="secondary-button" data-empty-action="hidden">Mostrar itens ocultos</button>']
+      : ['A planilha não tem itens para mostrar.', ''];
+  return `<div class="empty-state"><span class="empty-icon" aria-hidden="true">${svgIcon('search')}</span><strong>Nenhum item encontrado</strong><p>${escapeHtml(text)}</p>${button}</div>`;
+}
+
+// Siglas que continuam em maiúsculas quando a descrição vira caixa de frase na tabela.
+const KEEP_UPPER = new Set(['PVC', 'CPVC', 'PEAD', 'PP', 'PE', 'PU', 'EVA', 'MDF', 'INOX', 'LED', 'EPI', 'NBR', 'ABNT', 'ISO', 'NR', 'USB', 'HD', 'SSD', 'CPU', 'UV', 'AC', 'DC', 'BSP', 'NPT', 'SAE', 'RPM', 'PSI', 'KVA', 'TV', 'PCB', 'EG', 'GG', 'XG', 'EXG', 'XGG', 'SC', 'OF', 'NF', 'CA', 'II', 'III', 'IV']);
+
+// Descrição para a tela: texto todo em maiúsculas (como vem do ERP) vira caixa de frase.
+// Palavras com número (220V, 10A, 090C) e siglas conhecidas ficam como estão. Texto que já
+// tem minúsculas não muda. A busca, os detalhes e a exportação usam o texto original.
+export function displayItemName(text) {
+  const value = String(text ?? '');
+  if (!/[A-ZÀ-Ý]/.test(value) || /[a-zß-ÿ]/.test(value)) return value;
+  return value
+    .replace(/[A-Za-zÀ-ÿ0-9]+/g, word => (/\d/.test(word) || KEEP_UPPER.has(word) ? word : word.toLowerCase()))
+    .replace(/^([^A-Za-zÀ-ÿ0-9]*)([a-zß-ÿ])/, (_, before, letter) => before + letter.toUpperCase());
 }
 
 // Tabela e detalhes do item: colunas, selos de ação, código copiável, posição, dicas de compra
@@ -216,31 +249,63 @@ export function limitsText(row) {
   const status = row.stock < row.minimum ? 'abaixo do mínimo' : row.stock > row.maximum ? 'acima do máximo' : 'dentro dos limites';
   return `${formatNumber(row.stock)} · mín. ${formatNumber(row.minimum)} / máx. ${formatNumber(row.maximum)} (${status})`;
 }
+// Régua do saldo: faixa entre o mínimo e o máximo e o marcador do saldo atual, com o tom
+// de abaixo (perigo), dentro (sucesso) ou acima (atenção). Sem limites, não aparece.
+export function stockGaugeHtml({ stock, minimum, maximum }) {
+  const filled = value => value !== null && value !== undefined && Number.isFinite(Number(value));
+  if (!filled(stock) || !filled(minimum) || !filled(maximum) || maximum < minimum || maximum <= 0) return '';
+  const scale = Math.max(maximum, stock, minimum, 1) * 1.15;
+  const at = value => Math.min(100, Math.max(0, (value / scale) * 100));
+  const tone = stock < minimum ? 'danger' : stock > maximum ? 'warning' : 'success';
+  const status = stock < minimum ? 'abaixo do mínimo' : stock > maximum ? 'acima do máximo' : 'dentro dos limites';
+  const label = `Saldo ${formatNumber(stock)}, mínimo ${formatNumber(minimum)}, máximo ${formatNumber(maximum)}: ${status}`;
+  const close = at(maximum) - at(minimum) < 22;
+  // Rótulo perto da borda encosta nela em vez de centralizar (não sai da caixa).
+  const tick = (position, text, center = -50) => `<span class="gauge-tick" style="left:${position.toFixed(1)}%;transform:translateX(${position < 12 ? 0 : position > 88 ? -100 : center}%)">${text}</span>`;
+  const ticks = close
+    ? tick((at(minimum) + at(maximum)) / 2, `mín./máx. ${formatNumber(minimum)} / ${formatNumber(maximum)}`)
+    : tick(at(minimum), `mín. ${formatNumber(minimum)}`, -30) + tick(at(maximum), `máx. ${formatNumber(maximum)}`, -70);
+  return `<span class="stock-gauge" role="img" aria-label="${escapeHtml(label)}"><span class="gauge-track"><span class="gauge-range" style="left:${at(minimum).toFixed(1)}%;width:${Math.max(at(maximum) - at(minimum), 0.8).toFixed(1)}%"></span><span class="gauge-marker is-${tone}" style="left:${at(stock).toFixed(1)}%"></span></span><span class="gauge-ticks">${ticks}</span></span>`;
+}
+
+// Campos do painel de detalhes em seções (o que fazer, saldo, compra, movimento). Seção sem
+// campo preenchido não aparece. Cada campo é <div><dt><dd> dentro do <dl> da seção.
 export function detailFields(reason, row, analitico) {
-  const entries = [];
+  const sections = [];
+  let entries = [];
   const add = (label, value, html = false) => { if (value !== '' && value !== null && value !== undefined) entries.push({ label, value, html }); };
+  const section = (title, extra = '') => {
+    if (entries.length) sections.push({ title, extra, entries });
+    entries = [];
+  };
   const filled = value => value !== null && value !== undefined;
   if (analitico) {
     const elapsed = filled(row.daysSince) ? `${formatNumber(row.daysSince)} dias desde a última requisição` : '';
     const notes = reason.split(' · ').filter(part => part !== elapsed && part !== row.blockReason && part !== `Id Bloqueio: ${row.blockId}`).join(' · ');
     add('Ação recomendada', row.actions?.length ? row.actions.map(badgeHtml).join(' ') : '', true);
     add(reason.startsWith('Corrigir na planilha:') ? 'Dados a revisar' : 'Por que', notes);
+    section('O que fazer');
     add('Saldo', limitsText(row));
     add('Sugestão de compra', filled(row.toBuy) ? `${formatNumber(row.toBuy)} (até o máximo${filled(row.onOrder) ? `, descontado o que está em SC aberta` : ''})` : '');
-    add('Em SC aberta', filled(row.onOrder) ? `${formatNumber(row.onOrder)} a receber` : '');
-    add(row.scCoverage && !row.scCoverage.sufficient ? 'SC insuficiente' : 'Cobertura da SC', scCoverageText(row.scCoverage));
-    add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
     add('Valor do saldo', filled(row.stockValue) ? realCurrency(row.stockValue) : '');
     add('Média de consumo', filled(row.averageConsumption) ? formatNumber(row.averageConsumption) : '');
     add('Giro do estoque', filled(row.coverage) ? `${formatNumber(row.coverage)} dias` : '');
+    section('Saldo e limites', stockGaugeHtml(row));
+    add('Em SC aberta', filled(row.onOrder) ? `${formatNumber(row.onOrder)} a receber` : '');
+    add(row.scCoverage && !row.scCoverage.sufficient ? 'SC insuficiente' : 'Cobertura da SC', scCoverageText(row.scCoverage));
+    add('Solicitação de compra', [purchaseRequestText(row.purchase), row.purchase?.supplier && `fornecedor ${row.purchase.supplier}`].filter(Boolean).join(' · '));
+    section('Compra (SC)');
     add('Classificação', row.classification);
     add('Última requisição', row.lastRequest);
     add('Tempo sem requisição', elapsed);
     add('Bloqueio', [...new Set([row.blockReason, row.blockId].filter(Boolean))].join(' · '));
+    section('Movimento e bloqueio');
   } else {
     add('Motivo da ação', reason);
+    section('');
   }
-  return `<dl class="detail-fields">${entries.map(({ label, value, html }) => `<div><dt>${escapeHtml(label)}</dt><dd>${html ? value : escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+  const entryHtml = ({ label, value, html }) => `<div><dt>${escapeHtml(label)}</dt><dd>${html ? value : escapeHtml(value)}</dd></div>`;
+  return `<div class="detail-fields">${sections.map(({ title, extra, entries: list }) => `<section class="detail-section">${title ? `<h3>${escapeHtml(title)}</h3>` : ''}${extra}<dl>${list.map(entryHtml).join('')}</dl></section>`).join('')}</div>`;
 }
 export function detailsHtml(reason, row) {
   if (!reason) return '<span class="no-details">—</span>';
