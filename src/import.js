@@ -20,7 +20,7 @@ function cellValue(value) {
     if ('result' in value) return value.result ?? '';
     if ('text' in value) return value.text ?? '';
     if ('richText' in value) return value.richText.map(part => part.text).join('');
-    if (value instanceof Date) return value.toLocaleDateString('pt-BR');
+    if (value instanceof Date) return value.toLocaleDateString('pt-BR', { timeZone: 'UTC' }); // ExcelJS dá a data em meia-noite UTC
     return '';
   }
   return value;

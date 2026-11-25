@@ -50,16 +50,7 @@ export function stockHealth(rows) {
 
 export function summarizeLocationTotal(rows, localFilter) {
   const filterValue = normalizeLocalKey(localFilter);
-  if (!filterValue) {
-    return rows.reduce((total, row) => {
-      const amount = parseNumber(row.stockValue);
-      return total + (Number.isFinite(amount) ? amount : 0);
-    }, 0);
-  }
-  return rows.reduce((total, row) => {
-    const localValue = normalizeLocalKey(stockLocation(row));
-    if (localValue !== filterValue) return total;
-    const amount = parseNumber(row.stockValue);
-    return total + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
+  return rows.reduce((total, row) => (!filterValue || normalizeLocalKey(stockLocation(row)) === filterValue
+    ? total + stockAmount(row)
+    : total), 0);
 }

@@ -64,7 +64,8 @@ export function createExport(ui) {
         };
         cell.alignment = { vertical: 'middle', horizontal: 'left' };
         if (rowIndex % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
-        if (['Valor unitário', 'Valor do saldo'].includes(header)) {
+        // Valor desconhecido fica em branco, como no CSV e no PDF (não vira R$ 0).
+        if (['Valor unitário', 'Valor do saldo'].includes(header) && cell.value !== '') {
           cell.value = currencyNumber(cell.value);
           cell.numFmt = header === 'Valor unitário' ? '[$R$-pt-BR] #,##0.0000' : '[$R$-pt-BR] #,##0.00';
         }

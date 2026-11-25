@@ -79,7 +79,8 @@ test('worker do .xlsx lê igual à leitura na página (mesma conversão de célu
   const inPage = await importFile({ name: 'estoque.xlsx', arrayBuffer: async () => buffer.slice(0) });
   assert.deepEqual(JSON.parse(JSON.stringify(inWorker)), JSON.parse(JSON.stringify(inPage)));
   assert.equal(inPage.length, 1, 'aba vazia fica de fora');
-  assert.deepEqual(inPage[0].rows[1], ['1001', 'Luva nitrílica', 3, 6, new Date(Date.UTC(2026, 10, 18)).toLocaleDateString('pt-BR'), 'site']);
+  // A data é a do Excel (18/11), não a véspera: o ExcelJS dá meia-noite UTC e o fuso do Brasil recuaria um dia.
+  assert.deepEqual(inPage[0].rows[1], ['1001', 'Luva nitrílica', 3, 6, '18/11/2026', 'site']);
 });
 
 test('readXlsxInWorker: abas do worker, erro de leitura, worker que não carrega e sem worker', async () => {

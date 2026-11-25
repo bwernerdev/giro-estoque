@@ -107,6 +107,8 @@ test('Excel e CSV exportam todos os itens filtrados e PDF mantém o contexto', a
   assert.equal(exported.worksheets[0].getCell('A2').value, '000');
   assert.equal(exported.worksheets[0].getCell('B2').value, '=1+1');
   assert.equal(exported.worksheets[0].getCell('B2').type, ExcelJS.ValueType.String);
+  // Sem valor do estoque mapeado: valor unitário e do saldo ficam em branco, não R$ 0.
+  for (const address of ['G2', 'H2']) assert.notEqual(typeof exported.worksheets[0].getCell(address).value, 'number', address);
   const csv = parseCsv((await (await app.exportFile('csv')).text()).replace(/^\uFEFF/, ''), ';');
   assert.equal(csv.length, 62);
   assert.equal(csv[1][1], "'=1+1");
