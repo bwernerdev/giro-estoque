@@ -6,3 +6,4 @@ review-*.png
 test-results/
 playwright-report/
 .panel-build/
+graphify-out/
